@@ -131,8 +131,7 @@ function PreExitCleanup {
 function Panic {
     param([Parameter(Position=0)] $msg = "")
     LogError $msg
-    PreExitCleanup
-    Exit $ExitCode
+    Exit $1
 }
 
 # Asserts that a condition is true. Quite the script otherwise.
@@ -169,8 +168,8 @@ function GetTargetArchitecture {
 ## Function to locate and load the Visual Studio command line environment:
 
 function LoadVisualStudio {
-    param([Parameter(Mandatory=$TRUE, Position=0)] [string] $HostArch   = "Native",
-          [Parameter(Mandatory=$TRUE, Position=1)] [string] $TargetArch = "Native")
+    param([Parameter(Position=0)] [string] $HostArch   = "Native",
+          [Parameter(Position=1)] [string] $TargetArch = "Native")
     $HostArch = $HostArch.Replace("Native", (GetHostArchitecture))
     $TargetArch = $TargetArch.Replace("Native", (GetTargetArchitecture))
 
@@ -234,7 +233,7 @@ $ClangDirectory = "LLVM-$ClangVersion-$Platform"
 $ClangURL = "https://releases.llvm.org/$ClangVersion/$ClangInstaller"
 
 function DownloadAndUnpackClang {
-    param([Parameter(Mandatory=$TRUE, Position=0)] [string] $HostArch = "Native")
+    param([Parameter(Position=0)] [string] $HostArch = "Native")
     $HostArch = $HostArch.Replace("Native", (GetHostArchitecture))
     switch ($HostArch) {
         "x86" { $Platform = "win32"; break }
@@ -245,7 +244,7 @@ function DownloadAndUnpackClang {
     $7ZPath = "$env:PROGRAMFILES\7-Zip\7z.exe"
     if (CommandExists "7z") {
         $7Z = (Get-Command "7z")[0].Path
-    } else if (Test-Path $7ZPath) {
+    } elseif (Test-Path $7ZPath) {
         $7Z = $7ZPath
     } else {
         Panic "7-Zip is required to extract the LLVM/Clang toolchain."
@@ -291,7 +290,7 @@ function GetGeneratorName {
 }
 
 # Returns the CMake build name corresponding to this script's command line arguments.
-function GetBuildName {
+function GetBuildType {
     if ($Release) {
         if ($NoDebugInfo) { return "Release" }
         else { return "RelWithDebInfo" }
@@ -314,7 +313,7 @@ function GetVisualStudioGeneratorName {
 
 # Returns the correct (absolute) build directory for the script's given command line arguments.
 function GetBuildDirectory {
-    $BuildType = (GetBuildName).ToLower()
+    $BuildType = (GetBuildType).ToLower()
     if ($Clang) { $Suffix = "-clang" }
     else        { $Suffix = "" }
     switch (GetGeneratorName) {
@@ -404,9 +403,9 @@ function ShowTimingStats {
 function Main {
     StartTimer "Main"
 
-    mkdir -Force "$BuildRoot"
-    mkdir -Force "$BuildRoot/include"
-    mkdir -Force "$(GetBuildDirectory)"
+    mkdir -Force "$BuildRoot"           | Out-Null
+    mkdir -Force "$BuildRoot/include"   | Out-Null
+    mkdir -Force "$(GetBuildDirectory)" | Out-Null
 
     if ($Clean) {
         StartTimer "CleanBuildDir"
@@ -431,12 +430,12 @@ function Main {
     if ($Reason) {
         StartTimer "CMake"
         pushd (GetBuildDirectory)
-        switch (GetGenerator) {
+        switch (GetGeneratorName) {
             "ninja" {
                 if ($Clang) {
                     LogInfo "Running CMake ($Reason) with generator Ninja and compiler Clang..."
                     cmake $RepositoryRoot -G Ninja `
-                        -DCMAKE_BUILD_TYPE=$(GetBuildType) `
+                        -DCMAKE_BUILD_TYPE="$(GetBuildType)" `
                         -DCMAKE_C_COMPILER:PATH="$ClangDirectory/bin/clang-cl.exe" `
                         -DCMAKE_CXX_COMPILER:PATH="$ClangDirectory/bin/clang-cl.exe" `
                         -DCMAKE_LINKER:PATH="$ClangDirectory/bin/lld-link.exe" `
@@ -444,7 +443,7 @@ function Main {
                     CheckExitCode
                 } else {
                     LogInfo "Running CMake ($Reason) with generator Ninja and compiler MSVC..."
-                    cmake $RepositoryRoot -G Ninja -DCMAKE_BUILD_TYPE=$(GetBuildType) | Out-Host
+                    cmake $RepositoryRoot -G Ninja -DCMAKE_BUILD_TYPE="$(GetBuildType)" | Out-Host
                     CheckExitCode
                 }
                 break
@@ -452,7 +451,7 @@ function Main {
             "msbuild" {
                 $Generator = GetVisualStudioGeneratorName
                 LogInfo "Running CMake ($Reason) with generator `"$Generator`"..."
-                cmake $RepositoryRoot -G $Generator -DCMAKE_BUILD_TYPE=$(GetBuildType) | Out-Host
+                cmake $RepositoryRoot -G $Generator -DCMAKE_BUILD_TYPE="$(GetBuildType)" | Out-Host
                 CheckExitCode
                 break
             }
@@ -481,7 +480,7 @@ function Main {
     if (-not $VS) {
         StartTimer "Build"
         pushd $(GetBuildDirectory)
-        switch (GetGenerator) {
+        switch (GetGeneratorName) {
             "msbuild" {
                 LogInfo "Running MSBuild for configuration $(GetBuildType)..."
                 msbuild -nologo ALL_BUILD.vcxproj -p:Configuration=$(GetBuildType) | Out-Host
@@ -499,9 +498,9 @@ function Main {
         StopTimer "Build"
     }
 
-    switch (GetGenerator) {
-        "msbuild": { $BinaryPath = "$(GetBuildDirectory)/$BinaryName.exe"; break }
-        "ninja":   { $BinaryPath = "$(GetBuildDirectory)/$(GetBuildType)/$BinaryName.exe"; break }
+    switch (GetGeneratorName) {
+        "msbuild" { $BinaryPath = "$(GetBuildDirectory)/$BinaryName.exe"; break }
+        "ninja"   { $BinaryPath = "$(GetBuildDirectory)/$(GetBuildType)/$BinaryName.exe"; break }
     }
 
     StopTimer "Main"
@@ -526,7 +525,7 @@ function Main {
         # Find RenderDoc:
         $RenderDoc1 = "${env:PROGRAMFILES}/RenderDoc/qrenderdoc.exe"
         if (CommandExists qrenderdoc)   { $RenderDocPath = (Get-Command qrenderdoc)[0].Path }
-        else if (Test-Path $RenderDoc1) { $RenderDocPath = $RenderDoc1 }
+        elseif (Test-Path $RenderDoc1) { $RenderDocPath = $RenderDoc1 }
         else { Panic "Can't find RenderDoc." }
         # Generate cap file:
         $CapFile = "$BuildRoot/renderdoc.cap"
@@ -539,14 +538,14 @@ function Main {
         start $RenderDocPath $CapFile
     }
 
-    elseif ($WinDbg){
+    elseif ($WinDbg) {
         cd "$WorkingRoot"
         LogInfo "Set working directory to $PWD."
         LogInfo "Launching WinDbg..."
         # Find WinDbg:
         $WinDbg1 = "${env:PROGRAMFILES(X86)}/Windows Kits/10/Debuggers/x64/WinDbg.exe"
-        if (CommandExists windbg)    { $WinDbgPath = (Get-Command windbg)[0].Path
-        else if (Test-Path $WinDbg1) { $WinDbgPath = $WinDbg1 }
+        if (CommandExists windbg)   { $WinDbgPath = (Get-Command windbg)[0].Path }
+        elseif (Test-Path $WinDbg1) { $WinDbgPath = $WinDbg1 }
         else { Panic "Can't find WinDbg." }
         # Launch:
         start $WinDbgPath $BinaryPath
