@@ -46,9 +46,11 @@ endif()
 # * GLM         vector and matrix math library
 # * dear imgui  user interface
 
-add_subdirectory(lib/eastl)
-add_subdirectory(lib/eastl/test/packages/EAAssert)
-add_subdirectory(lib/eastl/test/packages/EAStdC)
+# add_subdirectory(lib/eastl)
+# add_subdirectory(lib/eastl/test/packages/EAAssert)
+# add_subdirectory(lib/eastl/test/packages/EABase)
+# add_subdirectory(lib/eastl/test/packages/EAStdC)
+# add_subdirectory(lib/eastl/test/packages/EAThread)
 
 set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
@@ -59,23 +61,26 @@ if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     target_compile_options(glfw PRIVATE /W0)
 endif()
 
-set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
-add_subdirectory(lib/glm)
+# set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+# add_subdirectory(lib/glm)
 
-add_library(DearImgui
-    "lib/imgui/imgui.cpp"
-    "lib/imgui/imgui_demo.cpp"
-    "lib/imgui/imgui_draw.cpp"
-    "lib/imgui/imgui_widgets.cpp"
-    "lib/imgui/examples/imgui_impl_opengl3.cpp"
-    "lib/imgui/examples/imgui_impl_glfw.cpp")
-target_include_directories(DearImgui PUBLIC "lib/imgui")
-target_include_directories(DearImgui PRIVATE "build/include")
-target_include_directories(DearImgui PRIVATE glfw)
+# add_library(imgui
+#     "lib/imgui/imgui.cpp"
+#     "lib/imgui/imgui_demo.cpp"
+#     "lib/imgui/imgui_draw.cpp"
+#     "lib/imgui/imgui_widgets.cpp"
+#     "lib/imgui/examples/imgui_impl_opengl3.cpp"
+#     "lib/imgui/examples/imgui_impl_glfw.cpp")
+# target_compile_definitions(imgui PRIVATE "IMGUI_IMPL_OPENGL_LOADER_GLAD")
+# target_include_directories(imgui PUBLIC "lib/imgui")
+# target_include_directories(imgui PRIVATE "build/include")
+# target_link_libraries(imgui PRIVATE glfw)
+
+add_subdirectory(lib/cimgui)
 
 # Main executable target:
 
-file(GLOB_RECURSE GameSources RELATIVE ${CMAKE_SOURCE_DIR} "src/*.cc")
+file(GLOB_RECURSE GameSources RELATIVE ${CMAKE_SOURCE_DIR} "src/*.c")
 file(GLOB_RECURSE GameHeaders RELATIVE ${CMAKE_SOURCE_DIR} "src/*.h")
 add_executable(Game ${GameSources} ${GameHeaders} "src/misc/main.rc")
 
@@ -87,14 +92,13 @@ target_include_directories(Game PRIVATE "build/include")    # auto-generated, e.
 
 # Libraries:
 
-target_link_libraries(Game PRIVATE EASTL)
-target_link_libraries(Game PRIVATE EAStdC)
 target_link_libraries(Game PRIVATE glfw)
-target_link_libraries(Game PRIVATE glm)
-target_link_libraries(Game PRIVATE imgui)
+target_link_libraries(Game PRIVATE cimgui)
 
 # Compiler and linker options:
 
+set_target_properties(Game PROPERTIES C_STANDARD 11)
+set_target_properties(Game PROPERTIES C_EXTENSIONS ON)
 set_target_properties(Game PROPERTIES CXX_STANDARD 14)
 set_target_properties(Game PROPERTIES CXX_EXTENSIONS ON)
 
@@ -109,16 +113,23 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     # Suppressed warnings:
     target_compile_options(Game PRIVATE
         /wd4100  # unreferenced function parameters
-        /wd4201  # gnu-anonymous-struct and nested-anon-types extensions, used by GLM
+        /wd4201  # gnu-anonymous-struct and nested-anon-types
         /wd4127) # constant conditional expressions
     # Prevent MSVCRT from nagging us to use Microsoft's non-standard "secure" functions:
     target_compile_definitions(Game PRIVATE _CRT_SECURE_NO_WARNINGS)
     # Generate PDB files only if required:
-    target_compile_options(Game PRIVATE "$<$<CONFIG:Debug>:/Zi /Zo>")
-    target_compile_options(Game PRIVATE "$<$<CONFIG:RelWithDebInfo>:/Zi /Zo>")
+    target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Zi /Zo>)
+    target_compile_options(Game PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi /Zo>)
     # Enable optimizations only in release mode:
-    target_compile_options(Game PRIVATE "$<$<CONFIG:Debug>:/Od>")
-    target_compile_options(Game PRIVATE "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/O2")
+    target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Od>)
+    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/O2>)
+    # Compile as console application:
+    set_target_properties(Game PROPERTIES LINK_FLAGS_DEBUG
+        "${LINK_FLAGS_DEBUG} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
+    set_target_properties(Game PROPERTIES LINK_FLAGS_RELEASE
+        "${LINK_FLAGS_RELEASE} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
+    set_target_properties(Game PROPERTIES LINK_FLAGS_RELWITHDEBINFO
+        "${LINK_FLAGS_RELWITHDEBINFO} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
 
 # Microsoft Visual C++ with Clang-CL
 elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
@@ -127,13 +138,6 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     # * Zi      generate PDB files
     # * Zo      generate extra debug information for optimized code
     # * EHsc-   disable C++ exceptions
-    # Suppressed warnings:
-    # * documentation   trips on most documentation comments in the GLFW headers
-    # * n-s-i-p         trips on Windows.h includes, which everyone writes in a different case
-    # * r-i-m           trips on every macro name starting with _
-    # * w-s             disallows passing const char* to functions expecting char*, inconvenient
-    # * u-p             unreferenced function parameter
-    # * g-a-s, n-a-t    extensions used by GLM
     target_compile_options(Game PRIVATE /W3 /Zi /Zo /EHsc-)
     # Suppressed warnings:
     target_compile_options(Game PRIVATE
@@ -142,18 +146,25 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
         -Wno-reserved-id-macro      # macro names starting with _
         -Wno-writable-strings       # passing const char* to char* arguments [1]
         -Wno-unused-parameter       # unreferenced function parameters
-        -Wno-gnu-anonymous-struct   # extension used by GLM
-        -Wno-nested-anon-types)     # extension used by GLM
+        -Wno-gnu-anonymous-struct   # useful well-supported extension
+        -Wno-nested-anon-types)     # useful well-supported extension
     # Prevent MSVCRT from nagging us to use Microsoft's non-standard "secure" functions:
     target_compile_definitions(Game PRIVATE _CRT_SECURE_NO_WARNINGS)
     # Generate PDB files only if required:
-    target_compile_options(Game PRIVATE "$<$<CONFIG:Debug>:/Zi /Zo>")
-    target_compile_options(Game PRIVATE "$<$<CONFIG:RelWithDebInfo>:/Zi /Zo>")
+    target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Zi /Zo>)
+    target_compile_options(Game PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi /Zo>)
     # Enable optimizations only in release mode:
-    target_compile_options(Game PRIVATE "$<$<CONFIG:Debug>:/Od>")
-    target_compile_options(Game PRIVATE "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/O2")
+    target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Od>)
+    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/O2)
+    # Compile as console application:
+    set_target_properties(Game PROPERTIES LINK_FLAGS_DEBUG
+        "${LINK_FLAGS_DEBUG} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
+    set_target_properties(Game PROPERTIES LINK_FLAGS_RELEASE
+        "${LINK_FLAGS_RELEASE} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
+    set_target_properties(Game PROPERTIES LINK_FLAGS_RELWITHDEBINFO
+        "${LINK_FLAGS_RELWITHDEBINFO} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
 
-# Clang, GCC and probably other compilers
+# Clang on Linux/Mac, GCC and probably other compilers
 else()
     # Common flags:
     # * Wall    more warnings
@@ -165,11 +176,11 @@ else()
         -Wno-reserved-id-macro      # macro names starting with _
         -Wno-writable-strings       # passing const char* to char* arguments [1]
         -Wno-unused-parameter       # unreferenced function parameters
-        -Wno-gnu-anonymous-struct   # extension used by GLM
-        -Wno-nested-anon-types)     # extension used by GLM
+        -Wno-gnu-anonymous-struct   # useful well-supported extension
+        -Wno-nested-anon-types)     # useful well-supported extension
     # Enable optimization only in release mode:
-    target_compile_options(Game PRIVATE "$<$<CONFIG:Debug>:-Og>")
-    target_compile_options(Game PRIVATE "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3")
+    target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:-Og>)
+    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3)
 endif()
 
 # Set the working directory for debugging with VS (https://stackoverflow.com/questions/23950887/):

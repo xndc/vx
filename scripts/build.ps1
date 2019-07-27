@@ -59,7 +59,7 @@ $ErrorActionPreference = "Stop"
 $RepositoryRoot = (Resolve-Path "$PSScriptRoot/..").Path
 $BuildDir   = "build"   ; $BuildRoot   = "$RepositoryRoot/$BuildDir"
 $LibraryDir = "lib"     ; $LibraryRoot = "$RepositoryRoot/$LibraryDir"
-$SourceDir  = "source"  ; $SourceRoot  = "$RepositoryRoot/$SourceDir"
+$SourceDir  = "src"     ; $SourceRoot  = "$RepositoryRoot/$SourceDir"
 $WorkingDir = "run"     ; $WorkingRoot = "$RepositoryRoot/$WorkingDir"
 $BinaryName  = "Game"
 $ProjectName = "Game"
@@ -70,7 +70,7 @@ pushd $RepositoryRoot
 # Log the build script's output to a file.
 # NOTE: External commands must be piped into Out-Host to show up in the log.
 $BuildLog     = "$BuildRoot/build.log"
-$BuildLastLog = "$BuildRoot/build.lastlog"
+$BuildLastLog = "$BuildRoot/build.prev.log"
 if (Test-Path $BuildLog) {
     Move -Force $BuildLog $BuildLastLog
 }
@@ -138,7 +138,7 @@ function Panic {
 function Assert {
     param([Parameter(Position=0, Mandatory=$TRUE)] [bool] $cond,
           [Parameter(Position=1)] [string] $msg = "Unknown assertion failed.")
-    if ($cond) { Panic $msg }
+    if (-not $cond) { Panic $msg }
 }
 
 # Asserts that the last command exited correctly. Quits the script otherwise.
@@ -352,7 +352,7 @@ function ShouldRunCMake? {
         }
     }
 
-    $CurrentSourceTree = (tree /f /a Source | out-string)
+    $CurrentSourceTree = (tree /f /a "$SourceRoot" | out-string)
     $LastSourceTree = (get-content -Raw "$BuildRoot/tree.txt" -ErrorAction Ignore)
     if ($CurrentSourceTree -ne $LastSourceTree) {
         set-content -NoNewline $CurrentSourceTree "$BuildRoot/tree.txt"
@@ -369,15 +369,15 @@ function ShouldRunCMake? {
 
 # NOTE: this should be the length of the longest description string used by ShowTimingStats
 $TimingMaxDescLength = 30
-$TotalTimeTracked = 0
+$global:TotalTimeTracked = 0
 
 function ShowTimingStat {
     param ([Parameter(Position=0, Mandatory=$TRUE)] [string] $TimerName,
-           [Parameter(Position=0, Mandatory=$TRUE)] [string] $Description)
+           [Parameter(Position=1, Mandatory=$TRUE)] [string] $Description)
     $ms = GetTimerMs $TimerName
     if ($ms -gt 0) {
         Write-Host "* $($Description.PadRight($TimingMaxDescLength)) :: $ms ms"
-        $TotalTimeTracked += $ms
+        $global:TotalTimeTracked += $ms
     }
 }
 
@@ -403,20 +403,20 @@ function ShowTimingStats {
 function Main {
     StartTimer "Main"
 
-    mkdir -Force "$BuildRoot"           | Out-Null
-    mkdir -Force "$BuildRoot/include"   | Out-Null
-    mkdir -Force "$(GetBuildDirectory)" | Out-Null
-
     if ($Clean) {
         StartTimer "CleanBuildDir"
         LogInfo "Cleaning build directory: $(GetBuildDirectory)..."
-        rm -Recurse -Force "$(GetBuildDirectory)"
+        rm -ErrorAction Ignore -Recurse -Force "$(GetBuildDirectory)"
         LogInfo "Cleaning build directory: $BuildRoot/include..."
-        rm -Recurse -Force "$BuildRoot/include/*"
+        rm -ErrorAction Ignore -Recurse -Force "$BuildRoot/include"
         LogInfo "Cleaning other build files in $BuildRoot..."
-        rm "$BuildRoot/tree.txt"
+        rm -ErrorAction Ignore "$BuildRoot/tree.txt"
         StopTimer "CleanBuildDir"
     }
+
+    mkdir -Force "$BuildRoot"           | Out-Null
+    mkdir -Force "$BuildRoot/include"   | Out-Null
+    mkdir -Force "$(GetBuildDirectory)" | Out-Null
 
     StartTimer "LoadVisualStudio"
     LoadVisualStudio
@@ -470,8 +470,8 @@ function Main {
             "Can't build OpenGL loader: Python is not installed or not in PATH."
         LogInfo "Building OpenGL loader..."
         pushd $GLADLocation
-        python -m glad --out-path $GLLoaderPath --generator c --local-files --api "gl=4.1" `
-            --profile core | Out-Host
+        python -m glad --out-path $GLLoaderPath --generator c-debug --local-files --api "gl=4.1" `
+            --profile core --reproducible | Out-Host
         CheckExitCode
         popd
         StopTimer "GLAD"
@@ -499,26 +499,28 @@ function Main {
     }
 
     switch (GetGeneratorName) {
-        "msbuild" { $BinaryPath = "$(GetBuildDirectory)/$BinaryName.exe"; break }
-        "ninja"   { $BinaryPath = "$(GetBuildDirectory)/$(GetBuildType)/$BinaryName.exe"; break }
+        "ninja"   { $BinaryPath = "$(GetBuildDirectory)/$BinaryName.exe"; break }
+        "msbuild" { $BinaryPath = "$(GetBuildDirectory)/$(GetBuildType)/$BinaryName.exe"; break }
     }
 
     StopTimer "Main"
     $MainMs = GetTimerMs Main
     LogInfo "Build script timing information:"
     ShowTimingStats
-    Write-Host "Total: $MainMs ms ($(MainMs - $TotalTimeTracked) ms untracked)"
+    Write-Host "Total: $MainMs ms ($($MainMs - $global:TotalTimeTracked) ms untracked)"
 
     if ($Run) {
         cd "$WorkingRoot"
         LogInfo "Set working directory to $PWD."
         LogInfo "Running $BinaryPath..."
         & $BinaryPath
+        LogInfo "Program exited with return code $LASTEXITCODE."
     }
 
     elseif ($VS) {
-        LogInfo "Launching Visual Studio for $(GetBuildDirectory)/$ProjectName.vcxproj..."
-        start devenv.exe "$(GetBuildDirectory)/$ProjectName.vcxproj"
+        $ProjectPath = "$(GetBuildDirectory)/$ProjectName.vcxproj"
+        LogInfo "Launching Visual Studio for $ProjectPath..."
+        & devenv.exe $ProjectPath
     }
 
     elseif ($RenderDoc) {
@@ -535,7 +537,7 @@ function Main {
         Set-Content -NoNewline $Template $CapFile
         # Launch:
         LogInfo "Launching RenderDoc ($RenderDocPath)..."
-        start $RenderDocPath $CapFile
+        & $RenderDocPath $CapFile
     }
 
     elseif ($WinDbg) {
@@ -548,7 +550,7 @@ function Main {
         elseif (Test-Path $WinDbg1) { $WinDbgPath = $WinDbg1 }
         else { Panic "Can't find WinDbg." }
         # Launch:
-        start $WinDbgPath $BinaryPath
+        & $WinDbgPath $BinaryPath
     }
 }
 

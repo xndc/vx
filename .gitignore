@@ -47,6 +47,7 @@ Temporary Items
 
 # Visual Studio
 .vs
+*.aps
 
 # Sublime Text
 *.sublime-workspace

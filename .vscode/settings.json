@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.h": "c",
+        "*.fsh": "glsl",
+        "*.vsh": "glsl",
+        "bitset": "c",
+        "chrono": "c",
+        "xhash": "c",
+        "xtree": "c",
+        "xutility": "c"
+    }
+}
