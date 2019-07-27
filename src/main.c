@@ -1,5 +1,6 @@
 #include "common.h"
-#include <glad/glad.c>
+#include "gui.h"
+#include <glad/glad.h>
 #include <glfw/glfw3.h>
 
 GLuint G_Buffer_Depth;
@@ -123,13 +124,16 @@ int main() {
     GLFWwindow* window = glfwCreateWindow(1280, 1024, "VX", NULL, NULL);
     glfwMakeContextCurrent(window);
     gladLoadGL();
+
     if (glfwExtensionSupported("WGL_EXT_swap_control_tear") ||
         glfwExtensionSupported("GLX_EXT_swap_control_tear")) {
         glfwSwapInterval(-1);
     } else {
         glfwSwapInterval(1);
     }
+
     CreateShadowFramebuffer(2048, 2048);
+    uiInit(window);
 
     int lastW = 0;
     int lastH = 0;
@@ -143,9 +147,12 @@ int main() {
         }
         glViewport(0, 0, w, h);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, G_Framebuffer_Main);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, G_Framebuffer_Main);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        uiDraw(window);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, G_Framebuffer_Main);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

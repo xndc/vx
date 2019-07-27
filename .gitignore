@@ -1,11 +1,11 @@
 # Project-specific
 build
 run/*
-!run/Fonts
-!run/Maps
-!run/Models
-!run/Shaders
-!run/Textures
+!run/fonts
+!run/models
+!run/shaders
+!run/terrain
+!run/textures
 
 # Backup and temporary files
 *.bak

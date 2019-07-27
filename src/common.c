@@ -8,8 +8,11 @@
     #define WIN32_LEAN_AND_MEAN
     #define VC_EXTRALEAN
     #define NOMINMAX
+    #undef APIENTRY
     #include <Windows.h>
 #endif
+
+#include <glad/glad.h>
 
 void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args) {
     stbsp_vsnprintf(dst, (int) size, fmt, args);
@@ -79,6 +82,7 @@ void vxLogMessage (int source, const char* file, int line, const char* func, con
         case VX_LOGSOURCE_WARN:  { sourcename = "[WARN]";  break; }
         case VX_LOGSOURCE_ERROR: { sourcename = "[ERROR]"; break; }
         case VX_LOGSOURCE_ALLOC: { sourcename = "[ALLOC]"; break; }
+        default: { sourcename = "[????] "; }
     }
 
     time_t now = time(NULL);
@@ -105,6 +109,7 @@ void vxLogMessage (int source, const char* file, int line, const char* func, con
 
 char* vxStringCopy (size_t size, char* dst, const char* src) {
     strncpy(dst, src, size);
+    return dst;
 }
 
 char* vxStringDuplicate (const char* src) {

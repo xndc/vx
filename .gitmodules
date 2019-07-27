@@ -1,15 +1,15 @@
 [submodule "lib/glfw"]
 	path = lib/glfw
 	url = https://github.com/glfw/glfw
-[submodule "lib/glm"]
-	path = lib/glm
-	url = https://github.com/g-truc/glm
 [submodule "lib/glad"]
 	path = lib/glad
 	url = https://github.com/Dav1dde/glad
 [submodule "lib/etc/stb"]
 	path = lib/etc/stb
 	url = https://github.com/nothings/stb
-[submodule "lib/cimgui"]
-	path = lib/cimgui
-	url = https://github.com/cimgui/cimgui
+[submodule "lib/etc/imgui"]
+	path = lib/etc/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "lib/imgui"]
+	path = lib/imgui
+	url = https://github.com/ocornut/imgui

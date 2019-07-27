@@ -64,25 +64,24 @@ endif()
 # set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 # add_subdirectory(lib/glm)
 
-# add_library(imgui
-#     "lib/imgui/imgui.cpp"
-#     "lib/imgui/imgui_demo.cpp"
-#     "lib/imgui/imgui_draw.cpp"
-#     "lib/imgui/imgui_widgets.cpp"
-#     "lib/imgui/examples/imgui_impl_opengl3.cpp"
-#     "lib/imgui/examples/imgui_impl_glfw.cpp")
-# target_compile_definitions(imgui PRIVATE "IMGUI_IMPL_OPENGL_LOADER_GLAD")
-# target_include_directories(imgui PUBLIC "lib/imgui")
-# target_include_directories(imgui PRIVATE "build/include")
-# target_link_libraries(imgui PRIVATE glfw)
-
-add_subdirectory(lib/cimgui)
+add_library(imgui
+    "lib/imgui/imgui.cpp"
+    "lib/imgui/imgui_demo.cpp"
+    "lib/imgui/imgui_draw.cpp"
+    "lib/imgui/imgui_widgets.cpp"
+    "lib/imgui/examples/imgui_impl_opengl3.cpp"
+    "lib/imgui/examples/imgui_impl_glfw.cpp")
+target_include_directories(imgui PUBLIC "lib/imgui")
+target_compile_definitions(imgui PRIVATE "IMGUI_IMPL_OPENGL_LOADER_GLAD")
+target_include_directories(imgui PRIVATE "build/include")
+target_link_libraries(imgui PUBLIC glfw)
 
 # Main executable target:
 
-file(GLOB_RECURSE GameSources RELATIVE ${CMAKE_SOURCE_DIR} "src/*.c")
-file(GLOB_RECURSE GameHeaders RELATIVE ${CMAKE_SOURCE_DIR} "src/*.h")
-add_executable(Game ${GameSources} ${GameHeaders} "src/misc/main.rc")
+file(GLOB_RECURSE GameSourcesC   RELATIVE ${CMAKE_SOURCE_DIR} "src/*.c")
+file(GLOB_RECURSE GameSourcesCXX RELATIVE ${CMAKE_SOURCE_DIR} "src/*.cc")
+file(GLOB_RECURSE GameHeaders    RELATIVE ${CMAKE_SOURCE_DIR} "src/*.h")
+add_executable(Game ${GameSourcesC} ${GameSourcesCXX} ${GameHeaders} "src/misc/main.rc")
 
 # Headers:
 
@@ -93,7 +92,7 @@ target_include_directories(Game PRIVATE "build/include")    # auto-generated, e.
 # Libraries:
 
 target_link_libraries(Game PRIVATE glfw)
-target_link_libraries(Game PRIVATE cimgui)
+target_link_libraries(Game PRIVATE imgui)
 
 # Compiler and linker options:
 
