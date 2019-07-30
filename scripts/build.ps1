@@ -451,7 +451,7 @@ function Main {
             "msbuild" {
                 $Generator = GetVisualStudioGeneratorName
                 LogInfo "Running CMake ($Reason) with generator `"$Generator`"..."
-                cmake $RepositoryRoot -G $Generator -DCMAKE_BUILD_TYPE="$(GetBuildType)" | Out-Host
+                cmake $RepositoryRoot -G $Generator | Out-Host
                 CheckExitCode
                 break
             }

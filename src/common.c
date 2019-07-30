@@ -2,8 +2,11 @@
 #include <string.h>
 #include <time.h>
 #include <malloc.h>
+
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb/stb_sprintf.h>
+#define STB_DS_IMPLEMENTATION
+#include <stb/stb_ds.h>
 
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN

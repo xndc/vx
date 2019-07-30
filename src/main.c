@@ -1,6 +1,7 @@
 #include "common.h"
 #include "gui.h"
 #include "renderer/program.h"
+#include "flib/accessor.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -173,6 +174,16 @@ int main() {
 
     CreatePrograms();
     InitGUI(window);
+
+    FAccessor* acc1 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
+    FAccessor* acc2 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
+    FAccessor* acc3 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 100, 800, 0);
+    #define DBG(acc) \
+        VXDEBUG("Accessor 0x%jx with buffer 0x%jx, offset %ju, count %ju, stride %ju", \
+            acc, acc->buffer, acc->offset, acc->count, acc->stride);
+    DBG(acc1);
+    DBG(acc2);
+    DBG(acc3);
 
     int last_screen_w = 0;
     int last_screen_h = 0;

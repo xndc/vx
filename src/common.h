@@ -37,7 +37,8 @@ typedef unsigned int GLuint;
 #define VXWARN(...)  vxLogMessage(2, VXLOCATION, __VA_ARGS__)
 #define VXERROR(...) vxLogMessage(3, VXLOCATION, __VA_ARGS__)
 
-#define VXPANIC(...)  (void)(VXERROR(__VA_ARGS__), abort(), 0)
+#define VXABORT()     (void)(abort(), 0)
+#define VXPANIC(...)  (void)(VXERROR(__VA_ARGS__), VXABORT(), 0)
 #define VXCHECK(cond) (void)(!!(cond) || (VXPANIC("Check failed: %s", #cond), 0))
 #define VXCHECKM(cond, ...) \
     (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
@@ -85,14 +86,18 @@ typedef void* (*VXAllocator) (void* block, size_t count, size_t itemsize, size_t
 // Generic allocator, defers to platform allocation functions.
 void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
-#define VXGENALLOC(count, type) (type*) vxGenAlloc(NULL, count, sizeof(type), 0, VXLOCATION);
+#define VXGENALLOCA(count, type, align) \
+    (type*) vxGenAlloc(NULL, count, sizeof(type), align, VXLOCATION);
+#define VXGENALLOC(count, type) VXGENALLOCA(count, type, 0)
 #define VXGENFREE(block) vxGenAlloc(block, 0, 0, 0, VXLOCATION);
 
 // Per-frame linear allocator, should be reset using vxFrameAllocReset at the start of each frame.
 void* vxFrameAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
 void vxFrameAllocReset();
-#define VXFRAMEALLOC(count, type) (type*) vxFrameAlloc(NULL, count, sizeof(type), 0, VXLOCATION);
+#define VXFRAMEALLOCA(count, type, align) \
+    (type*) vxFrameAlloc(NULL, count, sizeof(type), align, VXLOCATION);
+#define VXFRAMEALLOC(count, type) VXFRAMEALLOCA(count, type, 0)
 
 #if 0
 typedef void* (*VXAllocFunction) (size_t count, size_t itemsize, size_t alignment,
