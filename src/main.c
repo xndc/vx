@@ -1,22 +1,8 @@
 #include "common.h"
 #include "gui.h"
+#include "renderer/program.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
-
-GLuint G_Buffer_Depth;
-GLuint G_Buffer_ColorLDR;
-GLuint G_Buffer_ColorHDR;
-GLuint G_Buffer_ColorTAA;
-GLuint G_Buffer_Normal;
-GLuint G_Buffer_Velocity;
-GLuint G_Buffer_Aux1;
-GLuint G_Buffer_Aux2;
-GLuint G_Buffer_AuxDepth1;
-GLuint G_Buffer_Shadow1;
-GLuint G_Buffer_ShadowColor1;
-
-GLuint G_Framebuffer_Main;
-GLuint G_Framebuffer_Shadow;
 
 static void GlfwErrorCallback (int code, const char* error) {
     VXERROR("GLFW error %d: %s", code, error);
@@ -51,7 +37,22 @@ GLenum vxglCheckFramebufferStatus (GLuint framebuffer) {
     return status;
 }
 
-void CreateBuffer (GLuint* buffer, GLenum format, int w, int h) {
+GLuint G_Buffer_Depth;
+GLuint G_Buffer_ColorLDR;
+GLuint G_Buffer_ColorHDR;
+GLuint G_Buffer_ColorTAA;
+GLuint G_Buffer_Normal;
+GLuint G_Buffer_Velocity;
+GLuint G_Buffer_Aux1;
+GLuint G_Buffer_Aux2;
+GLuint G_Buffer_AuxDepth1;
+GLuint G_Buffer_Shadow1;
+GLuint G_Buffer_ShadowColor1;
+
+GLuint G_Framebuffer_Main;
+GLuint G_Framebuffer_Shadow;
+
+static void CreateBuffer (GLuint* buffer, GLenum format, int w, int h) {
     if (*buffer != 0) {
         glDeleteTextures(1, buffer);
     }
@@ -60,7 +61,7 @@ void CreateBuffer (GLuint* buffer, GLenum format, int w, int h) {
     glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
 }
 
-void CreateMainFramebuffer (int w, int h) {
+static void CreateMainFramebuffer (int w, int h) {
     if (G_Framebuffer_Main != 0) {
         glDeleteFramebuffers(1, &G_Framebuffer_Main);
     }
@@ -113,6 +114,39 @@ void CreateShadowFramebuffer (int w, int h) {
     VXINFO("Created G_Framebuffer_Shadow (%d) with size %dx%d", G_Framebuffer_Shadow, w, h);
 }
 
+GLuint G_Program_GBuffer_BasicLit;
+GLuint G_Program_GBuffer_MetallicRoughness;
+GLuint G_Program_Light_Directional;
+GLuint G_Program_Light_Point;
+GLuint G_Program_Composite;
+
+void CreatePrograms() {
+    FArray* defines = FArrayAlloc(sizeof(ProgramDefine), 256, NULL, NULL, NULL);
+    #define P(prog, vs, fs) prog = GetProgram("shaders/" vs, "shaders/" fs, defines)
+
+    FArrayClear(defines);
+    P(G_Program_GBuffer_BasicLit, "default.vert", "default.frag");
+
+    FArrayClear(defines);
+    P(G_Program_GBuffer_MetallicRoughness, "default.vert", "default.frag");
+
+    FArrayClear(defines);
+    P(G_Program_Light_Directional, "default.vert", "default.frag");
+
+    FArrayClear(defines);
+    P(G_Program_Light_Point, "default.vert", "default.frag");
+
+    FArrayClear(defines);
+    P(G_Program_Composite, "default.vert", "default.frag");
+
+    FArrayFree(defines);
+    #undef P
+}
+
+int G_WindowConfig_W = 1280;
+int G_WindowConfig_H = 1024;
+int G_RenderConfig_ShadowMapSize = 2048;
+
 int main() {
     glfwSetErrorCallback(GlfwErrorCallback);
     VXCHECK(glfwInit());
@@ -121,7 +155,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
-    GLFWwindow* window = glfwCreateWindow(1280, 1024, "VX", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(G_WindowConfig_W, G_WindowConfig_H, "VX", NULL, NULL);
     glfwMakeContextCurrent(window);
     gladLoadGL();
 
@@ -132,18 +166,32 @@ int main() {
         glfwSwapInterval(1);
     }
 
-    CreateShadowFramebuffer(2048, 2048);
-    uiInit(window);
+    // Clear window to prevent white flash before loading resources:
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    int lastW = 0;
-    int lastH = 0;
+    CreatePrograms();
+    InitGUI(window);
+
+    int last_screen_w = 0;
+    int last_screen_h = 0;
+    int last_shadow_size = 0;
+
     while (!glfwWindowShouldClose(window)) {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
-        if (lastW != w || lastH != h) {
+        if (last_screen_w != w || last_screen_h != h) {
             CreateMainFramebuffer(w, h);
-            lastW = w;
-            lastH = h;
+            last_screen_w = G_WindowConfig_W = w;
+            last_screen_h = G_WindowConfig_H = h;
+        }
+        if (last_screen_w != G_WindowConfig_W || last_screen_h != G_WindowConfig_H) {
+            // TODO: resize window
+        }
+        if (last_shadow_size != G_RenderConfig_ShadowMapSize) {
+            last_shadow_size = G_RenderConfig_ShadowMapSize;
+            CreateShadowFramebuffer(last_shadow_size, last_shadow_size);
         }
         glViewport(0, 0, w, h);
 
@@ -152,7 +200,8 @@ int main() {
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        uiDraw(window);
+        DrawGUI(window);
+        glUseProgram(G_Program_Composite);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, G_Framebuffer_Main);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

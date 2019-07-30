@@ -12,7 +12,7 @@
     #include <Windows.h>
 #endif
 
-#include <glad/glad.h>
+#include <glad/glad.c>
 
 void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args) {
     stbsp_vsnprintf(dst, (int) size, fmt, args);
@@ -154,13 +154,41 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
 void* vxGenAllocEx (size_t count, size_t itemsize, size_t alignment, const char* file,
     int line, const char* func)
 {
-    #ifdef _MSC_VER
-        void* mem = _aligned_malloc(count * itemsize, alignment);
-    #else
-        void* mem = aligned_alloc(alignment, count * itemsize);
-    #endif
-    vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
-        "Allocated %ld items of size %ld with alignment %ld => 0x%lx",
-        count, itemsize, alignment, mem);
-    return mem;
+    if (count == 0 || itemsize == 0) {
+        return NULL;
+    } else {
+        // Most systems want the alignment to be a power of 2 and a multiple of sizeof(void*).
+        // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+        size_t real_alignment = alignment;
+        while (real_alignment % sizeof(void*) != 0) {
+            real_alignment *= 2;
+        }
+        real_alignment--;
+        real_alignment |= real_alignment >> 1;
+        real_alignment |= real_alignment >> 2;
+        real_alignment |= real_alignment >> 4;
+        real_alignment |= real_alignment >> 8;
+        real_alignment |= real_alignment >> 16;
+        real_alignment++;
+        vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
+            "Allocating %ld items of size %ld with alignment %ld (real: %ld)",
+            count, itemsize, alignment, real_alignment);
+        #ifdef _MSC_VER
+            void* mem = _aligned_malloc(count * itemsize, real_alignment);
+        #else
+            void* mem = aligned_alloc(real_alignment, count * itemsize);
+        #endif
+        return mem;
+    }
+}
+
+void vxGenFreeEx (void* mem, const char* file, int line, const char* func) {
+    if (mem != NULL) {
+        #ifdef _MSC_VER
+            _aligned_free(mem);
+        #else
+            free(mem);
+        #endif
+        vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func, "Freed block 0x%lx", mem);
+    }
 }

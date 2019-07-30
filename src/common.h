@@ -12,6 +12,11 @@
 #define VX_MiB 1048576
 #define VX_GiB 1073741824
 
+typedef int GLint;
+typedef unsigned int GLenum;
+typedef unsigned int GLbitfield;
+typedef unsigned int GLuint;
+
 #define VXMIN(a, b) (((a) < (b))? (a) : (b))
 #define VXMAX(a, b) (((a) > (b))? (a) : (b))
 #define VXCLAMP(x, min, max) VXMIN(VXMAX(x, min), max)
@@ -32,13 +37,13 @@
 
 #define VXPANIC(...)  (void)(VXERROR(__VA_ARGS__), abort(), 0)
 #define VXCHECK(cond) (void)(!!(cond) || (VXPANIC("Check failed: %s", #cond), 0))
-#define VXCHECKM(cond, fmt, ...) \
-    (void)(!!(cond) || (VXPANIC("Check failed: %s\n%s", #cond, msg), 0))
+#define VXCHECKM(cond, ...) \
+    (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
 
 #ifndef NDEBUG
     #define ASSERT(cond) (void)(!!(cond) || (VXPANIC("Assertion failed: %s", #cond), 0))
-    #define ASSERTM(cond, fmt, ...) \
-        (void)(!!(cond) || (VXPANIC("Assertion failed: %s\n%s", #cond, msg), 0))
+    #define ASSERTM(cond, ...) \
+        (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
 #else
     #define ASSERT(cond) (void)(0)
     #define ASSERTM(cond, fmt, ...) (void)(0)
@@ -73,10 +78,10 @@ typedef void (*VXFreeFunction) (void* mem, const char* file, int line, const cha
 // General allocator: passes arguments to aligned_alloc, with logging.
 void* vxGenAllocEx (size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
-void vxGenAllocFreeEx (void* mem, const char* file, int line, const char* func);
+void vxGenFreeEx (void* mem, const char* file, int line, const char* func);
 #define VXGENALLOC(count, type) \
     (type*) vxGenAllocEx(count, sizeof(type), sizeof(type), __FILE__, __LINE__, VXFUNCTION)
-#define VXGENALLOCFREE(mem) vxGenAllocFreeEx(mem, __FILE__, __LINE__, VXFUNCTION);
+#define VXGENFREE(mem) vxGenFreeEx(mem, __FILE__, __LINE__, VXFUNCTION);
 
 // Frame allocator: linear allocator, should be reset every frame.
 void* vxFrameAllocEx (size_t count, size_t itemsize, size_t alignment, const char* file,

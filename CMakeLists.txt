@@ -113,7 +113,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     target_compile_options(Game PRIVATE
         /wd4100  # unreferenced function parameters
         /wd4201  # gnu-anonymous-struct and nested-anon-types
-        /wd4127) # constant conditional expressions
+        /wd4204  # non-constant aggregate initializer - struct x y = {a, b}
+        /wd4127) # constant conditional expressions - while(1)
     # Prevent MSVCRT from nagging us to use Microsoft's non-standard "secure" functions:
     target_compile_definitions(Game PRIVATE _CRT_SECURE_NO_WARNINGS)
     # Generate PDB files only if required:
