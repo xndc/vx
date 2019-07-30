@@ -137,3 +137,15 @@ FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
 // Creates or retrieves a previously created FAccessor, given a filename.
 FAccessor* FAccessorFromFile (FAccessorType t, const char* filename, size_t offset,
     size_t count, size_t stride);
+
+// Retrieves a pointer to the data the accessor is actually pointing to.
+static inline char* FAccessorData (FAccessor* a) {
+    if (a == NULL) { return NULL; }
+    return a->buffer + a->offset;
+}
+static inline char* FAccessorElement (FAccessor* a, size_t index, size_t component) {
+    if (a == NULL) { return NULL; }
+    if (index > a->count) { return NULL; }
+    if (component > a->component_count) { return NULL; }
+    return a->buffer + a->offset + (index * a->stride) + (component * a->component_size);
+}
