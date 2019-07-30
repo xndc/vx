@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <limits.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -29,11 +30,12 @@ typedef unsigned int GLuint;
 #else
     #define VXFUNCTION __func__
 #endif
+#define VXLOCATION __FILE__, __LINE__, VXFUNCTION
 
-#define VXDEBUG(...) vxLogMessage(0, __FILE__, __LINE__, VXFUNCTION, __VA_ARGS__)
-#define VXINFO(...)  vxLogMessage(1, __FILE__, __LINE__, VXFUNCTION, __VA_ARGS__)
-#define VXWARN(...)  vxLogMessage(2, __FILE__, __LINE__, VXFUNCTION, __VA_ARGS__)
-#define VXERROR(...) vxLogMessage(3, __FILE__, __LINE__, VXFUNCTION, __VA_ARGS__)
+#define VXDEBUG(...) vxLogMessage(0, VXLOCATION, __VA_ARGS__)
+#define VXINFO(...)  vxLogMessage(1, VXLOCATION, __VA_ARGS__)
+#define VXWARN(...)  vxLogMessage(2, VXLOCATION, __VA_ARGS__)
+#define VXERROR(...) vxLogMessage(3, VXLOCATION, __VA_ARGS__)
 
 #define VXPANIC(...)  (void)(VXERROR(__VA_ARGS__), abort(), 0)
 #define VXCHECK(cond) (void)(!!(cond) || (VXPANIC("Check failed: %s", #cond), 0))
@@ -41,12 +43,12 @@ typedef unsigned int GLuint;
     (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
 
 #ifndef NDEBUG
-    #define ASSERT(cond) (void)(!!(cond) || (VXPANIC("Assertion failed: %s", #cond), 0))
-    #define ASSERTM(cond, ...) \
+    #define VXASSERT(cond) (void)(!!(cond) || (VXPANIC("Assertion failed: %s", #cond), 0))
+    #define VXASSERTM(cond, ...) \
         (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
 #else
-    #define ASSERT(cond) (void)(0)
-    #define ASSERTM(cond, fmt, ...) (void)(0)
+    #define VXASSERT(cond) (void)(0)
+    #define VXASSERTM(cond, fmt, ...) (void)(0)
 #endif
 
 #define VX_LOGSOURCE_DEBUG 0
@@ -71,6 +73,28 @@ char* vxStringDuplicate (const char* src);
 char* vxReadFileEx (size_t size, char* dst, size_t* read_bytes, FILE* file);
 char* vxReadFile (const char* filename, bool text_mode, size_t* read_bytes);
 
+// Specification for a generic memory allocation/deallocation function.
+// * block: Memory block to reallocate or free. Set to NULL to allocate a new block.
+// * count: The number of "items" to allocate. Set this (or itemsize) to 0 to free a given block.
+// * itemsize: The size in bytes of each "item". Set this (or count) to 0 to free a given block.
+// * alignment: The alignment of the allocated block. Set this to 0 to align on itemsize.
+// * file, line, func: Used for debug output. Use the VXLOCATION macro to fill these parameters.
+typedef void* (*VXAllocator) (void* block, size_t count, size_t itemsize, size_t alignment,
+    const char* file, int line, const char* func);
+
+// Generic allocator, defers to platform allocation functions.
+void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
+    const char* file, int line, const char* func);
+#define VXGENALLOC(count, type) (type*) vxGenAlloc(NULL, count, sizeof(type), 0, VXLOCATION);
+#define VXGENFREE(block) vxGenAlloc(block, 0, 0, 0, VXLOCATION);
+
+// Per-frame linear allocator, should be reset using vxFrameAllocReset at the start of each frame.
+void* vxFrameAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
+    const char* file, int line, const char* func);
+void vxFrameAllocReset();
+#define VXFRAMEALLOC(count, type) (type*) vxFrameAlloc(NULL, count, sizeof(type), 0, VXLOCATION);
+
+#if 0
 typedef void* (*VXAllocFunction) (size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
 typedef void (*VXFreeFunction) (void* mem, const char* file, int line, const char* func);
@@ -90,3 +114,4 @@ void vxFrameAllocSize (size_t heapsize);
 void vxFrameAllocReset ();
 #define VXFRAMEALLOC(type) \
     (type*) vxFrameAllocEx(count, sizeof(type), sizeof(type), __FILE__, __LINE__, VXFUNCTION)
+#endif

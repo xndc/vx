@@ -1,6 +1,7 @@
 #include "common.h"
 #include <string.h>
 #include <time.h>
+#include <malloc.h>
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb/stb_sprintf.h>
 
@@ -151,6 +152,7 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
     return buffer;
 }
 
+#if 0
 void* vxGenAllocEx (size_t count, size_t itemsize, size_t alignment, const char* file,
     int line, const char* func)
 {
@@ -171,7 +173,7 @@ void* vxGenAllocEx (size_t count, size_t itemsize, size_t alignment, const char*
         real_alignment |= real_alignment >> 16;
         real_alignment++;
         vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
-            "Allocating %ld items of size %ld with alignment %ld (real: %ld)",
+            "Allocating %jd items of size %jd with alignment %jd (real: %jd)",
             count, itemsize, alignment, real_alignment);
         #ifdef _MSC_VER
             void* mem = _aligned_malloc(count * itemsize, real_alignment);
@@ -189,6 +191,111 @@ void vxGenFreeEx (void* mem, const char* file, int line, const char* func) {
         #else
             free(mem);
         #endif
-        vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func, "Freed block 0x%lx", mem);
+        vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func, "Freed block 0x%jx", mem);
     }
+}
+#endif
+
+// Disables usage of _aligned_realloc on Windows, to test the generic alternative.
+// #define VX_GEN_ALLOC_DISABLE_REALLOC
+
+// Generic aligned_alloc, malloc_size and free functions.
+#if defined(_MSC_VER)
+    static inline void* SystemAlloc (size_t size, size_t alignment) {
+        return _aligned_malloc(size, alignment);
+    }
+    static inline size_t SystemMemSize (void* block, size_t alignment) {
+        return _aligned_msize(block, alignment, 0);
+    }
+    static inline void SystemFree (void* block) {
+        _aligned_free(block);
+    }
+#else
+    static inline void* SystemAlloc (size_t size, size_t alignment) {
+        return aligned_alloc(size);
+    }
+    static inline void SystemMemSize (void* block, size_t alignment) {
+        #ifdef __APPLE__
+            return malloc_size(block);
+        #else
+            return malloc_usable_size(block);
+        #endif
+    }
+    static inline void SystemFree (void* block) {
+        free(block);
+    }
+#endif
+
+void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
+    const char* file, int line, const char* func)
+{
+    void* p = NULL;
+    size_t size = count * itemsize; // TODO: check for overflow, somehow
+
+    if (alignment == 0) {
+        alignment = itemsize;
+    }
+    #if !defined(VX_NO_ALLOC_MESSAGES)
+        size_t given_alignment = alignment;
+    #endif
+
+    // Most systems want the alignment to be a power of 2 and a multiple of sizeof(void*).
+    // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+    while (alignment % sizeof(void*) != 0) {
+        alignment *= 2;
+    }
+    alignment--;
+    alignment |= alignment >> 1;
+    alignment |= alignment >> 2;
+    alignment |= alignment >> 4;
+    alignment |= alignment >> 8;
+    alignment |= alignment >> 16;
+    alignment++;
+
+    if (count == 0 || itemsize == 0) {
+        if (block) {
+            #if !defined(VX_NO_ALLOC_MESSAGES)
+                vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
+                "vxGenAlloc: Freeing block 0x%jx", block);
+            #endif
+            SystemFree(block);
+        }
+    } else {
+        if (block) {
+            #if !defined(VX_NO_ALLOC_MESSAGES)
+                vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
+                    "vxGenAlloc: Reallocating block 0x%jx to hold %jd * %jd bytes with alignment "
+                    "%jd (given: %jd) ",
+                    block, count, itemsize, alignment, given_alignment);
+            #endif
+            #if defined(_MSC_VER) && !defined(VX_GEN_ALLOC_DISABLE_REALLOC)
+                p = _aligned_realloc(block, size, alignment);
+            #else
+                p = SystemAlloc(size, alignment);
+                VXDEBUG("p = 0x%jx", p);
+                // NOTE: This can return a bogus value on Windows if the alignments are different.
+                size_t block_size = SystemMemSize(block, alignment);
+                VXDEBUG("block_size = %jd", block_size);
+                VXDEBUG("block = 0x%jx", block);
+                VXDEBUG("copying %jd bytes", VXMIN(block_size, size));
+                memcpy(p, block, VXMIN(block_size, size));
+            #endif
+            #if !defined(VX_NO_ALLOC_MESSAGES)
+                vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
+                    "vxGenAlloc: Reallocated block: 0x%jx", p);
+            #endif
+        } else {
+            #if !defined(VX_NO_ALLOC_MESSAGES)
+                vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
+                    "vxGenAlloc: Allocating %jd items of size %jd with alignment %jd (given: %jd)",
+                    count, itemsize, alignment, given_alignment);
+            #endif
+            p = SystemAlloc(size, alignment);
+            #if !defined(VX_NO_ALLOC_MESSAGES)
+                vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
+                    "vxGenAlloc: Allocated block: 0x%jx", p);
+            #endif
+        }
+    }
+    return p;
 }

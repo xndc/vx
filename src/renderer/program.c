@@ -63,7 +63,7 @@ GLuint GetProgram (const char* vert_path, const char* frag_path, FArray* defines
     GLuint program = 0;
     // Initialize cache:
     if (S_ProgramCache.capacity == 0) {
-        FArrayInit(&S_ProgramCache, sizeof(ProgramCacheEntry), 64, NULL, NULL, NULL);
+        FArrayInit(&S_ProgramCache, sizeof(ProgramCacheEntry), 64, NULL, NULL);
     }
     // Cache lookup:
     int found_cache_entry = -1;
@@ -89,7 +89,7 @@ GLuint GetProgram (const char* vert_path, const char* frag_path, FArray* defines
     } else {
         // Compile, link and cache new program:
         ProgramCacheEntry* pce = FArrayReserve(&S_ProgramCache, 1);
-        FArrayInit(&pce->defines, sizeof(ProgramDefine), defines->size, NULL, NULL, NULL);
+        FArrayInit(&pce->defines, sizeof(ProgramDefine), defines->size, NULL, NULL);
         FArrayPush(&pce->defines, defines->size, defines->items);
         // Read shaders from disk:
         pce->vert.path = vxStringDuplicate(vert_path);

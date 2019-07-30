@@ -121,7 +121,7 @@ GLuint G_Program_Light_Point;
 GLuint G_Program_Composite;
 
 void CreatePrograms() {
-    FArray* defines = FArrayAlloc(sizeof(ProgramDefine), 256, NULL, NULL, NULL);
+    FArray* defines = FArrayAlloc(sizeof(ProgramDefine), 128, NULL, NULL);
     #define P(prog, vs, fs) prog = GetProgram("shaders/" vs, "shaders/" fs, defines)
 
     FArrayClear(defines);
