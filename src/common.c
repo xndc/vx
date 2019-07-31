@@ -1,7 +1,12 @@
 #include "common.h"
 #include <string.h>
 #include <time.h>
-#include <malloc.h>
+
+#ifdef __APPLE__
+    #include <malloc/malloc.h>
+#else
+    #include <malloc.h>
+#endif
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb/stb_sprintf.h>
@@ -203,31 +208,33 @@ void vxGenFreeEx (void* mem, const char* file, int line, const char* func) {
 // #define VX_GEN_ALLOC_DISABLE_REALLOC
 
 // Generic aligned_alloc, malloc_size and free functions.
-#if defined(_MSC_VER)
-    static inline void* SystemAlloc (size_t size, size_t alignment) {
+static inline void* SystemAlloc (size_t size, size_t alignment) {
+    #if defined(_MSC_VER)
         return _aligned_malloc(size, alignment);
-    }
-    static inline size_t SystemMemSize (void* block, size_t alignment) {
-        return _aligned_msize(block, alignment, 0);
-    }
-    static inline void SystemFree (void* block) {
-        _aligned_free(block);
-    }
-#else
-    static inline void* SystemAlloc (size_t size, size_t alignment) {
+    #elif defined(__APPLE__)
+        void* p;
+        posix_memalign(&p, alignment, size);
+        return p;
+    #else
         return aligned_alloc(size);
-    }
-    static inline void SystemMemSize (void* block, size_t alignment) {
-        #ifdef __APPLE__
-            return malloc_size(block);
-        #else
-            return malloc_usable_size(block);
-        #endif
-    }
-    static inline void SystemFree (void* block) {
+    #endif
+}
+static inline size_t SystemMemSize (void* block, size_t alignment) {
+    #if defined(_MSC_VER)
+        return _aligned_msize(block, alignment, 0);
+    #elif defined(__APPLE__)
+        return malloc_size(block);
+    #else
+        return malloc_usable_size(block);
+    #endif
+}
+static inline void SystemFree (void* block) {
+    #if defined(_MSC_VER)
+        _aligned_free(block);
+    #else
         free(block);
-    }
-#endif
+    #endif
+}
 
 void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func)

@@ -52,7 +52,7 @@ FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
     acc.stride = stride ? stride : FAccessorStride(t);
     acc.component_count = FAccessorComponentCount(t);
     acc.component_size  = FAccessorComponentSize(t);
-    acc.gl_object = NULL;
+    acc.gl_object = 0;
     acc.gl_needs_upload = false;
     ptrdiff_t i = hmgeti(S_AccessorCache, acc);
     if (i >= 0) {

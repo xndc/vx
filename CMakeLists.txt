@@ -155,7 +155,7 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     target_compile_options(Game PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi /Zo>)
     # Enable optimizations only in release mode:
     target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Od>)
-    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/O2)
+    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/O2>)
     # Compile as console application:
     set_target_properties(Game PROPERTIES LINK_FLAGS_DEBUG
         "${LINK_FLAGS_DEBUG} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
@@ -171,7 +171,7 @@ else()
     target_compile_options(Game PRIVATE -Wall)
     # Suppressed warnings:
     target_compile_options(Game PRIVATE
-        -Wno-nonportable-system-include-path    # trips on lots of Windows.h includes
+        -Wno-nonportable-include-path   # pointless, trips on a few things
         -Wno-documentation          # trips on most documentation comments in GLFW3.h
         -Wno-reserved-id-macro      # macro names starting with _
         -Wno-writable-strings       # passing const char* to char* arguments [1]
@@ -180,7 +180,7 @@ else()
         -Wno-nested-anon-types)     # useful well-supported extension
     # Enable optimization only in release mode:
     target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:-Og>)
-    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3)
+    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>)
 endif()
 
 # Set the working directory for debugging with VS (https://stackoverflow.com/questions/23950887/):
