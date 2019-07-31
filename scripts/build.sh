@@ -15,7 +15,7 @@ Usage() {
     echo "  -r, -Run        Run the program after compilation."
     echo "  -Xcode          Generate and open an Xcode project. Implies -g Xcode."
     echo "  -g, -Generator [Ninja|\"Unix Makefiles\"|...]"
-    echo "    Specifies the CMake generator to use. Ninja is the default, if available."
+    echo "    Specifies the CMake generator to use. Ninja is the default."
     echo ""
     echo "All options are case-insensitive, and --option can be used instead of -option."
 }
@@ -133,14 +133,14 @@ GetCMakeReason() {
                 return
             fi ;;
     esac
-    ls "$SourceRoot/" ** > "$BuildRoot/tree.lst.new"
-    if ! [ -f "$BuildRoot/tree.lst" ] ||
-         [ -n "$(diff -q "$BuildRoot/tree.lst" "$BuildRoot/tree.lst.new")" ]; then
-        mv -f "$BuildRoot/tree.lst.new" "$BuildRoot/tree.lst"
+    ls "$SourceRoot/" ** > "$BuildRoot/tree.txt.new"
+    if ! [ -f "$BuildRoot/tree.txt" ] ||
+         [ -n "$(diff -q "$BuildRoot/tree.txt" "$BuildRoot/tree.txt.new")" ]; then
+        mv -f "$BuildRoot/tree.txt.new" "$BuildRoot/tree.txt"
         echo "source tree changed"
     fi
-    if [ -f "$BuildRoot/tree.lst.new" ]; then
-        mv -f "$BuildRoot/tree.lst.new" "$BuildRoot/tree.lst"
+    if [ -f "$BuildRoot/tree.txt.new" ]; then
+        mv -f "$BuildRoot/tree.txt.new" "$BuildRoot/tree.txt"
     fi
 }
 CMakeReason="$(GetCMakeReason)"
@@ -169,7 +169,7 @@ if $GLLoader; then
         Panic "Can't build OpenGL loader: GLAD not found at $GLADLocation."
     fi
     if ! command -v python > /dev/null; then
-        Panic "Can't build OpenGL loader: Python is not insalled or not in PATH."
+        Panic "Can't build OpenGL loader: Python is not installed or not in PATH."
     fi
     LogInfo "Building OpenGL loader..."
     cd "$GLADLocation"

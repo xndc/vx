@@ -196,5 +196,8 @@ endif()
 # Enable Xcode scheme file generation. We need this in order to set the working directory before starting Xcode.
 set(CMAKE_XCODE_GENERATE_SCHEME ON)
 
-# Set the working directory for debugging with VS (https://stackoverflow.com/questions/23950887/):
+# Set the working directory and startup project for Visual Studio:
+# * https://stackoverflow.com/questions/23950887/
+# * https://stackoverflow.com/questions/7304625/
 set_target_properties(Game PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/run")
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Game)

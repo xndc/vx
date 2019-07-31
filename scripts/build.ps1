@@ -18,66 +18,48 @@ param (
     [switch] $Verbose,
     # Clean the build directory before building.
     [switch] $Clean,
-    # Re-run CMake before building.
+    # Re-run CMake before building. Implied by -Clean.
     [switch] $CMake,
-    # Re-generate the OpenGL loader before building.
+    # Specifies the CMake generator to use. Ninja is the default. Use "MSBuild" to generate a
+    # project for the latest instaled version of Visual Studio.
+    [string] $Generator = "Ninja",
+    # Specifies the CPU architecture for which the program should be built.
+    [ValidateSet("Native", "x86", "x64", "arm")] [string] $Arch = "Native",
+    # Use Clang-CL instead of the Microsoft compiler.
+    [switch] $Clang,
+    # Force the LLVM toolchain to be downloaded and unpacked again.
+    [switch] $RedownloadLLVM,
+    # Re-generate the OpenGL loader before building. Implied by -Clean.
     [switch] $GLLoader,
     # Generate a release build, i.e. enable optimizations.
     [switch] $Release,
     # Omit debug information for release builds.
     [switch] $NoDebugInfo,
-    # Use MSBuild instead of the Ninja build system.
-    [switch] $MSBuild,
-    # Use Clang-CL instead of the Microsoft compiler.
-    [switch] $Clang,
     # Run the program after compilation.
     [switch] $Run,
     # Run the program under RenderDoc after compilation.
     [switch] $RenderDoc,
     # Run the program under WinDbg after compilation.
     [switch] $WinDbg,
-    # Generate an MSBuild project and open it in Visual Studio.
-    [switch] $VS,
-    # The architecture for which the program should be built.
-    [ValidateSet("Native", "x86", "x64", "arm")] [string] $Arch = "Native"
+    # Generate and open a Visual Studio project. Implies -Generator MSBuild.
+    [switch] $VS
 )
-
-# Process arguments:
-
-if ($Help) {
-    Get-Help $PSCommandPath -Detailed
-    Exit
-}
-if ($VS) {
-    $MSBuild = $TRUE
-}
 
 # Stop script if an error is encountered:
 $ErrorActionPreference = "Stop"
 
-# Configuration:
-$RepositoryRoot = (Resolve-Path "$PSScriptRoot/..").Path
-$BuildDir   = "build"   ; $BuildRoot   = "$RepositoryRoot/$BuildDir"
-$LibraryDir = "lib"     ; $LibraryRoot = "$RepositoryRoot/$LibraryDir"
-$SourceDir  = "src"     ; $SourceRoot  = "$RepositoryRoot/$SourceDir"
-$WorkingDir = "run"     ; $WorkingRoot = "$RepositoryRoot/$WorkingDir"
-$BinaryName  = "Game"
-$ProjectName = "Game"
-
-# Switch to repository root:
-pushd $RepositoryRoot
-
-# Log the build script's output to a file.
-# NOTE: External commands must be piped into Out-Host to show up in the log.
-$BuildLog     = "$BuildRoot/build.log"
-$BuildLastLog = "$BuildRoot/build.prev.log"
-if (Test-Path $BuildLog) {
-    Move -Force $BuildLog $BuildLastLog
+# Process arguments:
+if ($Help) {
+    Get-Help $PSCommandPath -Detailed
+    Exit
 }
-Start-Transcript $BuildLog | Out-Null
-
-## *************************************************************************************************
-## Helper functions:
+if ([bool]$Run + [bool]$VS + [bool]$RenderDoc + [bool]$WinDbg -gt 1) {
+    LogWarn("Options -Run, -VS, -RenderDoc and -WinDbg are mutually exclusive.")
+    Exit 1
+}
+if ($VS) {
+    $Generator = "MSBuild"
+}
 
 # Functions for logging a line of text.
 function LogInfo {
@@ -93,52 +75,11 @@ function LogError {
     Write-Host -ForegroundColor Red $msg
 }
 
-# Functions for timing.
-$_Timers = @{}
-function StartTimer {
-    param ([Parameter(Mandatory=$TRUE, Position=0)] $Name)
-    $Stopwatch = $_Timers[$Name]
-    if ($Stopwatch) {
-        $Stopwatch.Start()
-    } else {
-        $_Timers.Add($Name, [Diagnostics.Stopwatch]::StartNew())
-    }
-}
-function StopTimer {
-    param ([Parameter(Mandatory=$TRUE, Position=0)] $Name)
-    $Stopwatch = $_Timers[$Name]
-    if ($Stopwatch) {
-        $Stopwatch.Stop()
-    }
-}
-function GetTimerMs {
-    param ([Parameter(Mandatory=$TRUE, Position=0)] $Name)
-    $Stopwatch = $_Timers[$Name]
-    if ($Stopwatch) {
-        return [Math]::Round($Stopwatch.Elapsed.TotalMilliseconds)
-    } else {
-        return 0
-    }
-}
-
-# Performs pre-exit cleanup. Should be run before the script exits.
-function PreExitCleanup {
-    popd
-    Stop-Transcript | Out-Null
-}
-
 # Quits the script with exit code 1, performing any required cleanup.
 function Panic {
     param([Parameter(Position=0)] $msg = "")
     LogError $msg
-    Exit $1
-}
-
-# Asserts that a condition is true. Quite the script otherwise.
-function Assert {
-    param([Parameter(Position=0, Mandatory=$TRUE)] [bool] $cond,
-          [Parameter(Position=1)] [string] $msg = "Unknown assertion failed.")
-    if (-not $cond) { Panic $msg }
+    Exit 1
 }
 
 # Asserts that the last command exited correctly. Quits the script otherwise.
@@ -152,41 +93,43 @@ function CommandExists {
     return ((Get-Command $cmd -ErrorAction Ignore).length -ne 0)
 }
 
-# Returns the name of this machine's CPU architecture (x86 or x64).
-function GetHostArchitecture {
-    if ([System.Environment]::Is64BitOperatingSystem) { return "x64" }
-    else { return "x86" }
+# Functions for timing.
+[System.Collections.ArrayList] $TimerNames = @()
+$Timers = @{}
+function StartTimer {
+    param ([Parameter(Mandatory=$TRUE, Position=0)] $Name)
+    $Stopwatch = $Timers[$Name]
+    if ($Stopwatch) {
+        $Stopwatch.Start()
+    } else {
+        $TimerNames.Add($Name) | Out-Null
+        $Timers.Add($Name, [Diagnostics.Stopwatch]::StartNew())
+    }
+}
+function StopTimer {
+    param ([Parameter(Mandatory=$TRUE, Position=0)] $Name)
+    $Stopwatch = $Timers[$Name]
+    if ($Stopwatch) {
+        $Stopwatch.Stop()
+    }
+}
+function GetTimerMs {
+    param ([Parameter(Mandatory=$TRUE, Position=0)] $Name)
+    $Stopwatch = $Timers[$Name]
+    if ($Stopwatch) {
+        return [Math]::Round($Stopwatch.Elapsed.TotalMilliseconds)
+    } else {
+        return 0
+    }
 }
 
-# Returns the name of the host architecture that should be used for this build.
-function GetTargetArchitecture {
-    if ($Arch -eq "Native") { return GetHostArchitecture }
-    else { return $Arch }
-}
-
-## *************************************************************************************************
-## Function to locate and load the Visual Studio command line environment:
-
-function LoadVisualStudio {
-    param([Parameter(Position=0)] [string] $HostArch   = "Native",
-          [Parameter(Position=1)] [string] $TargetArch = "Native")
-    $HostArch = $HostArch.Replace("Native", (GetHostArchitecture))
-    $TargetArch = $TargetArch.Replace("Native", (GetTargetArchitecture))
-
-    if (FindVisualStudio2017 $HostArch $TargetArch) { return }
-
-    Panic "Failed to find any supported version of Visual Studio installed."
-}
-
-function FindVisualStudio2017 {
+function LoadVisualStudio2017 {
     param([Parameter(Mandatory=$TRUE, Position=0)] [string] $HostArch,
           [Parameter(Mandatory=$TRUE, Position=1)] [string] $TargetArch)
 
-    if (("${env:VisualStudioVersion}" -eq "15.0") -and
-        ("${env:VSCMD_ARG_HOST_ARCH}" -eq $HostArch) -and
+    if (("${env:VSCMD_ARG_HOST_ARCH}" -eq $HostArch) -and
         ("${env:VSCMD_ARG_TGT_ARCH}"  -eq $TargetArch)) {
-        LogInfo "Visual Studio 2017 is already loaded for host $HostArch and target $TargetArch."
-        return $TRUE
+        return
     }
 
     $VSDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\Community\Common7\Tools"
@@ -204,7 +147,7 @@ function FindVisualStudio2017 {
         LogWarn "         If you get this error, restart PowerShell and try again."
     }
     cmd.exe /c "`"$VSDir\VsDevCmd.bat`" -host_arch=$VDCHostArch -arch=$VDCTargetArch && set" |
-    foreach {
+    ForEach-Object {
         if ($_ -match "=") {
             $Var = $_.split("=")
             $VarName  = $Var[0]
@@ -214,321 +157,279 @@ function FindVisualStudio2017 {
     }
 
     # Sanity check:
-    if (("${env:VisualStudioVersion}" -eq "15.0") -and
-        ("${env:VSCMD_ARG_HOST_ARCH}" -eq $HostArch) -and
-        ("${env:VSCMD_ARG_TGT_ARCH}"  -eq $TargetArch)) {
-        return $TRUE
-    } else {
+    if (-not (
+        ("${env:VisualStudioVersion}" -eq "15.0")       -and
+        ("${env:VSCMD_ARG_HOST_ARCH}" -eq $HostArch)    -and
+        ("${env:VSCMD_ARG_TGT_ARCH}"  -eq $TargetArch)))
+    {
         Panic "VsDevCmd failed to load the correct environment."
     }
 }
 
-## *************************************************************************************************
-## Function to download and unpack the LLVM/Clang toolchain:
-
-function DownloadAndUnpackClang {
-    param([Parameter(Position=0)] [string] $HostArch = "Native")
-    $HostArch = $HostArch.Replace("Native", (GetHostArchitecture))
-    switch ($HostArch) {
-        "x86" { $Platform = "win32"; break }
-        "x64" { $Platform = "win64"; break }
-        default { Panic "Unknown host architecture $HostArch" }
-    }
+try {
+    StartTimer("Main")
 
     # Configuration:
-    $ClangVersion = "8.0.0"
-    $ClangInstaller = "LLVM-$ClangVersion-$Platform.exe"
-    $ClangDirectory = "LLVM-$ClangVersion-$Platform"
-    $ClangURL = "https://releases.llvm.org/$ClangVersion/$ClangInstaller"
+    $RepositoryRoot = (Resolve-Path "$PSScriptRoot/..").Path
+    $BuildDN   = "build"    ; $BuildRoot   = "$RepositoryRoot/$BuildDN"
+    $LibraryDN = "lib"      ; $LibraryRoot = "$RepositoryRoot/$LibraryDN"
+    $SourceDN  = "src"      ; $SourceRoot  = "$RepositoryRoot/$SourceDN"
+    $WorkingDN = "run"      ; $WorkingRoot = "$RepositoryRoot/$WorkingDN"
+    $ProjectName = "VX"     # CMake project name
+    $TargetName = "Game"    # CMake executable target name
 
-    $7ZPath = "$env:PROGRAMFILES\7-Zip\7z.exe"
-    if (CommandExists "7z") {
-        $7Z = (Get-Command "7z")[0].Path
-    } elseif (Test-Path $7ZPath) {
-        $7Z = $7ZPath
-    } else {
-        Panic "7-Zip is required to extract the LLVM/Clang toolchain."
+    # Switch to repository root:
+    Push-Location $RepositoryRoot
+
+    # Log the build script's output to a file.
+    # NOTE: External commands must be piped into Out-Host to show up in the log.
+    $BuildLog     = "$BuildRoot/build.log"
+    $BuildLastLog = "$BuildRoot/build.prev.log"
+    if (Test-Path $BuildLog) {
+        Move-Item -Force $BuildLog $BuildLastLog
     }
+    Start-Transcript $BuildLog | Out-Null
 
-    pushd $BuildRoot
-    if (-not (Test-Path $ClangDirectory)) {
-        # Download the installer:
-        if (-not (Test-Path $ClangInstaller)) {
-            StartTimer "DownloadClang"
-            LogInfo "Downloading LLVM/Clang installer from $ClangURL..."
-            # We use curl if available, since it's a lot faster than Invoke-WebRequest.
-            if (CommandExists "curl.exe") {
-                curl.exe -o $ClangInstaller $ClangURL
-                CheckExitCode
-            } else {
-                Invoke-WebRequest -OutFile $ClangInstaller $ClangURL
+    # Machine information:
+    $HostArch = "x86"
+    if ([System.Environment]::Is64BitOperatingSystem) { $HostArch = "x64" }
+
+    # Build information:
+    $TargetArch = $Arch.ToLower().Replace("native", $HostArch)
+    $BuildType = "Debug"
+    if ($Release) { $BuildType = "RelWithDebInfo" }
+    if ($Release -and $NoDebugInfo) { $BuildType = "Release" }
+
+    # Load Visual Studio:
+    StartTimer "Load Visual Studio environment"
+    LoadVisualStudio2017 $HostArch $TargetArch
+    StopTimer "Load Visual Studio environment"
+
+    # Get the correct generator names:
+    if ($Generator.ToLower() -eq "msbuild") {
+        switch ($env:VisualStudioVersion) {
+            "15.0" {
+                if ($TargetArch -eq "x64") { $Generator = "Visual Studio 15 2017 Win64" }
+                if ($TargetArch -eq "x86") { $Generator = "Visual Studio 15 2017" }
+                break
             }
-            StopTimer "DownloadClang"
-        }
-        # Unpack:
-        # NOTE: What happens if the download is incomplete?
-        StartTimer "UnpackClang"
-        LogInfo "Extracting LLVM/Clang toolchain into $BuildDir/$ClangDirectory..."
-        mkdir $ClangDirectory
-        pushd $ClangDirectory
-        7z x "$BuildRoot/$ClangInstaller" | Out-Host
-        popd
-        StopTimer "UnpackClang"
-    }
-    popd
-
-    return (Resolve-Path "$BuildRoot/$ClangDirectory")
-}
-
-## *************************************************************************************************
-## Helper functions for use with CMake:
-
-# Returns a generator name for the script's given command line arguments.
-function GetGeneratorName {
-    if ($MSBuild) { return "msbuild" }
-    else { return "ninja" }
-}
-
-# Returns the CMake build name corresponding to this script's command line arguments.
-function GetBuildType {
-    if ($Release) {
-        if ($NoDebugInfo) { return "Release" }
-        else { return "RelWithDebInfo" }
-    } else {
-        return "Debug"
-    }
-}
-
-# Returns the CMake generator name corresponding to the currently loaded Visual Studio environment.
-function GetVisualStudioGeneratorName {
-    switch ($env:VisualStudioVersion) {
-        "15.0" {
-            if ("${env:VSCMD_ARG_TGT_ARCH}" -eq "x64") { return "Visual Studio 15 2017 Win64" }
-            if ("${env:VSCMD_ARG_TGT_ARCH}" -eq "x86") { return "Visual Studio 15 2017" }
-            break
         }
     }
-    Panic "Visual Studio environment not loaded."
-}
-
-# Returns the correct (absolute) build directory for the script's given command line arguments.
-function GetBuildDirectory {
-    $BuildType = (GetBuildType).ToLower()
-    if ($Clang) { $Suffix = "-clang" }
-    else        { $Suffix = "" }
-    switch (GetGeneratorName) {
-        "msbuild" { return "$BuildRoot/windows-$(GetTargetArchitecture)-msbuild$Suffix" }
-        "ninja"   { return "$BuildRoot/windows-$(GetTargetArchitecture)-ninja-$BuildType$Suffix"}
-    }
-}
-
-# Determines whether or not CMake has to be run manually, using the following heuristics:
-# 1. Has the user passed -CMake to the script?
-# 2. Will we launch Visual Studio? (The project files should be up-to-date for that.)
-# 3. Does a valid makefile for the selected generator exist yet?
-# 4. Has the structure of the src directory changed since this function was last run?
-# Returns either an empty string or one containing the reason CMake should be run.
-function ShouldRunCMake? {
-    if ($CMake) {
-        return "script -CMake flag set"
-    }
-
-    if ($VS) {
-        return "launching Visual Studio"
-    }
-
-    switch (GetGeneratorName) {
-        "msbuild" {
-            if (-not (Test-Path "$(GetBuildDirectory)/ALL_BUILD.vcxproj")) {
-                return "project file ALL_BUILD.vcxproj not found"
-            }
-            break
-        }
-        "ninja" {
-            if (-not (Test-Path "$(GetBuildDirectory)/build.ninja")) {
-                return "makefile build.ninja not found"
-            }
-            break
+    $ShortGenerator = $Generator.ToLower().Replace("-", "").Replace(" ", "-")
+    if ($ShortGenerator.StartsWith("visual-studio")) {
+        switch ($env:VisualStudioVersion) {
+            "15.0" { $ShortGenerator = "msvc" }
         }
     }
 
-    $CurrentSourceTree = (tree /f /a "$SourceRoot" | out-string)
-    $LastSourceTree = (get-content -Raw "$BuildRoot/tree.txt" -ErrorAction Ignore)
-    if ($CurrentSourceTree -ne $LastSourceTree) {
-        set-content -NoNewline $CurrentSourceTree "$BuildRoot/tree.txt"
-        if (-not $ShouldRunCMake) {
-            return "source tree changed"
+    # Build directory:
+    $BuildDir = "$BuildRoot/win-$TargetArch-$ShortGenerator"
+    if ($Clang) { $BuildDir = "$BuildDir-clang" }
+    if ($ShortGenerator -ne "msvc") { $BuildDir = "$BuildDir-$($BuildType.ToLower())"}
+
+    # Build artifact paths:
+    $BinaryPath = "$BuildDir/$TargetName.exe"
+    if ($ShortGenerator -eq "msvc") { $BinaryPath = "$BuildDir/$BuildType/$TargetName.exe" }
+    $VsSolutionFile = "$BuildDir/$ProjectName.sln"
+
+    # Clean build directory:
+    function CleanDir {
+        param([Parameter(Mandatory=$TRUE, Position=0)] [string] $Dir)
+        if (Test-Path -PathType Container $Dir) {
+            LogInfo "Cleaning build directory: $Dir"
+            Remove-Item -Recurse -Force "$Dir"
         }
     }
-
-    return ""
-}
-
-## *************************************************************************************************
-## Function to display timing statistics:
-
-# NOTE: this should be the length of the longest description string used by ShowTimingStats
-$TimingMaxDescLength = 30
-$global:TotalTimeTracked = 0
-
-function ShowTimingStat {
-    param ([Parameter(Position=0, Mandatory=$TRUE)] [string] $TimerName,
-           [Parameter(Position=1, Mandatory=$TRUE)] [string] $Description)
-    $ms = GetTimerMs $TimerName
-    if ($ms -gt 0) {
-        Write-Host "* $($Description.PadRight($TimingMaxDescLength)) :: $ms ms"
-        $global:TotalTimeTracked += $ms
+    function CleanFile {
+        param([Parameter(Mandatory=$TRUE, Position=0)] [string] $File)
+        if (Test-Path -PathType Leaf $File) {
+            LogInfo "Cleaning build file: $File"
+            Remove-Item "$File"
+        }
     }
-}
-
-function ShowTimingStats {
-    switch (GetGeneratorName) {
-        "msbuild" { $Builder = "MSBuild"; break }
-        "ninja"   { $Builder = "Ninja";   break }
-        default   { $Builder = GetGeneratorName }
-    }
-    ShowTimingStat "CleanBuildDir"      "Clean build directory"
-    ShowTimingStat "LoadVisualStudio"   "Load Visual Studio environment"
-    ShowTimingStat "DownloadClang"      "Download LLVM/Clang installer"
-    ShowTimingStat "UnpackClang"        "Unpack LLVM/Clang toolchain"
-    ShowTimingStat "SourceTreeCompare"  "Check for source tree changes"
-    ShowTimingStat "CMake"              "Generate makefile (CMake)"
-    ShowTimingStat "GLAD"               "Generate OpenGL loader (GLAD)"
-    ShowTimingStat "Build"              "Build program ($Builder)"
-}
-
-## *************************************************************************************************
-## Main function for this script:
-
-function Main {
-    StartTimer "Main"
-
     if ($Clean) {
-        StartTimer "CleanBuildDir"
-        LogInfo "Cleaning build directory: $(GetBuildDirectory)..."
-        rm -ErrorAction Ignore -Recurse -Force "$(GetBuildDirectory)"
-        LogInfo "Cleaning build directory: $BuildRoot/include..."
-        rm -ErrorAction Ignore -Recurse -Force "$BuildRoot/include"
-        LogInfo "Cleaning other build files in $BuildRoot..."
-        rm -ErrorAction Ignore "$BuildRoot/tree.txt"
-        StopTimer "CleanBuildDir"
+        StartTimer "Clean build directory"
+        CleanDir "$BuildDir"
+        CleanDir "$BuildRoot/include"
+        CleanFile "$BuildRoot/tree.txt"
+        StopTimer "Clean build directory"
     }
 
+    # Determine whether or not CMake has to be run manually, using the following heuristics:
+    # 1. Has the user passed -CMake to the script?
+    # 2. Will we launch Visual Studio? (The project files should be up-to-date for that.)
+    # 3. Does a valid makefile for the selected generator exist yet?
+    # 4. Has the structure of the src directory changed since the last build?
+    # Returns either an empty string or one containing the reason CMake should be run.
+    if ($CMake) {
+        $CMakeReason = "script -CMake flag set"
+    } elseif ($VS) {
+        $CMake = $TRUE
+        $CMakeReason = "launching Visual Studio"
+    } elseif ($ShortGenerator -eq "msvc" -and -not (Test-Path "$VsSolutionFile")) {
+        $CMake = $TRUE
+        $CMakeReason = "solution $ProjectName.sln not found"
+    } elseif ($ShortGenerator -eq "ninja" -and -not (Test-Path "$BuildDir/build.ninja")) {
+        $CMake = $TRUE
+        $CMakeReason = "makefile build.ninja not found"
+    } else {
+        StartTimer "Check for source tree changes"
+        $LastTree = (Get-Content -Raw "$BuildRoot/tree.txt" -ErrorAction Ignore)
+        $ThisTree = (tree /f /a "$SourceRoot" | Out-String)
+        CheckExitCode
+        if ($ThisTree -ne $LastTree) {
+            Set-Content -NoNewline $ThisTree "$BuildRoot/tree.txt"
+            $CMake = $TRUE
+            $CMakeReason = "source tree changed"
+        }
+        StopTimer "Check for source tree changes"
+    }
+
+    # Make directories:
     mkdir -Force "$BuildRoot"           | Out-Null
     mkdir -Force "$BuildRoot/include"   | Out-Null
-    mkdir -Force "$(GetBuildDirectory)" | Out-Null
+    mkdir -Force "$BuildDir"            | Out-Null
 
-    StartTimer "LoadVisualStudio"
-    LoadVisualStudio
-    StopTimer "LoadVisualStudio"
-
+    # Download and unpack LLVM/Clang if requested:
     if ($Clang) {
-        $ClangDirectory = DownloadAndUnpackClang
-    }
+        $LLVMVersion = "8.0.0"
+        $LLVMPlatform = $HostArch.Replace("x86", "win32").Replace("x64", "win64")
+        $LLVMPackageName = "LLVM-$LLVMVersion-$LLVMPlatform"
+        $LLVMDownloadURL = "https://releases.llvm.org/$LLVMVersion/$LLVMPackageName.exe"
+        $LLVMDirectory = "$BuildRoot/$LLVMPackageName"
+        $LLVMInstaller = "$BuildRoot/$LLVMPackageName.exe"
 
-    $Reason = ShouldRunCMake?
-    if ($Reason) {
-        StartTimer "CMake"
-        pushd (GetBuildDirectory)
-        switch (GetGeneratorName) {
-            "ninja" {
-                if ($Clang) {
-                    LogInfo "Running CMake ($Reason) with generator Ninja and compiler Clang..."
-                    cmake $RepositoryRoot -G Ninja `
-                        -DCMAKE_BUILD_TYPE="$(GetBuildType)" `
-                        -DCMAKE_C_COMPILER:PATH="$ClangDirectory/bin/clang-cl.exe" `
-                        -DCMAKE_CXX_COMPILER:PATH="$ClangDirectory/bin/clang-cl.exe" `
-                        -DCMAKE_LINKER:PATH="$ClangDirectory/bin/lld-link.exe" `
-                    | Out-Host
-                    CheckExitCode
-                } else {
-                    LogInfo "Running CMake ($Reason) with generator Ninja and compiler MSVC..."
-                    cmake $RepositoryRoot -G Ninja -DCMAKE_BUILD_TYPE="$(GetBuildType)" | Out-Host
-                    CheckExitCode
-                }
-                break
-            }
-            "msbuild" {
-                $Generator = GetVisualStudioGeneratorName
-                LogInfo "Running CMake ($Reason) with generator `"$Generator`"..."
-                cmake $RepositoryRoot -G $Generator | Out-Host
+        $7z = (Get-Command "7z" -ErrorAction Ignore).Path
+        if (-not $7z) { $7z = Resolve-Path "$env:PROGRAMFILES\7-Zip\7z.exe" -ErrorAction Ignore }
+        if (-not $7z) { Panic "7-Zip is required to extract the LLVM toolchain." }
+
+        if ($RedownloadLLVM -or -not ((Test-Path $LLVMDirectory) -or (Test-Path $LLVMInstaller))) {
+            StartTimer "LLVM download"
+            Set-Location "$BuildRoot"
+            LogInfo "Downloading LLVM installer from $LLVMDownloadURL..."
+            # NOTE: curl is quite a bit faster.
+            # FIXME: if the URL is wrong this will just download a 404 page without complaining.
+            if (CommandExists "curl.exe") {
+                curl.exe -o $LLVMInstaller $LLVMDownloadURL
                 CheckExitCode
-                break
             }
+            else {
+                Invoke-WebRequest -OutFile $LLVMInstaller $LLVMDownloadURL
+            }
+            StopTimer "LLVM download"
         }
-        popd
-        StopTimer "CMake"
+
+        if ($RedownloadLLVM -or -not (Test-Path $LLVMDirectory)) {
+            StartTimer "LLVM unpack"
+            mkdir "$LLVMDirectory" | Out-Null
+            Set-Location "$LLVMDirectory"
+            & $7z x "$LLVMInstaller" | Out-Host
+            CheckExitCode
+            StopTimer "LLVM unpack"
+        }
     }
 
+    # Run CMake:
+    if ($CMake) {
+        StartTimer "Generate build files with CMake"
+        Set-Location "$BuildDir"
+        if ($Clang) {
+            LogInfo "Running CMake ($CMakeReason) with generator `"$Generator`" for Clang..."
+            cmake "$RepositoryRoot" -G "$Generator" -DCMAKE_BUILD_TYPE="$BuildType" `
+                -DCMAKE_C_COMPILER:PATH="$LLVMDirectory/bin/clang-cl.exe" `
+                -DCMAKE_CXX_COMPILER:PATH="$LLVMDirectory/bin/clang-cl.exe" `
+                -DCMAKE_LINKER:PATH="$LLVMDirectory/bin/lld-link.exe" `
+            CheckExitCode
+        } else {
+            LogInfo "Running CMake ($CMakeReason) with generator `"$Generator`"..."
+            cmake "$RepositoryRoot" -G "$Generator" -DCMAKE_BUILD_TYPE="$BuildType"
+            CheckExitCode
+        }
+        StopTimer "Generate build files with CMake"
+    }
+
+    # Build OpenGL loader:
     $GLLoaderPath = "$BuildRoot/include/glad"
     $GLADLocation = "$LibraryRoot/glad"
     if ($GLLoader -or -not (Test-Path $GLLoaderPath)) {
-        StartTimer "GLAD"
-        Assert (Test-Path "$GLADLocation/glad/__init__.py") `
-            "Can't build OpenGL loader: GLAD not found at $GLADLocation."
-        Assert (CommandExists "python") `
-            "Can't build OpenGL loader: Python is not installed or not in PATH."
+        StartTimer "Generate OpenGL loader with GLAD"
+        if (-not (Test-Path "$GLADLocation/glad/__init__.py")) {
+            Panic "Can't build OpenGL loader: GLAD not found at $GLADLocation."
+        }
+        if (-not (CommandExists "python")) {
+            Panic "Can't build OpenGL loader: Python is not installed or not in PATH."
+        }
         LogInfo "Building OpenGL loader..."
-        pushd $GLADLocation
-        python -m glad --out-path $GLLoaderPath --generator c-debug --local-files --api "gl=4.1" `
+        Set-Location "$GLADLocation"
+        python -m glad --out-path "$GLLoaderPath" --generator c-debug --local-files --api "gl=4.1" `
             --profile core --reproducible | Out-Host
         CheckExitCode
-        popd
-        StopTimer "GLAD"
+        StopTimer "Generate OpenGL loader with GLAD"
     }
 
+    # Run build tool:
     if (-not $VS) {
-        StartTimer "Build"
-        pushd $(GetBuildDirectory)
-        switch (GetGeneratorName) {
-            "msbuild" {
-                LogInfo "Running MSBuild for configuration $(GetBuildType)..."
-                msbuild -nologo ALL_BUILD.vcxproj -p:Configuration=$(GetBuildType) | Out-Host
+        Set-Location $BuildDir
+        switch ($ShortGenerator) {
+            "msvc" {
+                StartTimer "Build with MSBuild"
+                LogInfo "Running MSBuild for configuration $BuildType..."
+                msbuild -nologo ALL_BUILD.vcxproj -p:Configuration=$BuildType | Out-Host
                 CheckExitCode
-                break
+                StopTimer "Build with MSBuild"
             }
             "ninja" {
-                LogInfo "Running Ninja for configuration $(GetBuildType)..."
+                StartTimer "Build with Ninja"
+                LogInfo "Running Ninja for configuration $BuildType..."
                 if ($Verbose) { ninja -v | Out-Host }
-                else { ninja | Out-Host }
-                CheckExitCode
-                break
+                else          { ninja    | Out-Host }
+                StopTimer "Build with Ninja"
             }
         }
-        StopTimer "Build"
     }
 
-    switch (GetGeneratorName) {
-        "ninja"   { $BinaryPath = "$(GetBuildDirectory)/$BinaryName.exe"; break }
-        "msbuild" { $BinaryPath = "$(GetBuildDirectory)/$(GetBuildType)/$BinaryName.exe"; break }
-    }
-
+    # Write out performance info:
     StopTimer "Main"
-    $MainMs = GetTimerMs Main
     LogInfo "Build script timing information:"
-    ShowTimingStats
-    Write-Host "Total: $MainMs ms ($($MainMs - $global:TotalTimeTracked) ms untracked)"
+    $TimerNameMaxLen = 0
+    $TotalTimeTracked = 0
+    $TimerNames.ForEach({
+        if ($_.Length -gt $TimerNameMaxLen) { $TimerNameMaxLen = $_.Length }
+    })
+    $TimerNames.ForEach({
+        if ($_ -ne "Main") {
+            $Ms = GetTimerMs $_
+            if ($Ms -gt 0) {
+                Write-Host "* $($_.PadRight($TimerNameMaxLen)) :: $Ms ms"
+                $TotalTimeTracked += $Ms
+            }
+        }
+    })
+    $Main = GetTimerMs "Main"
+    LogInfo "Total: $Main ms ($($Main - $TotalTimeTracked) ms untracked)"
 
+    # Run game:
     if ($Run) {
-        cd "$WorkingRoot"
+        Set-Location "$WorkingRoot"
         LogInfo "Set working directory to $PWD."
         LogInfo "Running $BinaryPath..."
         & $BinaryPath
         LogInfo "Program exited with return code $LASTEXITCODE."
     }
 
-    elseif ($VS) {
-        $ProjectPath = "$(GetBuildDirectory)/$ProjectName.vcxproj"
-        LogInfo "Launching Visual Studio for $ProjectPath..."
-        & devenv.exe $ProjectPath
+    # Launch Visual Studio:
+    if ($VS) {
+        LogInfo "Launching Visual Studio for $VsSolutionFile..."
+        & devenv.exe $VsSolutionFile
     }
 
-    elseif ($RenderDoc) {
-        # Find RenderDoc:
-        $RenderDoc1 = "${env:PROGRAMFILES}/RenderDoc/qrenderdoc.exe"
-        if (CommandExists qrenderdoc)   { $RenderDocPath = (Get-Command qrenderdoc)[0].Path }
-        elseif (Test-Path $RenderDoc1) { $RenderDocPath = $RenderDoc1 }
-        else { Panic "Can't find RenderDoc." }
+    # Launch RenderDoc:
+    if ($RenderDoc) {
+        $Rd = (Get-Command "qrenderdoc" -ErrorAction Ignore).Path
+        if (-not $Rd) {
+            $Rd = Resolve-Path "$env:PROGRAMFILES\RenderDoc\qrenderdoc.exe" -ErrorAction Ignore
+        }
+        if (-not $Rd) { Panic "RenderDoc is not installed or not in your PATH." }
         # Generate cap file:
         $CapFile = "$BuildRoot/renderdoc.cap"
         $Template = Get-Content -Raw "$PSScriptRoot/renderdoc.cap"
@@ -537,23 +438,32 @@ function Main {
         Set-Content -NoNewline $Template $CapFile
         # Launch:
         LogInfo "Launching RenderDoc ($RenderDocPath)..."
-        & $RenderDocPath $CapFile
+        & $Rd $CapFile
     }
 
-    elseif ($WinDbg) {
-        cd "$WorkingRoot"
+    # Launch WinDbg:
+    if ($WinDbg) {
+        $Wd = (Get-Command "windbg" -ErrorAction Ignore).Path
+        if (-not $Wd -and ($HostArch -eq "x64")) {
+            $Wd = Resolve-Path "${env:PROGRAMFILES(X86)}/Windows Kits/10/Debuggers/x64/windbg.exe" `
+                -ErrorAction Ignore
+        }
+        if (-not $Wd -and ($HostArch -eq "x86")) {
+            $Wd = Resolve-Path "${env:PROGRAMFILES(X86)}/Windows Kits/10/Debuggers/x86/windbg.exe"`
+                -ErrorAction Ignore
+        }
+        if (-not $Wd -and ($HostArch -eq "x86")) {
+            $Wd = Resolve-Path "${env:PROGRAMFILES}/Windows Kits/10/Debuggers/x86/windbg.exe"`
+                -ErrorAction Ignore
+        }
+        if (-not $Wd) { Panic "WinDbg is not installed or not in your PATH." }
+        Set-Location "$WorkingRoot"
         LogInfo "Set working directory to $PWD."
-        LogInfo "Launching WinDbg..."
-        # Find WinDbg:
-        $WinDbg1 = "${env:PROGRAMFILES(X86)}/Windows Kits/10/Debuggers/x64/WinDbg.exe"
-        if (CommandExists windbg)   { $WinDbgPath = (Get-Command windbg)[0].Path }
-        elseif (Test-Path $WinDbg1) { $WinDbgPath = $WinDbg1 }
-        else { Panic "Can't find WinDbg." }
-        # Launch:
-        & $WinDbgPath $BinaryPath
+        LogInfo "Launching WinDbg for $BinaryPath..."
+        & $Wd $BinaryPath
     }
-}
 
-# Run the Main function:
-try { Main }
-finally { PreExitCleanup }
+} finally {
+    Pop-Location
+    Stop-Transcript -ErrorAction Ignore | Out-Null
+}
