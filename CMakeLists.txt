@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project(VX)
 
 # Require builds to be out-of-tree (CMake is not designed for in-tree builds).
@@ -166,7 +166,7 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
         "${LINK_FLAGS_RELWITHDEBINFO} /ENTRY:mainCRTStartup /SUBSYSTEM:console")
 
 # Clang on Linux/Mac, GCC and probably other compilers
-else()
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Common flags:
     # * Wall    more warnings
     target_compile_options(Game PRIVATE -Wall)
@@ -179,6 +179,15 @@ else()
         -Wno-unused-parameter       # unreferenced function parameters
         -Wno-gnu-anonymous-struct   # useful well-supported extension
         -Wno-nested-anon-types)     # useful well-supported extension
+    # Enable optimization only in release mode:
+    target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:-Og>)
+    target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>)
+
+# Fallback configuration for GCC and other GCC-like compilers
+else()
+    # Common flags:
+    # * Wall    more warnings
+    target_compile_options(Game PRIVATE -Wall)
     # Enable optimization only in release mode:
     target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:-Og>)
     target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>)

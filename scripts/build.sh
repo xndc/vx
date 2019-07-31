@@ -2,7 +2,7 @@
 set -euo pipefail
 
 Usage() {
-    echo "Unix (Linux/macOS) build script for the VX Engine codebase."
+    echo "Linux and macOS build script for the VX Engine codebase."
     echo "Syntax: $0 [options]"
     echo ""
     echo "  -h, -?, --help  Show this message."
@@ -133,7 +133,7 @@ GetCMakeReason() {
                 return
             fi ;;
     esac
-    ls $SourceRoot/** > "$BuildRoot/tree.lst.new"
+    ls "$SourceRoot/" ** > "$BuildRoot/tree.lst.new"
     if ! [ -f "$BuildRoot/tree.lst" ] ||
          [ -n "$(diff -q "$BuildRoot/tree.lst" "$BuildRoot/tree.lst.new")" ]; then
         mv -f "$BuildRoot/tree.lst.new" "$BuildRoot/tree.lst"
@@ -201,7 +201,7 @@ if $Run; then
         LogInfo "Set working directory to $PWD."
         LogInfo "Running $BinaryPath..."
         set +e
-        $BinaryPath
+        "$BinaryPath"
         set -e
         LogInfo "Program exited with return code $?."
     fi

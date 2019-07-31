@@ -226,12 +226,6 @@ function FindVisualStudio2017 {
 ## *************************************************************************************************
 ## Function to download and unpack the LLVM/Clang toolchain:
 
-# Configuration:
-$ClangVersion = "8.0.0"
-$ClangInstaller = "LLVM-$ClangVersion-$Platform.exe"
-$ClangDirectory = "LLVM-$ClangVersion-$Platform"
-$ClangURL = "https://releases.llvm.org/$ClangVersion/$ClangInstaller"
-
 function DownloadAndUnpackClang {
     param([Parameter(Position=0)] [string] $HostArch = "Native")
     $HostArch = $HostArch.Replace("Native", (GetHostArchitecture))
@@ -240,6 +234,12 @@ function DownloadAndUnpackClang {
         "x64" { $Platform = "win64"; break }
         default { Panic "Unknown host architecture $HostArch" }
     }
+
+    # Configuration:
+    $ClangVersion = "8.0.0"
+    $ClangInstaller = "LLVM-$ClangVersion-$Platform.exe"
+    $ClangDirectory = "LLVM-$ClangVersion-$Platform"
+    $ClangURL = "https://releases.llvm.org/$ClangVersion/$ClangInstaller"
 
     $7ZPath = "$env:PROGRAMFILES\7-Zip\7z.exe"
     if (CommandExists "7z") {
@@ -423,7 +423,7 @@ function Main {
     StopTimer "LoadVisualStudio"
 
     if ($Clang) {
-        DownloadAndUnpackClang
+        $ClangDirectory = DownloadAndUnpackClang
     }
 
     $Reason = ShouldRunCMake?

@@ -7,8 +7,8 @@ extern "C" {
 #include <examples/imgui_impl_opengl3.h>
 #include <examples/imgui_impl_glfw.h>
 
-extern "C" bool UI_ShowDebugOverlay = false;
-extern "C" int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
+bool UI_ShowDebugOverlay = false;
+int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
 
 extern "C" void InitGUI (GLFWwindow* window) {
     IMGUI_CHECKVERSION();

@@ -216,7 +216,7 @@ static inline void* SystemAlloc (size_t size, size_t alignment) {
         posix_memalign(&p, alignment, size);
         return p;
     #else
-        return aligned_alloc(size);
+        return aligned_alloc(alignment, size);
     #endif
 }
 static inline size_t SystemMemSize (void* block, size_t alignment) {

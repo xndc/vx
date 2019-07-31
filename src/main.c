@@ -33,8 +33,6 @@ GLenum vxglCheckFramebufferStatus (GLuint framebuffer) {
                 VXPANIC("Framebuffer error for %d: unknown code 0x%x", framebuffer, status);
         };
     }
-    GL_INVALID_ENUM;
-    GL_INVALID_VALUE;
     return status;
 }
 
