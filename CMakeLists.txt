@@ -142,6 +142,7 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     # Suppressed warnings:
     target_compile_options(Game PRIVATE
         -Wno-nonportable-system-include-path    # trips on lots of Windows.h includes
+        -Wno-nonportable-include-path           # pointless, trips on a few things
         -Wno-documentation          # trips on most documentation comments in GLFW3.h
         -Wno-reserved-id-macro      # macro names starting with _
         -Wno-writable-strings       # passing const char* to char* arguments [1]
@@ -183,7 +184,7 @@ else()
     target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>)
 endif()
 
-# Enable Xcode scheme file generation. We need this in order to set the build directory before starting Xcode.
+# Enable Xcode scheme file generation. We need this in order to set the working directory before starting Xcode.
 set(CMAKE_XCODE_GENERATE_SCHEME ON)
 
 # Set the working directory for debugging with VS (https://stackoverflow.com/questions/23950887/):

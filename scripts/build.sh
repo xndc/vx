@@ -3,30 +3,21 @@ set -euo pipefail
 
 Usage() {
     echo "Unix (Linux/macOS) build script for the VX Engine codebase."
-    echo ""
     echo "Syntax: $0 [options]"
     echo ""
-    echo "Options:"
-    echo "  -h, -?, --help, -Help"
-    echo "    Show this message"
-    echo "  -v, --verbose, -Verbose"
-    echo "    Print build command lines and other verbose log data."
-    echo "  -c, --clean, -Clean"
-    echo "    Clean the build directory before building."
-    echo "  --cmake, -CMake"
-    echo "    Re-run CMake before building. Implied by -c."
-    echo "  -g, --generator, -Generator [name]"
-    echo "    Specify the CMake generator to use. Ninja is the default, if available."
-    echo "  --gl-loader, -GLLoader"
-    echo "    Re-generate the OpenGL loader before building. Implied by -c."
-    echo "  --release, -Release"
-    echo "    Generate a release build, i.e. enable optimizations."
-    echo "  --no-debug-info, -NoDebugInfo"
-    echo "    Omit debug information for release builds."
-    echo "  -r, --run, -Run"
-    echo "    Run the program after compilation."
-    echo "  --xcode, -Xcode"
-    echo "    Generate and open an Xcode project. Implies -g Xcode."
+    echo "  -h, -?, --help  Show this message."
+    echo "  -v, -Verbose    Print build command lines and other verbose log data."
+    echo "  -c, -Clean      Clean the build directory before building."
+    echo "  -CMake          Re-run CMake before building. Implied by -c."
+    echo "  -GLLoader       Re-generate the OpenGL loader before building. Implied by -c."
+    echo "  -Release        Generate a release build, i.e. enable optimizations."
+    echo "  -NoDebugInfo    Omit debug information for release builds."
+    echo "  -r, -Run        Run the program after compilation."
+    echo "  -Xcode          Generate and open an Xcode project. Implies -g Xcode."
+    echo "  -g, -Generator [Ninja|\"Unix Makefiles\"|...]"
+    echo "    Specifies the CMake generator to use. Ninja is the default, if available."
+    echo ""
+    echo "All options are case-insensitive, and --option can be used instead of -option."
 }
 
 Verbose=false
@@ -41,16 +32,17 @@ Generator="Ninja"
 
 set +u
 while :; do
-    case $1 in
-        -h | -\? | --help | -Help       ) Usage; exit   ;;
-        -v | --verbose    | -Verbose    ) Verbose=true  ;;
-        -c | --clean      | -Clean      ) Clean=true    ;;
-        --cmake           | -CMake      ) CMake=true    ;;
-        --gl-loader       | -GLLoader   ) GLLoader=true ;;
-        --release         | -Release    ) Release=true  ;;
-        -r | --run        | -Run        ) Run=true      ;;
-        --xcode           | -XCode      ) Generator="Xcode"; Run=false; Xcode=true ;;
-        -g | --generator  | -Generator  ) Generator=$2; shift ;;
+    arg="$(echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/-//g')"
+    case $arg in
+        h | \? | help   ) Usage; exit   ;;
+        v | verbose     ) Verbose=true  ;;
+        c | clean       ) Clean=true    ;;
+        cmake           ) CMake=true    ;;
+        glloader        ) GLLoader=true ;;
+        release         ) Release=true  ;;
+        r | run         ) Run=true      ;;
+        xcode           ) Generator="Xcode"; Run=false; Xcode=true ;;
+        g | generator   ) Generator=$2; shift ;;
         *) break ;; # end of options
     esac
     shift
@@ -194,7 +186,7 @@ case $Generator in
         ;;
     "Unix Makefiles")
         LogInfo "Running Make for configuration $BuildType..."
-        make
+        make -j "$(getconf _NPROCESSORS_ONLN)"
         ;;
     *)
         Run=false
