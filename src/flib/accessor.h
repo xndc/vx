@@ -59,7 +59,7 @@ typedef enum {
     FACCESSOR_FLOAT32_MAT4,
 } FAccessorType;
 
-static inline size_t FAccessorComponentCount (FAccessorType t) {
+static inline uint8_t FAccessorComponentCount (FAccessorType t) {
     if (t >= FACCESSOR_UINT8      && t <= FACCESSOR_FLOAT32)      { return 1; }
     if (t >= FACCESSOR_UINT8_VEC2 && t <= FACCESSOR_FLOAT32_VEC2) { return 2; }
     if (t >= FACCESSOR_UINT8_VEC3 && t <= FACCESSOR_FLOAT32_VEC3) { return 3; }
@@ -70,7 +70,7 @@ static inline size_t FAccessorComponentCount (FAccessorType t) {
     VXPANIC("FAccessor type %d is invalid", t);
 }
 
-static inline size_t FAccessorComponentSize (FAccessorType t) {
+static inline uint8_t FAccessorComponentSize (FAccessorType t) {
     switch (t % FACCESSOR_UINT8_VEC2) {
         case FACCESSOR_UINT8:
         case FACCESSOR_SINT8:
@@ -86,7 +86,7 @@ static inline size_t FAccessorComponentSize (FAccessorType t) {
     VXPANIC("FAccessor type %d is invalid", t);
 }
 
-static inline size_t FAccessorStride (FAccessorType t) {
+static inline uint8_t FAccessorStride (FAccessorType t) {
     return FAccessorComponentCount(t) * FAccessorComponentSize(t);
 }
 
@@ -120,23 +120,31 @@ typedef struct {
     char* buffer;
     size_t offset;
     size_t count;
-    size_t stride;
-    size_t component_count;
-    size_t component_size;
-    GLuint gl_object;
+    uint8_t stride;
+    uint8_t component_count;
+    uint8_t component_size;
     bool gl_needs_upload;
+    GLuint gl_object;
 } FAccessor;
 
 // Reads a file into memory or returns a previously read version of it.
-char* FBufferFromFile (const char* filename);
+char* FBufferFromFile (const char* filename, size_t* out_size);
+
+// Initializes an accessor, given an in-memory buffer.
+void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset,
+    size_t count, uint8_t stride);
+
+// Initializes an accessor, given a filename.
+void FAccessorInitFile (FAccessor* acc, FAccessorType t, const char* filename, size_t offset,
+    size_t count, uint8_t stride);
 
 // Creates or retrieves a previously created FAccessor, given an in-memory buffer.
 FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
-    size_t count, size_t stride);
+    size_t count, uint8_t stride);
 
 // Creates or retrieves a previously created FAccessor, given a filename.
 FAccessor* FAccessorFromFile (FAccessorType t, const char* filename, size_t offset,
-    size_t count, size_t stride);
+    size_t count, uint8_t stride);
 
 // Retrieves a pointer to the data the accessor is actually pointing to.
 static inline char* FAccessorData (FAccessor* a) {

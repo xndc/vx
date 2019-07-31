@@ -13,3 +13,6 @@
 [submodule "lib/imgui"]
 	path = lib/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "lib/etc/parson"]
+	path = lib/etc/parson
+	url = https://github.com/kgabis/parson

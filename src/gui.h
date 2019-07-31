@@ -1,5 +1,4 @@
 #pragma once
-#include <common.h>
 
 typedef struct GLFWwindow GLFWwindow;
 

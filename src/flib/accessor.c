@@ -1,15 +1,13 @@
 #include "accessor.h"
-#include <stb/stb_ds.h>
 
-// shgeti returns 0 instead of -1: https://github.com/nothings/stb/pull/781
-#undef stbds_shgeti
-#define stbds_shgeti(t,k) \
-    ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
-    stbds_temp(t-1))
+typedef struct {
+    char* mem;
+    size_t size;
+} BufferCacheValue;
 
 typedef struct {
     char* key;
-    char* value;
+    BufferCacheValue value;
 } BufferCacheEntry;
 
 typedef struct {
@@ -28,32 +26,52 @@ static void InitCaches() {
     }
 }
 
-char* FBufferFromFile (const char* filename) {
+char* FBufferFromFile (const char* filename, size_t* out_size) {
     char* buffer;
     InitCaches();
     ptrdiff_t i = shgeti(S_BufferCache, filename);
+    size_t size;
     if (i >= 0) {
-        buffer = S_BufferCache[i].value;
+        buffer = S_BufferCache[i].value.mem;
+        size   = S_BufferCache[i].value.size;
     } else {
-        buffer = vxReadFile(filename, false, NULL);
-        shput(S_BufferCache, filename, buffer);
+        buffer = vxReadFile(filename, false, &size);
+        VXCHECK(buffer != NULL);
+        BufferCacheValue v = {buffer, size};
+        shput(S_BufferCache, filename, v);
+    }
+    if (out_size) {
+        *out_size = size;
     }
     return buffer;
 }
 
+void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset,
+    size_t count, uint8_t stride)
+{
+    acc->buffer = buffer;
+    acc->offset = offset;
+    acc->count = count;
+    acc->stride = stride ? stride : FAccessorStride(t);
+    acc->component_count = FAccessorComponentCount(t);
+    acc->component_size  = FAccessorComponentSize(t);
+    acc->gl_object = 0;
+    acc->gl_needs_upload = false;
+}
+
+void FAccessorInitFile (FAccessor* acc, FAccessorType t, const char* filename, size_t offset,
+    size_t count, uint8_t stride)
+{
+    char* buffer = FBufferFromFile(filename, NULL);
+    FAccessorInit(acc, t, buffer, offset, count, stride);
+}
+
 FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
-    size_t count, size_t stride)
+    size_t count, uint8_t stride)
 {
     FAccessor* cached;
     FAccessor acc;
-    acc.buffer = buffer;
-    acc.offset = offset;
-    acc.count = count;
-    acc.stride = stride ? stride : FAccessorStride(t);
-    acc.component_count = FAccessorComponentCount(t);
-    acc.component_size  = FAccessorComponentSize(t);
-    acc.gl_object = 0;
-    acc.gl_needs_upload = false;
+    FAccessorInit(&acc, t, buffer, offset, count, stride);
     ptrdiff_t i = hmgeti(S_AccessorCache, acc);
     if (i >= 0) {
         cached = S_AccessorCache[i].value;
@@ -66,8 +84,8 @@ FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
 }
 
 FAccessor* FAccessorFromFile (FAccessorType t, const char* filename, size_t offset,
-    size_t count, size_t stride)
+    size_t count, uint8_t stride)
 {
-    char* buffer = FBufferFromFile(filename);
+    char* buffer = FBufferFromFile(filename, NULL);
     return FAccessorFromMemory(t, buffer, offset, count, stride);
 }

@@ -12,6 +12,8 @@
 #include <stb/stb_sprintf.h>
 #define STB_DS_IMPLEMENTATION
 #include <stb/stb_ds.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
@@ -150,6 +152,7 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
         file = fopen(filename, "rb");
     }
     if (!file) {
+        VXWARN("Failed to read file %s (%s)", filename, strerror(errno));
         return NULL;
     }
     fseek(file, 0L, SEEK_END);
@@ -159,50 +162,6 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
     vxReadFileEx(size, buffer, out_read_bytes, file);
     return buffer;
 }
-
-#if 0
-void* vxGenAllocEx (size_t count, size_t itemsize, size_t alignment, const char* file,
-    int line, const char* func)
-{
-    if (count == 0 || itemsize == 0) {
-        return NULL;
-    } else {
-        // Most systems want the alignment to be a power of 2 and a multiple of sizeof(void*).
-        // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-        size_t real_alignment = alignment;
-        while (real_alignment % sizeof(void*) != 0) {
-            real_alignment *= 2;
-        }
-        real_alignment--;
-        real_alignment |= real_alignment >> 1;
-        real_alignment |= real_alignment >> 2;
-        real_alignment |= real_alignment >> 4;
-        real_alignment |= real_alignment >> 8;
-        real_alignment |= real_alignment >> 16;
-        real_alignment++;
-        vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
-            "Allocating %jd items of size %jd with alignment %jd (real: %jd)",
-            count, itemsize, alignment, real_alignment);
-        #ifdef _MSC_VER
-            void* mem = _aligned_malloc(count * itemsize, real_alignment);
-        #else
-            void* mem = aligned_alloc(real_alignment, count * itemsize);
-        #endif
-        return mem;
-    }
-}
-
-void vxGenFreeEx (void* mem, const char* file, int line, const char* func) {
-    if (mem != NULL) {
-        #ifdef _MSC_VER
-            _aligned_free(mem);
-        #else
-            free(mem);
-        #endif
-        vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func, "Freed block 0x%jx", mem);
-    }
-}
-#endif
 
 // Disables usage of _aligned_realloc on Windows, to test the generic alternative.
 // #define VX_GEN_ALLOC_DISABLE_REALLOC

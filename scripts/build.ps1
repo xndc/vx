@@ -383,6 +383,7 @@ try {
                 LogInfo "Running Ninja for configuration $BuildType..."
                 if ($Verbose) { ninja -v | Out-Host }
                 else          { ninja    | Out-Host }
+                CheckExitCode
                 StopTimer "Build with Ninja"
             }
         }

@@ -1,7 +1,8 @@
 #include "common.h"
 #include "gui.h"
-#include "renderer/program.h"
 #include "flib/accessor.h"
+#include "renderer/program.h"
+#include "renderer/texture.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -182,6 +183,12 @@ int main() {
     DBG(acc1);
     DBG(acc2);
     DBG(acc3);
+
+    Texture* tex = TextureFromFile("textures/ground0/albedo.jpg", false);
+    Sampler smp1 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
+    Sampler smp2 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
+    Sampler smp3 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
+    Sampler smp4 = GetColorSampler(GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR, GL_REPEAT);
 
     int last_screen_w = 0;
     int last_screen_h = 0;

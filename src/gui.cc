@@ -1,3 +1,4 @@
+#include <common.h>
 extern "C" {
     #include "./gui.h"
 }

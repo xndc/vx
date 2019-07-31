@@ -9,6 +9,13 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include <stb/stb_ds.h>
+// shgeti returns 0 instead of -1: https://github.com/nothings/stb/pull/781
+#undef stbds_shgeti
+#define stbds_shgeti(t,k) \
+    ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
+    stbds_temp(t-1))
+
 #define VX_KiB 1024
 #define VX_MiB 1048576
 #define VX_GiB 1073741824
