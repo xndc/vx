@@ -65,6 +65,8 @@ BuildDN="build";    BuildRoot="$RepositoryRoot/$BuildDN"
 SourceDN="src";     SourceRoot="$RepositoryRoot/$SourceDN"
 LibraryDN="lib";    LibraryRoot="$RepositoryRoot/$LibraryDN"
 WorkingDN="run";    WorkingRoot="$RepositoryRoot/$WorkingDN"
+ProjectName="VX"    # CMake project name
+TargetName="Game"   # CMake executable target name
 
 # Functions for logging a line of text.
 SGR_RESET="\033[0m"
@@ -85,15 +87,16 @@ if $Release; then BuildType="RelWithDebInfo"; fi
 if $Release && $NoDebugInfo; then BuildType="Release"; fi
 
 # Build directory:
-BD1=$(uname | tr '[:upper:]' '[:lower:]')
+BD1=$(uname | tr '[:upper:]' '[:lower:]' | sed 's/darwin/mac/')
 BD2=$(uname -m | sed 's/x86_64/x64/' | sed 's/i.86/x86/')
 BD3=$(echo "$Generator" | sed 's/ /-/g' | sed 's/-+/-/g' | tr '[:upper:]' '[:lower:]')
 BD4=$(echo "$BuildType" | tr '[:upper:]' '[:lower:]')
 BuildDir="$BuildRoot/$BD1-$BD2-$BD3-$BD4"
 
-# Configuration:
-BinaryName="Game";      BinaryPath="$BuildDir/$BinaryName"
-XcProjectName="Game";   XcProjectFile="$BuildDir/$XcProjectName.xcodeproj"
+# Build artifact paths:
+BinaryPath="$BuildDir/$TargetName"
+XcProjectDir="$BuildDir/$ProjectName.xcodeproj"
+XcSchemeFile="$XcProjectDir/xcshareddata/xcschemes/$TargetName.xcscheme"
 
 # Clean build directory:
 CleanDir() {
@@ -133,8 +136,8 @@ GetCMakeReason() {
                 return
             fi ;;
         "Xcode")
-            if ! [ -d "$BuildDir/$XcProjectName.xcodeproj" ]; then
-                echo "project file $XcProjectName.xcodeproj not found"
+            if ! [ -d "$XcProjectDir" ]; then
+                echo "project $ProjectName.xcodeproj not found"
                 return
             fi ;;
     esac
@@ -199,7 +202,7 @@ case $Generator in
 esac
 
 # Run game:
-BinaryPath="$BuildDir/$BinaryName"
+BinaryPath="$BuildDir/$TargetName"
 if $Run; then
     cd "$WorkingRoot"
     if [ -x "$BinaryPath" ]; then
@@ -213,7 +216,21 @@ if $Run; then
 fi
 
 # Start XCode:
+if [ "$Generator" = "Xcode" ]; then
+    if [ -f "$XcSchemeFile" ]; then
+        # NOTE: CMake generates scheme files with XML attributes that look like "name=value", but
+        #       Xcode rewrites them as "name = value" when changing any settings.
+        if grep -E 'useCustomWorkingDirectory ?= ?"NO"' "$XcSchemeFile" >/dev/null; then
+            LogInfo "Updating working directory for Xcode project..."
+            awk '{gsub(/useCustomWorkingDirectory ?= ?"NO"/, "useCustomWorkingDirectory=\"YES\"\n      customWorkingDirectory=\"$PROJECT_DIR/run\"")}1' \
+                "$XcSchemeFile" > "$XcSchemeFile.new"
+            mv -f "$XcSchemeFile.new" "$XcSchemeFile"
+        fi
+    else
+        LogWarn "Xcode scheme file $XcSchemeFile not found."
+    fi
+fi
 if $Xcode && [ "$Generator" = "Xcode" ]; then
-    LogInfo "Opening Xcode project $XcProjectFile"
-    open -a Xcode "$XcProjectFile"
+    LogInfo "Opening Xcode project $XcProjectDir"
+    open -a Xcode "$XcProjectDir"
 fi

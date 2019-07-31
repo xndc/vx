@@ -183,5 +183,8 @@ else()
     target_compile_options(Game PRIVATE $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>)
 endif()
 
+# Enable Xcode scheme file generation. We need this in order to set the build directory before starting Xcode.
+set(CMAKE_XCODE_GENERATE_SCHEME ON)
+
 # Set the working directory for debugging with VS (https://stackoverflow.com/questions/23950887/):
 set_target_properties(Game PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/run")
