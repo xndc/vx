@@ -1,7 +1,7 @@
 #include "common.h"
 #include "gui.h"
 #include "flib/accessor.h"
-#include "renderer/program.h"
+#include "flib/array.h"
 #include "renderer/texture.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
@@ -10,138 +10,138 @@ static void GlfwErrorCallback (int code, const char* error) {
     VXERROR("GLFW error %d: %s", code, error);
 }
 
-#define GLENUM_FRAMEBUFFERSTATUS \
-    X(GL_FRAMEBUFFER_UNDEFINED)\
-    X(GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)\
-    X(GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)\
-    X(GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)\
-    X(GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)\
-    X(GL_FRAMEBUFFER_UNSUPPORTED)\
-    X(GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)\
-    X(GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)
+// #define GLENUM_FRAMEBUFFERSTATUS \
+//     X(GL_FRAMEBUFFER_UNDEFINED)\
+//     X(GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)\
+//     X(GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)\
+//     X(GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)\
+//     X(GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)\
+//     X(GL_FRAMEBUFFER_UNSUPPORTED)\
+//     X(GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)\
+//     X(GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)
 
-GLenum vxglCheckFramebufferStatus (GLuint framebuffer) {
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        switch (status) {
-            #define X(VAL) case VAL: \
-                VXPANIC("Framebuffer error for %d: %s (0x%x)", framebuffer, #VAL, status); \
-                break;
-            GLENUM_FRAMEBUFFERSTATUS
-            #undef X
-            default:
-                VXPANIC("Framebuffer error for %d: unknown code 0x%x", framebuffer, status);
-        };
-    }
-    return status;
-}
+// GLenum vxglCheckFramebufferStatus (GLuint framebuffer) {
+//     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+//     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+//     if (status != GL_FRAMEBUFFER_COMPLETE) {
+//         switch (status) {
+//             #define X(VAL) case VAL: \
+//                 VXPANIC("Framebuffer error for %d: %s (0x%x)", framebuffer, #VAL, status); \
+//                 break;
+//             GLENUM_FRAMEBUFFERSTATUS
+//             #undef X
+//             default:
+//                 VXPANIC("Framebuffer error for %d: unknown code 0x%x", framebuffer, status);
+//         };
+//     }
+//     return status;
+// }
 
-GLuint G_Buffer_Depth;
-GLuint G_Buffer_ColorLDR;
-GLuint G_Buffer_ColorHDR;
-GLuint G_Buffer_ColorTAA;
-GLuint G_Buffer_Normal;
-GLuint G_Buffer_Velocity;
-GLuint G_Buffer_Aux1;
-GLuint G_Buffer_Aux2;
-GLuint G_Buffer_AuxDepth1;
-GLuint G_Buffer_Shadow1;
-GLuint G_Buffer_ShadowColor1;
+// GLuint G_Buffer_Depth;
+// GLuint G_Buffer_ColorLDR;
+// GLuint G_Buffer_ColorHDR;
+// GLuint G_Buffer_ColorTAA;
+// GLuint G_Buffer_Normal;
+// GLuint G_Buffer_Velocity;
+// GLuint G_Buffer_Aux1;
+// GLuint G_Buffer_Aux2;
+// GLuint G_Buffer_AuxDepth1;
+// GLuint G_Buffer_Shadow1;
+// GLuint G_Buffer_ShadowColor1;
 
-GLuint G_Framebuffer_Main;
-GLuint G_Framebuffer_Shadow;
+// GLuint G_Framebuffer_Main;
+// GLuint G_Framebuffer_Shadow;
 
-static void CreateBuffer (GLuint* buffer, GLenum format, int w, int h) {
-    if (*buffer != 0) {
-        glDeleteTextures(1, buffer);
-    }
-    glGenTextures(1, buffer);
-    glBindTexture(GL_TEXTURE_2D, *buffer);
-    glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
-}
+// static void CreateBuffer (GLuint* buffer, GLenum format, int w, int h) {
+//     if (*buffer != 0) {
+//         glDeleteTextures(1, buffer);
+//     }
+//     glGenTextures(1, buffer);
+//     glBindTexture(GL_TEXTURE_2D, *buffer);
+//     glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
+// }
 
-static void CreateMainFramebuffer (int w, int h) {
-    if (G_Framebuffer_Main != 0) {
-        glDeleteFramebuffers(1, &G_Framebuffer_Main);
-    }
-    glGenFramebuffers(1, &G_Framebuffer_Main);
-    glBindFramebuffer(GL_FRAMEBUFFER, G_Framebuffer_Main);
+// static void CreateMainFramebuffer (int w, int h) {
+//     if (G_Framebuffer_Main != 0) {
+//         glDeleteFramebuffers(1, &G_Framebuffer_Main);
+//     }
+//     glGenFramebuffers(1, &G_Framebuffer_Main);
+//     glBindFramebuffer(GL_FRAMEBUFFER, G_Framebuffer_Main);
 
-    CreateBuffer(&G_Buffer_Depth,       GL_DEPTH32F_STENCIL8,   w, h);
-    CreateBuffer(&G_Buffer_ColorLDR,    GL_RGBA8,               w, h);
-    CreateBuffer(&G_Buffer_ColorHDR,    GL_R11F_G11F_B10F,      w, h);
-    CreateBuffer(&G_Buffer_ColorTAA,    GL_R11F_G11F_B10F,      w, h);
-    CreateBuffer(&G_Buffer_Normal,      GL_RGB16F,              w, h);
-    CreateBuffer(&G_Buffer_Velocity,    GL_RG16F,               w, h);
-    CreateBuffer(&G_Buffer_Aux1,        GL_RGBA8,               w, h);
-    CreateBuffer(&G_Buffer_Aux2,        GL_RGBA8,               w, h);
-    CreateBuffer(&G_Buffer_AuxDepth1,   GL_DEPTH_COMPONENT32F,  w, h);
+//     CreateBuffer(&G_Buffer_Depth,       GL_DEPTH32F_STENCIL8,   w, h);
+//     CreateBuffer(&G_Buffer_ColorLDR,    GL_RGBA8,               w, h);
+//     CreateBuffer(&G_Buffer_ColorHDR,    GL_R11F_G11F_B10F,      w, h);
+//     CreateBuffer(&G_Buffer_ColorTAA,    GL_R11F_G11F_B10F,      w, h);
+//     CreateBuffer(&G_Buffer_Normal,      GL_RGB16F,              w, h);
+//     CreateBuffer(&G_Buffer_Velocity,    GL_RG16F,               w, h);
+//     CreateBuffer(&G_Buffer_Aux1,        GL_RGBA8,               w, h);
+//     CreateBuffer(&G_Buffer_Aux2,        GL_RGBA8,               w, h);
+//     CreateBuffer(&G_Buffer_AuxDepth1,   GL_DEPTH_COMPONENT32F,  w, h);
 
-    #define TEXTURE(attach, tex) \
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attach, GL_TEXTURE_2D, tex, 0);
-    TEXTURE(GL_DEPTH_STENCIL_ATTACHMENT,    G_Buffer_Depth);
-    TEXTURE(GL_COLOR_ATTACHMENT0,           G_Buffer_ColorLDR);
-    TEXTURE(GL_COLOR_ATTACHMENT1,           G_Buffer_ColorHDR);
-    TEXTURE(GL_COLOR_ATTACHMENT2,           G_Buffer_ColorTAA);
-    TEXTURE(GL_COLOR_ATTACHMENT3,           G_Buffer_Normal);
-    TEXTURE(GL_COLOR_ATTACHMENT4,           G_Buffer_Velocity);
-    TEXTURE(GL_COLOR_ATTACHMENT5,           G_Buffer_Aux1);
-    TEXTURE(GL_COLOR_ATTACHMENT6,           G_Buffer_Aux2);
-    #undef TEXTURE
+//     #define TEXTURE(attach, tex) \
+//         glFramebufferTexture2D(GL_FRAMEBUFFER, attach, GL_TEXTURE_2D, tex, 0);
+//     TEXTURE(GL_DEPTH_STENCIL_ATTACHMENT,    G_Buffer_Depth);
+//     TEXTURE(GL_COLOR_ATTACHMENT0,           G_Buffer_ColorLDR);
+//     TEXTURE(GL_COLOR_ATTACHMENT1,           G_Buffer_ColorHDR);
+//     TEXTURE(GL_COLOR_ATTACHMENT2,           G_Buffer_ColorTAA);
+//     TEXTURE(GL_COLOR_ATTACHMENT3,           G_Buffer_Normal);
+//     TEXTURE(GL_COLOR_ATTACHMENT4,           G_Buffer_Velocity);
+//     TEXTURE(GL_COLOR_ATTACHMENT5,           G_Buffer_Aux1);
+//     TEXTURE(GL_COLOR_ATTACHMENT6,           G_Buffer_Aux2);
+//     #undef TEXTURE
 
-    vxglCheckFramebufferStatus(G_Framebuffer_Main);
-    VXINFO("Created G_Framebuffer_Main (%d) with size %dx%d", G_Framebuffer_Main, w, h);
-}
+//     vxglCheckFramebufferStatus(G_Framebuffer_Main);
+//     VXINFO("Created G_Framebuffer_Main (%d) with size %dx%d", G_Framebuffer_Main, w, h);
+// }
 
-void CreateShadowFramebuffer (int w, int h) {
-    if (G_Framebuffer_Shadow != 0) {
-        glDeleteFramebuffers(1, &G_Framebuffer_Shadow);
-    }
-    glGenFramebuffers(1, &G_Framebuffer_Shadow);
-    glBindFramebuffer(GL_FRAMEBUFFER, G_Framebuffer_Shadow);
+// void CreateShadowFramebuffer (int w, int h) {
+//     if (G_Framebuffer_Shadow != 0) {
+//         glDeleteFramebuffers(1, &G_Framebuffer_Shadow);
+//     }
+//     glGenFramebuffers(1, &G_Framebuffer_Shadow);
+//     glBindFramebuffer(GL_FRAMEBUFFER, G_Framebuffer_Shadow);
 
-    CreateBuffer(&G_Buffer_Shadow1,         GL_DEPTH_COMPONENT32F,  w, h);
-    CreateBuffer(&G_Buffer_ShadowColor1,    GL_RGBA8,               w, h);
+//     CreateBuffer(&G_Buffer_Shadow1,         GL_DEPTH_COMPONENT32F,  w, h);
+//     CreateBuffer(&G_Buffer_ShadowColor1,    GL_RGBA8,               w, h);
 
-    #define TEXTURE(attach, tex) \
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attach, GL_TEXTURE_2D, tex, 0);
-    TEXTURE(GL_DEPTH_ATTACHMENT,    G_Buffer_Shadow1);
-    TEXTURE(GL_COLOR_ATTACHMENT0,   G_Buffer_ShadowColor1);
-    #undef TEXTURE
+//     #define TEXTURE(attach, tex) \
+//         glFramebufferTexture2D(GL_FRAMEBUFFER, attach, GL_TEXTURE_2D, tex, 0);
+//     TEXTURE(GL_DEPTH_ATTACHMENT,    G_Buffer_Shadow1);
+//     TEXTURE(GL_COLOR_ATTACHMENT0,   G_Buffer_ShadowColor1);
+//     #undef TEXTURE
 
-    vxglCheckFramebufferStatus(G_Framebuffer_Shadow);
-    VXINFO("Created G_Framebuffer_Shadow (%d) with size %dx%d", G_Framebuffer_Shadow, w, h);
-}
+//     vxglCheckFramebufferStatus(G_Framebuffer_Shadow);
+//     VXINFO("Created G_Framebuffer_Shadow (%d) with size %dx%d", G_Framebuffer_Shadow, w, h);
+// }
 
-GLuint G_Program_GBuffer_BasicLit;
-GLuint G_Program_GBuffer_MetallicRoughness;
-GLuint G_Program_Light_Directional;
-GLuint G_Program_Light_Point;
-GLuint G_Program_Composite;
+// GLuint G_Program_GBuffer_BasicLit;
+// GLuint G_Program_GBuffer_MetallicRoughness;
+// GLuint G_Program_Light_Directional;
+// GLuint G_Program_Light_Point;
+// GLuint G_Program_Composite;
 
-void CreatePrograms() {
-    FArray* defines = FArrayAlloc(sizeof(ProgramDefine), 128, NULL, NULL);
-    #define P(prog, vs, fs) prog = GetProgram("shaders/" vs, "shaders/" fs, defines)
+// void CreatePrograms() {
+//     FArray* defines = FArrayAlloc(sizeof(ProgramDefine), 128, NULL, NULL);
+//     #define P(prog, vs, fs) prog = GetProgram("shaders/" vs, "shaders/" fs, defines)
 
-    FArrayClear(defines);
-    P(G_Program_GBuffer_BasicLit, "default.vert", "default.frag");
+//     FArrayClear(defines);
+//     P(G_Program_GBuffer_BasicLit, "default.vert", "default.frag");
 
-    FArrayClear(defines);
-    P(G_Program_GBuffer_MetallicRoughness, "default.vert", "default.frag");
+//     FArrayClear(defines);
+//     P(G_Program_GBuffer_MetallicRoughness, "default.vert", "default.frag");
 
-    FArrayClear(defines);
-    P(G_Program_Light_Directional, "default.vert", "default.frag");
+//     FArrayClear(defines);
+//     P(G_Program_Light_Directional, "default.vert", "default.frag");
 
-    FArrayClear(defines);
-    P(G_Program_Light_Point, "default.vert", "default.frag");
+//     FArrayClear(defines);
+//     P(G_Program_Light_Point, "default.vert", "default.frag");
 
-    FArrayClear(defines);
-    P(G_Program_Composite, "default.vert", "default.frag");
+//     FArrayClear(defines);
+//     P(G_Program_Composite, "default.vert", "default.frag");
 
-    FArrayFree(defines);
-    #undef P
-}
+//     FArrayFree(defines);
+//     #undef P
+// }
 
 int G_WindowConfig_W = 1280;
 int G_WindowConfig_H = 1024;
@@ -171,7 +171,7 @@ int main() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    CreatePrograms();
+    InitTextureSystem();
     InitGUI(window);
 
     FAccessor* acc1 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
@@ -184,42 +184,26 @@ int main() {
     DBG(acc2);
     DBG(acc3);
 
-    Texture* tex = GetTexture("textures/ground0/albedo.jpg", true, true);
-    Sampler smp1 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
-    Sampler smp2 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
-    Sampler smp3 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
-    Sampler smp4 = GetColorSampler(GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR, GL_REPEAT);
-
-    int last_screen_w = 0;
-    int last_screen_h = 0;
-    int last_shadow_size = 0;
+    // Texture* tex = GetTexture("textures/ground0/albedo.jpg", true, true);
+    // Sampler smp1 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
+    // Sampler smp2 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
+    // Sampler smp3 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
+    // Sampler smp4 = GetColorSampler(GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR, GL_REPEAT);
 
     while (!glfwWindowShouldClose(window)) {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
-        if (last_screen_w != w || last_screen_h != h) {
-            CreateMainFramebuffer(w, h);
-            last_screen_w = G_WindowConfig_W = w;
-            last_screen_h = G_WindowConfig_H = h;
-        }
-        if (last_screen_w != G_WindowConfig_W || last_screen_h != G_WindowConfig_H) {
-            // TODO: resize window
-        }
-        if (last_shadow_size != G_RenderConfig_ShadowMapSize) {
-            last_shadow_size = G_RenderConfig_ShadowMapSize;
-            CreateShadowFramebuffer(last_shadow_size, last_shadow_size);
-        }
+        UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
         glViewport(0, 0, w, h);
 
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, G_Framebuffer_Main);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         DrawGUI(window);
-        glUseProgram(G_Program_Composite);
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, G_Framebuffer_Main);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glfwSwapBuffers(window);

@@ -1,30 +1,28 @@
 #pragma once
 #include <common.h>
-#include <flib/vec.h>
+#include <assets.h>
 
-typedef struct {
-    char* path;
-    char* mem;
-    uint32_t w;
-    uint32_t h;
-    uint8_t chan;
-    GLuint gl_id;
-} Texture;
+#define X(name, _) extern GLuint name;
+XM_ASSETS_TEXTURES
+XM_ASSETS_RENDERTARGETS_SCREENSIZE
+XM_ASSETS_RENDERTARGETS_SHADOWSIZE
+#undef X
 
-// Loads a texture from a file, uploading it to the GPU if requested.
-// Will return the same in-memory texture for each invocation with the same path.
-Texture* GetTexture (const char* path, bool upload, bool gpu_only);
+#define BEGIN_FRAMEBUFFER(name) extern GLuint name;
+#define ATTACH(point, name)
+#define END_FRAMEBUFFER(name)
+XM_ASSETS_FRAMEBUFFERS
+#undef BEGIN_FRAMEBUFFER
+#undef ATTACH
+#undef END_FRAMEBUFFER
 
-// Uploads a texture to the GPU.
-void TextureUpload (Texture* texture);
+#define VXGL_SAMPLER_COUNT 10
+extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
-typedef struct {
-    GLuint gl_sampler;
-    GLenum min_filter;
-    GLenum mag_filter;
-    GLenum wrap;
-    GLenum depth_function; // 0 for non-shadow samplers
-} Sampler;
+// Initializes the texture subsystem. Creates the following:
+// * the textures, render targets and framebuffers defined in assets.h (TEX_*, RT_*, FB_*)
+// * some sampler objects for the render system to use (VXGL_SAMPLER[i])
+void InitTextureSystem();
 
-Sampler GetColorSampler (GLenum min_filter, GLenum mag_filter, GLenum wrap);
-Sampler GetShadowSampler (GLenum depth_function);
+// Resizes all render targets and framebuffers.
+void UpdateFramebuffers (int width, int height, int shadowsize);

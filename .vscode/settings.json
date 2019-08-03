@@ -1,12 +1,14 @@
 {
     "files.associations": {
-        "*.h": "c",
         "*.fsh": "glsl",
         "*.vsh": "glsl",
+        "*.h": "c",
         "bitset": "c",
         "chrono": "c",
         "xhash": "c",
         "xtree": "c",
-        "xutility": "c"
+        "xutility": "c",
+        "system_error": "c",
+        "xlocale": "c"
     }
 }
