@@ -122,4 +122,5 @@ GLuint LoadTextureFromDisk (const char* name, const char* path) {
         }
     }
     glGenerateMipmap(GL_TEXTURE_2D);
+    return texture;
 }

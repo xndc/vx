@@ -14,7 +14,7 @@ typedef struct {
     bool depth_test;
     bool depth_write;
     GLenum depth_func;
-    FVec4 const_diffuse;
+    vec4 const_diffuse;
     float const_metallic;
     float const_roughness;
     GLuint tex_diffuse;

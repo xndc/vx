@@ -22,6 +22,13 @@ typedef struct {
     Shader* current_fsh;
     bool defines_changed;
     GLuint program;
+    mat4 mat_view;
+    mat4 mat_proj;
+    mat4 mat_model;
+    vec4 vec_model_rotation;
+    vec3 vec_model_position;
+    vec3 vec_model_scale;
+    int next_texture_unit;
 } RenderState;
 
 typedef struct {
@@ -42,6 +49,23 @@ typedef struct {
 RenderState S_RenderState = {0};
 RenderState* S_RenderStateStack = NULL;
 ProgramCacheEntry* S_ProgramCache = NULL;
+
+static void DefineArrayCopy (ShaderDefine* src, ShaderDefine** dst) {
+    for (ptrdiff_t i = 0; i < arrlen(src); i++) {
+        arrput(*dst, src[i]);
+    }
+}
+
+static bool DefineArraysEqual (ShaderDefine* a, ShaderDefine* b) {
+    if (arrlen(a) != arrlen(b)) {
+        return false;
+    }
+    for (ptrdiff_t i = 0; i < arrlen(a); i++) {
+        if (strcmp(a[i].name, b[i].name) != 0) { return false; }
+        if (strcmp(a[i].text, b[i].text) != 0) { return false; }
+    }
+    return true;
+}
 
 static Shader* LoadShaderFromDisk (const char* name, const char* path) {
     Shader* shader = VXGENALLOC(1, Shader);
@@ -68,28 +92,38 @@ void InitRenderSystem() {
     #undef X
 }
 
-// Conceptually, starts a new render pass. Concretely, resets the following render state variables:
-// * the currently selected shaders
-// * the current shader #define set
-// * the current uniform and attribute locations (UNIF_*, ATTR_*)
-// * any texture and sampler bindings
-// This function does NOT reset the following:
-// * the currently bound framebuffer
+// Conceptually, starts a new render pass. Concretely, resets the following:
+// -> the current render state and stack
+// -> the currently selected shaders
+// -> the current shader #define set
+// -> the current model, view and projection matrices
+// -> any current uniform and attribute locations (UNIF_*, ATTR_*)
+// Note that this function does NOT reset the following:
+// -> the currently bound framebuffer
+// -> any other global OpenGL state (blend mode, depth test settings, etc.)
 // This function also signals to the debug and timing systems that a new render pass is starting.
 void StartRenderPass (const char* name) {
+    ResetMatrices();
     ResetShaderDefines();
-    // ResetShaderVariables();
-    // ResetTextureUnits();
+    SetRenderProgram(NULL, NULL);
+    // Free render state and stack:
+    arrfree(S_RenderState.defines);
     S_RenderState = (RenderState){0};
+    for (ptrdiff_t i = 0; i < arrlen(S_RenderStateStack); i++) {
+        arrfree(S_RenderStateStack[i].defines);
+    }
     arrfree(S_RenderStateStack);
 }
 
 void PushRenderState() {
     arrput(S_RenderStateStack, S_RenderState);
+    arrlast(S_RenderStateStack).defines = NULL;
+    DefineArrayCopy(S_RenderState.defines, &arrlast(S_RenderStateStack).defines);
 }
 
 void PopRenderState() {
     if (arrlen(S_RenderStateStack) > 0) {
+        arrfree(S_RenderState.defines);
         S_RenderState = arrlast(S_RenderStateStack);
         arrpop(S_RenderStateStack);
     }
@@ -152,18 +186,7 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
             ProgramCacheKey key = {vsh, fsh};
             ptrdiff_t pidx = hmgeti(S_ProgramCache, key);
             ProgramCacheValue* v = (pidx >= 0) ? &S_ProgramCache[pidx].value : NULL;
-            bool match = (v != NULL);
-            if (match && arrlen(v->defines) == arrlen(S_RenderState.defines)) {
-                for (size_t i = 0; i < arrlenu(v->defines); i++) {
-                    if (strcmp(v->defines[i].name, S_RenderState.defines[i].name) != 0 ||
-                        strcmp(v->defines[i].text, S_RenderState.defines[i].text) != 0)
-                    {
-                        match = false;
-                        break;
-                    }
-                }
-            }
-            if (match) {
+            if (v != NULL && DefineArraysEqual(v->defines, S_RenderState.defines)) {
                 program = v->program;
             }
         }
@@ -190,23 +213,17 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
             // Save program to cache:
             ProgramCacheKey key = {vsh, fsh};
             ProgramCacheValue v = {NULL, program};
-            for (size_t i = 0; i < arrlenu(defines); i++) {
-                arrput(v.defines, defines[i]);
-            }
+            DefineArrayCopy(defines, &v.defines);
             hmput(S_ProgramCache, key, v);
         }
     }
     // Retrieve uniform and attribute locations:
+    ResetShaderVariables();
     if (program != 0) {
         #define X(name, glsl_name) name = glGetUniformLocation(program, glsl_name);
         XM_ASSETS_SHADER_UNIFORMS
         #undef X
         #define X(name, glsl_name) name = glGetAttribLocation(program, glsl_name);
-        XM_ASSETS_SHADER_ATTRIBUTES
-        #undef X
-    } else {
-        #define X(name, glsl_name) name = -1;
-        XM_ASSETS_SHADER_UNIFORMS
         XM_ASSETS_SHADER_ATTRIBUTES
         #undef X
     }
@@ -227,4 +244,116 @@ void AddShaderDefine (const char* name, const char* text) {
 
 void ResetShaderDefines() {
     arrfree(S_RenderState.defines);
+}
+
+void SetViewMatrix (mat4 vmat)  { glm_mat4_copy(vmat, S_RenderState.mat_view); }
+void SetProjMatrix (mat4 pmat)  { glm_mat4_copy(pmat, S_RenderState.mat_proj); }
+void SetModelMatrix (mat4 mmat) { glm_mat4_copy(mmat, S_RenderState.mat_model); }
+void GetModelMatrix (mat4 dest) { glm_mat4_copy(S_RenderState.mat_model, dest); }
+void AddModelPosition (vec3 position) { glm_translate(S_RenderState.mat_model, position); }
+void AddModelRotation (vec4 rotation) { glm_quat_rotate(S_RenderState.mat_model, rotation, S_RenderState.mat_model); }
+void AddModelScale (vec3 scale) { glm_scale(S_RenderState.mat_model, scale); }
+void ResetModelMatrix() { glm_mat4_identity(S_RenderState.mat_model); }
+
+void ResetMatrices() {
+    glm_mat4_identity(S_RenderState.mat_view);
+    glm_mat4_identity(S_RenderState.mat_proj);
+    ResetModelMatrix();
+}
+
+void SetCameraMatrices (Camera* cam) {
+    SetViewMatrix(cam->view_matrix);
+    SetProjMatrix(cam->proj_matrix);
+}
+
+GLuint BindTextureUnit (GLuint texture, GLuint sampler) {
+    GLuint tu = 0;
+    int max_units;
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_units);
+    if (S_RenderState.next_texture_unit < max_units) {
+        if (texture != 0 && sampler != 0) {
+            tu = S_RenderState.next_texture_unit++;
+            glActiveTexture(GL_TEXTURE0 + tu);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glBindSampler(tu, sampler);
+        } else {
+            VXPANIC("Invalid parameters (texture %u, sampler %u)", texture, sampler);
+        }
+    } else {
+        VXWARN("Texture unit limit (%u) reached, not binding texture %u", max_units, texture);
+    }
+    return tu;
+}
+
+void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler) {
+    if (texture != 0 && sampler != 0) {
+        GLuint tu = BindTextureUnit(texture, sampler);
+        glUniform1i(uniform, tu);
+    }
+}
+
+void SetUniformTexture (GLint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap) {
+    if (texture != 0) {
+        GLuint tu = S_RenderState.next_texture_unit;
+        GLuint sampler = VXGL_SAMPLER[tu];
+        glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, min);
+        glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, mag);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, wrap);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, wrap);
+        SetUniformTexSampler(uniform, texture, sampler);
+    }
+}
+
+void ResetShaderVariables() {
+    S_RenderState.next_texture_unit = 0;
+    #define X(name, glsl_name) name = -1;
+    XM_ASSETS_SHADER_UNIFORMS
+    XM_ASSETS_SHADER_ATTRIBUTES
+    #undef X
+}
+
+void SetMaterial (Material* mat) {
+    if (mat->blend) {
+        glEnable(GL_BLEND);
+        glBlendFunc(mat->blend_srcf, mat->blend_dstf);
+    } else {
+        glDisable(GL_BLEND);
+    }
+
+    if (mat->cull) {
+        glEnable(GL_CULL_FACE);
+        glCullFace(mat->cull_face);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
+
+    if (mat->depth_test) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(mat->depth_func);
+        glDepthMask(mat->depth_write ? GL_TRUE : GL_FALSE);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+
+    glUniform4fv(UNIF_CONST_DIFFUSE, 4, mat->const_diffuse);
+    glUniform1f(UNIF_CONST_METALLIC,  mat->const_metallic);
+    glUniform1f(UNIF_CONST_ROUGHNESS, mat->const_roughness);
+    SetUniformTexSampler(UNIF_TEX_DIFFUSE,      mat->tex_diffuse,       mat->smp_diffuse);
+    SetUniformTexSampler(UNIF_TEX_OCC_MET_RGH,  mat->tex_occ_met_rgh,   mat->smp_occ_met_rgh);
+    SetUniformTexSampler(UNIF_TEX_OCCLUSION,    mat->tex_occlusion,     mat->smp_occlusion);
+    SetUniformTexSampler(UNIF_TEX_METALLIC,     mat->tex_metallic,      mat->smp_metallic);
+    SetUniformTexSampler(UNIF_TEX_ROUGHNESS,    mat->tex_roughness,     mat->smp_roughness);
+    SetUniformTexSampler(UNIF_TEX_NORMAL,       mat->tex_normal,        mat->smp_normal);
+}
+
+void RenderMesh (Mesh* mesh) {
+    mat4 model;
+    GetModelMatrix(model);
+    glUniformMatrix4fv(UNIF_MODEL_MATRIX, 16, false, model);
+    glUniformMatrix4fv(UNIF_PROJ_MATRIX,  16, false, S_RenderState.mat_proj);
+    glUniformMatrix4fv(UNIF_VIEW_MATRIX,  16, false, S_RenderState.mat_view);
+    SetMaterial(mesh->material);
+
+    // TODO:
+    // You have to actually upload the mesh to the GPU, you doofus.
 }

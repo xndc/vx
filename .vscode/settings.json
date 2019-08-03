@@ -9,6 +9,8 @@
         "xtree": "c",
         "xutility": "c",
         "system_error": "c",
-        "xlocale": "c"
+        "xlocale": "c",
+        "ios": "c",
+        "xiosbase": "c"
     }
 }

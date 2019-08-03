@@ -23,8 +23,10 @@
     X(UNIF_CONST_ROUGHNESS, "uRoughness") \
     X(UNIF_TEX_DIFFUSE,     "texDiffuse") \
     X(UNIF_TEX_OCC_MET_RGH, "texOccMetRgh") \
+    X(UNIF_TEX_OCCLUSION,   "texOcclusion") \
     X(UNIF_TEX_METALLIC,    "texMetallic") \
     X(UNIF_TEX_ROUGHNESS,   "texRoughness") \
+    X(UNIF_TEX_NORMAL,      "texNormal") \
     X(UNIF_RT_DEPTH,        "gDepth") \
     X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
     X(UNIF_RT_COLOR_HDR,    "gColorHDR") \

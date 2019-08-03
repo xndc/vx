@@ -3,6 +3,7 @@
 #include "assets.h"
 #include "data/texture.h"
 #include "data/model.h"
+#include "data/camera.h"
 #include <cglm/cglm.h>
 
 // The process of rendering something in VX looks something like this:
@@ -50,18 +51,19 @@ void ResetShaderDefines();
 void SetViewMatrix (mat4 vmat);
 void SetProjMatrix (mat4 pmat);
 void SetModelMatrix (mat4 mmat);
+void GetModelMatrix (mat4 dest);
 void AddModelPosition (vec3 position);
 void AddModelRotation (vec4 rotation);
 void AddModelScale (vec3 scale);
-void GetModelMatrix (mat4 dest);
 void ResetModelMatrix();
 void ResetMatrices();
+void SetCameraMatrices (Camera* cam);
 
 GLuint BindTextureUnit (GLuint texture, GLuint sampler);
-void ResetTextureUnits();
-void SetUniformTexture (GLuint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap);
-void SetUniformTextureWithSampler (GLuint uniform, GLuint texture, GLuint sampler);
+void SetUniformTexture (GLint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap);
+void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler);
 void ResetShaderVariables();
 
+void SetMaterial (Material* mat);
 void RenderMesh (Mesh* mesh);
 void RenderModel (Model* model);

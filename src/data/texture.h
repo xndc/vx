@@ -16,7 +16,7 @@ XM_ASSETS_FRAMEBUFFERS
 #undef ATTACH
 #undef END
 
-#define VXGL_SAMPLER_COUNT 10
+#define VXGL_SAMPLER_COUNT 32
 extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
 // Initializes the texture subsystem. Creates the following:

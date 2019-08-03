@@ -2,6 +2,7 @@
 #include "gui.h"
 #include "flib/accessor.h"
 #include "flib/array.h"
+#include "data/camera.h"
 #include "render/render.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
@@ -146,6 +147,8 @@ static void GlfwErrorCallback (int code, const char* error) {
 int G_WindowConfig_W = 1280;
 int G_WindowConfig_H = 1024;
 int G_RenderConfig_ShadowMapSize = 2048;
+Camera G_MainCamera = {0};
+Camera G_ShadowCamera = {0};
 
 int main() {
     glfwSetErrorCallback(GlfwErrorCallback);
@@ -176,6 +179,16 @@ int main() {
     InitRenderSystem();
     InitGUI(window);
 
+    G_MainCamera.projection = CAMERA_PERSPECTIVE;
+    G_MainCamera.fov  = 80.0f;
+    G_MainCamera.near = 0.1f;
+    G_MainCamera.far  = 0.0f;
+    G_MainCamera.mode = CAMERA_MODE_ORBIT;
+    glm_vec3_zero(G_MainCamera.orbit.target);
+    G_MainCamera.orbit.distance = 10.0f;
+    G_MainCamera.orbit.angle_horz = (float) VXRADIANS(40.0f);
+    G_MainCamera.orbit.angle_vert = (float) VXRADIANS(30.0f);
+
     FAccessor* acc1 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
     FAccessor* acc2 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
     FAccessor* acc3 = FAccessorFromFile(FACCESSOR_FLOAT32_MAT4, "models/Duck/Duck0.bin", 100, 800, 0);
@@ -197,6 +210,7 @@ int main() {
         glfwGetFramebufferSize(window, &w, &h);
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
         glViewport(0, 0, w, h);
+        UpdateCameraMatrices(&G_MainCamera, w, h);
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -205,6 +219,8 @@ int main() {
 
         DrawGUI(window);
         StartRenderPass("Test");
+        PushRenderState();
+        PushRenderState();
         SetRenderProgram(VSH_DEFAULT, FSH_DEFAULT);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
