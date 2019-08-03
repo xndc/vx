@@ -137,10 +137,10 @@ char* vxReadFileEx (size_t size, char* dst, size_t* out_read_bytes, FILE* file) 
     rewind(file);
     size_t read_bytes = fread(dst, sizeof(char), size, file);
     dst[read_bytes] = '\0';
-    fclose(file);
     if (out_read_bytes != NULL) {
         *out_read_bytes = read_bytes;
     }
+    rewind(file);
     return dst;
 }
 
@@ -160,6 +160,7 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
     rewind(file);
     char* buffer = VXGENALLOC(size + 1, char);
     vxReadFileEx(size, buffer, out_read_bytes, file);
+    fclose(file);
     return buffer;
 }
 

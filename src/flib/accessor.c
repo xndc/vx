@@ -46,6 +46,17 @@ char* FBufferFromFile (const char* filename, size_t* out_size) {
     return buffer;
 }
 
+void FBufferFree (char* buffer) {
+    InitCaches();
+    for (size_t i = 0; i < shlenu(S_BufferCache); i++) {
+        if (S_BufferCache[i].value.mem == buffer) {
+            VXGENFREE(buffer);
+            shdel(S_BufferCache, S_BufferCache[i].key);
+            break;
+        }
+    }
+}
+
 void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset,
     size_t count, uint8_t stride)
 {

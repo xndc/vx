@@ -4,12 +4,7 @@
 #include <flib/accessor.h>
 
 typedef struct {
-    char* buffer;
-    bool depth;
-} TextureCacheKey;
-
-typedef struct {
-    TextureCacheKey key;
+    char* key;
     Texture value;
 } TextureCacheEntry;
 
@@ -21,20 +16,16 @@ typedef struct {
 TextureCacheEntry* S_TextureCache;
 SamplerCacheEntry* S_SamplerCache;
 
-Texture* TextureFromFile (const char* path, bool depth) {
+Texture* GetTexture (const char* path, bool upload, bool gpu_only) {
     Texture* tex;
-    TextureCacheKey k;
     size_t buffer_size;
-    k.buffer = FBufferFromFile(path, &buffer_size);
-    k.depth = depth;
-    ptrdiff_t i = hmgeti(S_TextureCache, k);
+    ptrdiff_t i = shgeti(S_TextureCache, path);
     if (i >= 0) {
         tex = &S_TextureCache[i].value;
     } else {
         Texture t;
         int readw, readh, readchan;
-        char* image = (char*) stbi_load_from_memory((void*) k.buffer, (int) buffer_size,
-            &readw, &readh, &readchan, 0);
+        void* image = stbi_load(path, &readw, &readh, &readchan, 0);
         if (!image) {
             VXPANIC("Failed to load texture %s: %s", path, stbi_failure_reason());
         }
@@ -43,14 +34,37 @@ Texture* TextureFromFile (const char* path, bool depth) {
         t.w = (uint32_t) readw;
         t.h = (uint32_t) readh;
         t.chan = (uint8_t) readchan;
-        t.depth = depth;
         t.gl_id = 0;
-        t.gpu_only = false;
-        hmput(S_TextureCache, k, t);
-        ptrdiff_t inew = hmgeti(S_TextureCache, k);
+        shput(S_TextureCache, path, t);
+        ptrdiff_t inew = shgeti(S_TextureCache, path);
         tex = &S_TextureCache[inew].value;
-        VXINFO("Read texture %s (0x%jx, index %jd) into 0x%jx (%dx%d, %d channels, buffer 0x%jx)",
-            path, tex, inew, image, readw, readh, readchan, k.buffer);
+        VXINFO("Read texture %s (0x%jx, index %jd) into 0x%jx (%dx%d, %d channels)",
+            path, tex, inew, image, readw, readh, t.chan);
+
+        if (upload) {
+            glGenTextures(1, &t.gl_id);
+            glBindTexture(GL_TEXTURE_2D, t.gl_id);
+
+            // Upload texture:
+            if (t.chan == 1) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, t.w, t.h, 0, GL_RED, GL_UNSIGNED_BYTE, t.mem);
+            } else if (t.chan == 2) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, t.w, t.h, 0, GL_RG, GL_UNSIGNED_BYTE, t.mem);
+            } else if (t.chan == 3) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, t.w, t.h, 0, GL_RGB, GL_UNSIGNED_BYTE, t.mem);
+            } else if (t.chan == 4) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, t.w, t.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, t.mem);
+            } else {
+                VXPANIC("Texture %s has %hu channels", t.path, t.chan);
+            }
+            glGenerateMipmap(GL_TEXTURE_2D); // TODO: mipmaps should be optional
+            VXINFO("Uploaded texture to GPU as OpenGL texture %d", t.gl_id);
+
+            if (gpu_only) {
+                stbi_image_free(image);
+                VXINFO("Freed texture image from memory (0x%jx)", image);
+            }
+        }
     }
     return tex;
 }

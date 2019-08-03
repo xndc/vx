@@ -184,7 +184,7 @@ int main() {
     DBG(acc2);
     DBG(acc3);
 
-    Texture* tex = TextureFromFile("textures/ground0/albedo.jpg", false);
+    Texture* tex = GetTexture("textures/ground0/albedo.jpg", true, true);
     Sampler smp1 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
     Sampler smp2 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
     Sampler smp3 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);

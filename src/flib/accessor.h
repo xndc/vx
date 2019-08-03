@@ -130,6 +130,9 @@ typedef struct {
 // Reads a file into memory or returns a previously read version of it.
 char* FBufferFromFile (const char* filename, size_t* out_size);
 
+// Frees a previously allocated buffer.
+void FBufferFree (char* buffer);
+
 // Initializes an accessor, given an in-memory buffer.
 void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset,
     size_t count, uint8_t stride);

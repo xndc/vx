@@ -8,14 +8,15 @@ typedef struct {
     uint32_t w;
     uint32_t h;
     uint8_t chan;
-    bool depth;
-    bool gpu_only;
     GLuint gl_id;
 } Texture;
 
-// Loads a texture from a file.
-// Will return the same in-memory texture for each invocation with the same parameters.
-Texture* TextureFromFile (const char* path, bool depth);
+// Loads a texture from a file, uploading it to the GPU if requested.
+// Will return the same in-memory texture for each invocation with the same path.
+Texture* GetTexture (const char* path, bool upload, bool gpu_only);
+
+// Uploads a texture to the GPU.
+void TextureUpload (Texture* texture);
 
 typedef struct {
     GLuint gl_sampler;

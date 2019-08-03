@@ -2,14 +2,9 @@
 #include <common.h>
 #include <flib/accessor.h>
 #include <flib/vec.h>
-
-typedef enum {
-    MATERIAL_UNLIT,
-    MATERIAL_METALLIC_ROUGHNESS,
-} MaterialType;
+#include "texture.h"
 
 typedef struct {
-    MaterialType type;
     bool blend;
     GLenum blend_srcf;
     GLenum blend_dstf;
@@ -19,7 +14,10 @@ typedef struct {
     bool depth_write;
     GLenum depth_func;
     FVec4 const_diffuse;
-    FVec4 const_emissive;
     float const_metallic;
     float const_roughness;
+    Texture* tex_diffuse;
+    Texture* tex_occ_met_rgh;
+    Sampler smp_diffuse;
+    Sampler smp_occ_met_rgh;
 } Material;
