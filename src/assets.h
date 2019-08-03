@@ -51,9 +51,9 @@
 
 #define XM_ASSETS_MODELS_GLTF \
     X(MDL_DUCK,     "models/Duck",      "Duck.gltf") \
-    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
 
 #define XM_ASSETS_MODELS_GLTF_IGNORED \
+    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
     X(MDL_BOX_MR,   "models/BoxTextured-MetallicRoughness", "BoxTextured.gltf") \
 
 #define XM_ASSETS_FONTS \

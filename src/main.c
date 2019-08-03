@@ -2,8 +2,7 @@
 #include "gui.h"
 #include "flib/accessor.h"
 #include "flib/array.h"
-#include "data/texture.h"
-#include "data/model.h"
+#include "render/render.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -174,6 +173,7 @@ int main() {
 
     InitTextureSystem();
     InitModelSystem();
+    InitRenderSystem();
     InitGUI(window);
 
     FAccessor* acc1 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
@@ -204,6 +204,8 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         DrawGUI(window);
+        StartRenderPass("Test");
+        SetRenderProgram(VSH_DEFAULT, FSH_DEFAULT);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

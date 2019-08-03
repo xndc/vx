@@ -10,9 +10,9 @@ XM_ASSETS_MODELS_GLTF
 
 typedef struct {
     vec4 rotation;
+    vec4 worldRotation;
     vec3 position;
     vec3 scale;
-    vec4 worldRotation;
     vec3 worldPosition;
     vec3 worldScale;
     int parent; // -1 if this is a root node
@@ -84,7 +84,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 stbsp_snprintf(path, 4096, "%s/%s", dir, uri);
                 char* buf = vxReadFile(path, false, NULL); // TODO: check length?
                 arrput(model->buffers, buf);
-                arrput(model->buffers, len);
+                arrput(model->bufsizes, len);
             }
         }
     }
@@ -102,7 +102,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
             }
             // Relevant data from GLTF accessor:
             const char* type = json_object_get_string(gltf_accessor, "type");
-            size_t componentType = (size_t) json_object_get_number(gltf_accessor, "componentType");
+            uint32_t componentType = (uint32_t) json_object_get_number(gltf_accessor, "componentType");
             size_t bufferViewId = (size_t) json_object_get_number(gltf_accessor, "bufferView");
             size_t accBufferOffset = (size_t) json_object_get_number(gltf_accessor, "byteOffset");
             size_t accByteStride = (size_t) json_object_get_number(gltf_accessor, "byteStride");
@@ -114,8 +114,8 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
             // Create accessor:
             FAccessor acc;
             FAccessorInit(&acc, FAccessorTypeFromGltf(type, componentType),
-                model->buffers[bufferIndex], bufferOffset, accElementCount,
-                accByteStride /* which is 0 if the key is missing */);
+                model->buffers[bufferIndex], bufferOffset + accBufferOffset, accElementCount,
+                (uint8_t) accByteStride /* which is 0 if the key is missing */);
             arrput(accessors, acc);
         }
     }
