@@ -6,7 +6,7 @@
 XM_ASSETS_SHADERS
 #undef X
 
-#define X(name, glsl_name) GLuint name = 0;
+#define X(name, glsl_name) GLint name = -1;
 XM_ASSETS_SHADER_ATTRIBUTES
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
@@ -139,63 +139,76 @@ static GLuint LinkProgram (const char* vsh_name, GLuint vsh, const char* fsh_nam
 }
 
 void SetRenderProgram (Shader* vsh, Shader* fsh) {
-    if (vsh == NULL || fsh == NULL) {
-        S_RenderState.program = 0;
-        S_RenderState.current_vsh = NULL;
-        S_RenderState.current_fsh = NULL;
-        glUseProgram(0);
-        return;
-    }
     GLuint program = S_RenderState.program;
-    if (vsh != S_RenderState.current_vsh) { program = 0; }
-    if (fsh != S_RenderState.current_fsh) { program = 0; }
-    if (program == 0 || S_RenderState.defines_changed) {
-        // Cache lookup:
-        ProgramCacheKey key = {vsh, fsh};
-        ptrdiff_t i = hmgeti(S_ProgramCache, key);
-        ProgramCacheValue* v = (i >= 0) ? &S_ProgramCache[i].value : NULL;
-        bool match = (v != NULL);
-        if (match && arrlen(v->defines) == arrlen(S_RenderState.defines)) {
-            for (size_t i = 0; i < arrlenu(v->defines); i++) {
-                if (strcmp(v->defines[i].name, S_RenderState.defines[i].name) != 0 ||
-                    strcmp(v->defines[i].text, S_RenderState.defines[i].text) != 0)
-                {
-                    match = false;
-                    break;
+    if (vsh == NULL || fsh == NULL) {
+        program = 0;
+        vsh = NULL;
+        fsh = NULL;
+    } else {
+        if (vsh != S_RenderState.current_vsh) { program = 0; }
+        if (fsh != S_RenderState.current_fsh) { program = 0; }
+        if (program == 0 || S_RenderState.defines_changed) {
+            // Cache lookup:
+            ProgramCacheKey key = {vsh, fsh};
+            ptrdiff_t pidx = hmgeti(S_ProgramCache, key);
+            ProgramCacheValue* v = (pidx >= 0) ? &S_ProgramCache[pidx].value : NULL;
+            bool match = (v != NULL);
+            if (match && arrlen(v->defines) == arrlen(S_RenderState.defines)) {
+                for (size_t i = 0; i < arrlenu(v->defines); i++) {
+                    if (strcmp(v->defines[i].name, S_RenderState.defines[i].name) != 0 ||
+                        strcmp(v->defines[i].text, S_RenderState.defines[i].text) != 0)
+                    {
+                        match = false;
+                        break;
+                    }
                 }
             }
+            if (match) {
+                program = v->program;
+            }
         }
-        if (match) {
-            program = v->program;
+        if (program == 0) {
+            ShaderDefine* defines = S_RenderState.defines;
+            // Generate #define block:
+            static char define_block [16 * VX_KiB];
+            size_t cursor_pos = 0;
+            for (size_t i = 0; i < arrlenu(defines); i++) {
+                char* cursor = &define_block[cursor_pos];
+                size_t space = VXSIZE(define_block) - cursor_pos;
+                size_t written = stbsp_snprintf(cursor, (int) space, "#define %s %s\n",
+                    defines[i].name, defines[i].text);
+                VXCHECK(written > 0);
+                cursor_pos += written;
+            }
+            define_block[cursor_pos] = '\0';
+            // Compile shaders and link program:
+            const char* vs_src[] = {vsh->version, define_block, vsh->body};
+            const char* fs_src[] = {fsh->version, define_block, fsh->body};
+            GLuint glvs = CompileShader(vsh->name, GL_VERTEX_SHADER,   VXSIZE(vs_src), vs_src);
+            GLuint glfs = CompileShader(fsh->name, GL_FRAGMENT_SHADER, VXSIZE(fs_src), fs_src);
+            program = LinkProgram(vsh->name, glvs, fsh->name, glfs);
+            // Save program to cache:
+            ProgramCacheKey key = {vsh, fsh};
+            ProgramCacheValue v = {NULL, program};
+            for (size_t i = 0; i < arrlenu(defines); i++) {
+                arrput(v.defines, defines[i]);
+            }
+            hmput(S_ProgramCache, key, v);
         }
     }
-    if (program == 0) {
-        ShaderDefine* defines = S_RenderState.defines;
-        // Generate #define block:
-        static char define_block [16 * VX_KiB];
-        size_t cursor_pos = 0;
-        for (size_t i = 0; i < arrlenu(defines); i++) {
-            char* cursor = &define_block[cursor_pos];
-            size_t space = VXSIZE(define_block) - cursor_pos;
-            size_t written = stbsp_snprintf(cursor, (int) space, "#define %s %s\n",
-                defines[i].name, defines[i].text);
-            VXCHECK(written > 0);
-            cursor_pos += written;
-        }
-        define_block[cursor_pos] = '\0';
-        // Compile shaders and link program:
-        const char* vs_src[] = {vsh->version, define_block, vsh->body};
-        const char* fs_src[] = {fsh->version, define_block, fsh->body};
-        GLuint glvs = CompileShader(vsh->name, GL_VERTEX_SHADER,   VXSIZE(vs_src), vs_src);
-        GLuint glfs = CompileShader(fsh->name, GL_FRAGMENT_SHADER, VXSIZE(fs_src), fs_src);
-        program = LinkProgram(vsh->name, glvs, fsh->name, glfs);
-        // Save program to cache:
-        ProgramCacheKey key = {vsh, fsh};
-        ProgramCacheValue v = {NULL, program};
-        for (size_t i = 0; i < arrlenu(defines); i++) {
-            arrput(v.defines, defines[i]);
-        }
-        hmput(S_ProgramCache, key, v);
+    // Retrieve uniform and attribute locations:
+    if (program != 0) {
+        #define X(name, glsl_name) name = glGetUniformLocation(program, glsl_name);
+        XM_ASSETS_SHADER_UNIFORMS
+        #undef X
+        #define X(name, glsl_name) name = glGetAttribLocation(program, glsl_name);
+        XM_ASSETS_SHADER_ATTRIBUTES
+        #undef X
+    } else {
+        #define X(name, glsl_name) name = -1;
+        XM_ASSETS_SHADER_UNIFORMS
+        XM_ASSETS_SHADER_ATTRIBUTES
+        #undef X
     }
     S_RenderState.program = program;
     S_RenderState.current_vsh = vsh;
@@ -214,8 +227,4 @@ void AddShaderDefine (const char* name, const char* text) {
 
 void ResetShaderDefines() {
     arrfree(S_RenderState.defines);
-}
-
-void SetViewMatrix (mat4 vmat) {
-
 }

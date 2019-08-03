@@ -29,7 +29,7 @@ typedef struct {
 XM_ASSETS_SHADERS
 #undef X
 
-#define X(name, glsl_name) extern GLuint name;
+#define X(name, glsl_name) extern GLint name;
 XM_ASSETS_SHADER_ATTRIBUTES
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
