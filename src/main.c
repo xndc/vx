@@ -2,7 +2,8 @@
 #include "gui.h"
 #include "flib/accessor.h"
 #include "flib/array.h"
-#include "renderer/texture.h"
+#include "data/texture.h"
+#include "data/model.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -172,6 +173,7 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     InitTextureSystem();
+    InitModelSystem();
     InitGUI(window);
 
     FAccessor* acc1 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);

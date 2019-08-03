@@ -8,17 +8,15 @@ XM_ASSETS_RENDERTARGETS_SCREENSIZE
 XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #undef X
 
-#define BEGIN_FRAMEBUFFER(name) GLuint name = 0;
+#define BEGIN(name) GLuint name = 0;
 #define ATTACH(point, name)
-#define END_FRAMEBUFFER(name)
+#define END(name)
 XM_ASSETS_FRAMEBUFFERS
-#undef BEGIN_FRAMEBUFFER
+#undef BEGIN
 #undef ATTACH
-#undef END_FRAMEBUFFER
+#undef END
 
 GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
-
-static void LoadTextureFromDisk (const char* name, GLuint* texture, const char* path);
 
 void InitTextureSystem() {
     // Create texture objects:
@@ -27,7 +25,7 @@ void InitTextureSystem() {
     #undef X
 
     // Load textures from disk:
-    #define X(name, path) LoadTextureFromDisk(#name, &name, path);
+    #define X(name, path) name = LoadTextureFromDisk(#name, path);
     XM_ASSETS_TEXTURES
     #undef X
 
@@ -71,27 +69,28 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
     // Re-generate framebuffers:
     if (regenerate_framebuffers) {
         GLenum status;
-        #define BEGIN_FRAMEBUFFER(name) \
+        #define BEGIN(name) \
             if (name != 0) { glDeleteFramebuffers(1, &name); } \
             glGenFramebuffers(1, &name); \
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, name);
         #define ATTACH(point, name) \
             glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, point, GL_TEXTURE_2D, name, 0);
-        #define END_FRAMEBUFFER(name) \
+        #define END(name) \
             status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER); \
             if (status != GL_FRAMEBUFFER_COMPLETE) { \
                 VXPANIC("Couldn't create framebuffer " #name ": error %d", status); \
             }
         XM_ASSETS_FRAMEBUFFERS
-        #undef BEGIN_FRAMEBUFFER
+        #undef BEGIN
         #undef ATTACH
-        #undef END_FRAMEBUFFER
+        #undef END
     }
 }
 
-static void LoadTextureFromDisk (const char* name, GLuint* texture, const char* path) {
-    glGenTextures(1, texture);
-    glBindTexture(GL_TEXTURE_2D, *texture);
+GLuint LoadTextureFromDisk (const char* name, const char* path) {
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
 
     // Read from disk:
     int w, h, c;
@@ -104,19 +103,19 @@ static void LoadTextureFromDisk (const char* name, GLuint* texture, const char* 
     switch (c) {
         case 1: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, R8, %dx%d)", name, path, *texture, w, h);
+            VXINFO("Uploaded %s (%s) to GPU (object %u, R8, %dx%d)", name, path, texture, w, h);
         } break;
         case 2: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, w, h, 0, GL_RG, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, RG8, %dx%d)", name, path, *texture, w, h);
+            VXINFO("Uploaded %s (%s) to GPU (object %u, RG8, %dx%d)", name, path, texture, w, h);
         } break;
         case 3: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, RGB8, %dx%d)", name, path, *texture, w, h);
+            VXINFO("Uploaded %s (%s) to GPU (object %u, RGB8, %dx%d)", name, path, texture, w, h);
         } break;
         case 4: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, RGBA8, %dx%d)", name, path, *texture, w, h);
+            VXINFO("Uploaded %s (%s) to GPU (object %u, RGBA8, %dx%d)", name, path, texture, w, h);
         } break;
         default: {
             VXWARN("Unknown channel count %d for %s", c, name);

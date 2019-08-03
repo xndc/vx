@@ -8,13 +8,6 @@
     #include <malloc.h>
 #endif
 
-#define STB_SPRINTF_IMPLEMENTATION
-#include <stb/stb_sprintf.h>
-#define STB_DS_IMPLEMENTATION
-#include <stb/stb_ds.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
-
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #define VC_EXTRALEAN
@@ -23,7 +16,15 @@
     #include <Windows.h>
 #endif
 
+#define STB_SPRINTF_IMPLEMENTATION
+#include <stb/stb_sprintf.h>
+#define STB_DS_IMPLEMENTATION
+#include <stb/stb_ds.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+
 #include <glad/glad.c>
+#include <parson/parson.c>
 
 void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args) {
     stbsp_vsnprintf(dst, (int) size, fmt, args);

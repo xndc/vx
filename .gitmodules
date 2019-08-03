@@ -16,3 +16,6 @@
 [submodule "lib/etc/parson"]
 	path = lib/etc/parson
 	url = https://github.com/kgabis/parson
+[submodule "lib/cglm"]
+	path = lib/cglm
+	url = https://github.com/recp/cglm

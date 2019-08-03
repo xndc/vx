@@ -64,6 +64,10 @@ endif()
 # set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 # add_subdirectory(lib/glm)
 
+# file(GLOB_RECURSE cglm_sources RELATIVE ${CMAKE_SOURCE_DIR} "lib/cglm/src/*.c")
+# add_library(cglm ${cglm_sources})
+# target_include_directories(cglm PUBLIC "lib/cglm/include")
+
 add_library(imgui
     "lib/imgui/imgui.cpp"
     "lib/imgui/imgui_demo.cpp"
@@ -88,6 +92,7 @@ add_executable(Game ${GameSourcesC} ${GameSourcesCXX} ${GameHeaders} "src/misc/m
 target_include_directories(Game PRIVATE "src")
 target_include_directories(Game PRIVATE "lib/etc")          # header-only libraries
 target_include_directories(Game PRIVATE "build/include")    # auto-generated, e.g. OpenGL loader
+target_include_directories(Game PRIVATE "lib/cglm/include") # cglm library
 
 # Libraries:
 

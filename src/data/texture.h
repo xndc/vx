@@ -1,6 +1,6 @@
 #pragma once
-#include <common.h>
-#include <assets.h>
+#include "common.h"
+#include "assets.h"
 
 #define X(name, _) extern GLuint name;
 XM_ASSETS_TEXTURES
@@ -8,13 +8,13 @@ XM_ASSETS_RENDERTARGETS_SCREENSIZE
 XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #undef X
 
-#define BEGIN_FRAMEBUFFER(name) extern GLuint name;
+#define BEGIN(name) extern GLuint name;
 #define ATTACH(point, name)
-#define END_FRAMEBUFFER(name)
+#define END(name)
 XM_ASSETS_FRAMEBUFFERS
-#undef BEGIN_FRAMEBUFFER
+#undef BEGIN
 #undef ATTACH
-#undef END_FRAMEBUFFER
+#undef END
 
 #define VXGL_SAMPLER_COUNT 10
 extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
@@ -26,3 +26,7 @@ void InitTextureSystem();
 
 // Resizes all render targets and framebuffers.
 void UpdateFramebuffers (int width, int height, int shadowsize);
+
+// Loads a texture from disk and uploads it to the GPU. Returns its OpenGL ID.
+// The name doesn't matter, it's only displayed in this function's debug output.
+GLuint LoadTextureFromDisk (const char* name, const char* path);
