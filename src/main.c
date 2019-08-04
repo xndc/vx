@@ -218,24 +218,21 @@ int main() {
 
         ResetModelMatrix();
         AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
-        AddModelMatrix(MDL_DUCK.transforms[0]);
-        RenderMesh(&MDL_DUCK.meshes[0]);
+        // AddModelMatrix(MDL_DUCK.transforms[0]);
+        // RenderMesh(&MDL_DUCK.meshes[0]);
+        RenderModel(&MDL_DUCK);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -1.0f, 0.0f});
         AddModelScale((vec3){1.2f, 1.2f, 1.2f});
-        AddModelMatrix(MDL_BOX_MR.transforms[0]);
-        RenderMesh(&MDL_BOX_MR.meshes[0]);
+        // AddModelMatrix(MDL_BOX_MR.transforms[0]);
+        // RenderMesh(&MDL_BOX_MR.meshes[0]);
+        RenderModel(&MDL_BOX_MR);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -4.0f, 0.0f});
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
-        for (size_t i = 0; i < arrlenu(MDL_SPONZA.meshes); i++) {
-            PushRenderState();
-            AddModelMatrix(MDL_SPONZA.transforms[i]);
-            RenderMesh(&MDL_SPONZA.meshes[i]);
-            PopRenderState();
-        }
+        RenderModel(&MDL_SPONZA);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

@@ -299,6 +299,8 @@ void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler) {
     if (texture != 0 && sampler != 0) {
         GLuint tu = BindTextureUnit(texture, sampler);
         glUniform1i(uniform, tu);
+    } else {
+        glUniform1i(uniform, 0);
     }
 }
 
@@ -315,7 +317,7 @@ void SetUniformTexture (GLint uniform, GLuint texture, GLuint min, GLuint mag, G
 }
 
 void ResetShaderVariables() {
-    S_RenderState.next_texture_unit = 0;
+    S_RenderState.next_texture_unit = 1;
     #define X(name, glsl_name) name = -1;
     XM_ASSETS_SHADER_UNIFORMS
     #undef X
@@ -362,7 +364,7 @@ void SetMaterial (Material* mat) {
 
 void RenderMesh (Mesh* mesh) {
     if (mesh->gl_vertex_array != 0) {
-        S_RenderState.next_texture_unit = 0;
+        S_RenderState.next_texture_unit = 1;
         mat4 model;
         GetModelMatrix(model);
         VXCHECK(UNIF_MODEL_MATRIX >= 0);
@@ -389,5 +391,14 @@ void RenderMesh (Mesh* mesh) {
                 VXWARN("Mesh 0x%lx has unknown index accessor type %d", mesh, mesh->indices.type);
             }
         }
+    }
+}
+
+void RenderModel (Model* model) {
+    for (size_t i = 0; i < arrlenu(model->meshes); i++) {
+        PushRenderState();
+        AddModelMatrix(model->transforms[i]);
+        RenderMesh(&model->meshes[i]);
+        PopRenderState();
     }
 }
