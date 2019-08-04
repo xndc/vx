@@ -50,7 +50,7 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         camera->prev_projection = camera->projection;
     }
     if (camera->mode != camera->prev_mode ||
-        memcmp(&camera->simple, camera->prev_props, sizeof(union CameraModeProps)) != 0)
+        memcmp(&camera->simple, camera->prev_props, sizeof(struct CameraModePropsFPS)) != 0)
     {
         vec3 up = {0.0f, 1.0f, 0.0f};
         switch (camera->mode) {
@@ -73,6 +73,6 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
             } break;
         }
         camera->prev_mode = camera->mode;
-        memcpy(camera->prev_props, &camera->simple, sizeof(union CameraModeProps));
+        memcpy(camera->prev_props, &camera->simple, sizeof(struct CameraModePropsFPS));
     }
 }

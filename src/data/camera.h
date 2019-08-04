@@ -22,7 +22,7 @@ typedef struct {
         CAMERA_MODE_FPS,
     } mode;
 
-    union CameraModeProps {
+    union {
         struct CameraModePropsSimple {
             vec3 position;
             vec3 direction; // normalized
@@ -53,7 +53,7 @@ typedef struct {
     float prev_aspect_hw;
     enum CameraProjection prev_projection;
     enum CameraMode prev_mode;
-    char prev_props [sizeof(union CameraModeProps)];
+    char prev_props [sizeof(struct CameraModePropsFPS)];
 } Camera;
 
 // Updates the given camera's projection and view matrices.

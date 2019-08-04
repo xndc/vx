@@ -178,6 +178,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Suppressed warnings:
     target_compile_options(Game PRIVATE
         -Wno-nonportable-include-path   # pointless, trips on a few things
+        -Wno-missing-braces         # trips on the common T X = {0} idiom
         -Wno-documentation          # trips on most documentation comments in GLFW3.h
         -Wno-reserved-id-macro      # macro names starting with _
         -Wno-writable-strings       # passing const char* to char* arguments [1]

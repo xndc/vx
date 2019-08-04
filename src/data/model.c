@@ -246,7 +246,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     }
                 }
                 glm_mat4_identity(nentry->matrix);
-                glm_translate(nentry->matrix, translation, nentry->matrix);
+                glm_translate(nentry->matrix, translation);
                 glm_quat_rotate(nentry->matrix, rotation, nentry->matrix);
                 glm_scale(nentry->matrix, scale);
             }

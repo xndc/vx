@@ -318,6 +318,8 @@ void ResetShaderVariables() {
     S_RenderState.next_texture_unit = 0;
     #define X(name, glsl_name) name = -1;
     XM_ASSETS_SHADER_UNIFORMS
+    #undef X
+    #define X(name, location, glsl_name) name = -1;
     XM_ASSETS_SHADER_ATTRIBUTES
     #undef X
 }
