@@ -169,6 +169,9 @@ int main() {
         glfwSwapInterval(1);
     }
 
+    // glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+    glDepthRangef(-1.0f, 1.0f);
+
     // Clear window to prevent white flash before loading resources:
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -183,45 +186,56 @@ int main() {
     G_MainCamera.fov  = 80.0f;
     G_MainCamera.near = 0.1f;
     G_MainCamera.far  = 0.0f;
+    // G_MainCamera.mode = CAMERA_MODE_SIMPLE;
+    // glm_vec3_copy((vec3){100.0f, 100.0f, 100.0f}, G_MainCamera.simple.position);
+    // glm_vec3_sub(GLM_VEC3_ZERO, G_MainCamera.simple.position, G_MainCamera.simple.direction);
+    // glm_vec3_normalize(G_MainCamera.simple.direction);
     G_MainCamera.mode = CAMERA_MODE_ORBIT;
     glm_vec3_zero(G_MainCamera.orbit.target);
-    G_MainCamera.orbit.distance = 10.0f;
-    G_MainCamera.orbit.angle_horz = (float) VXRADIANS(40.0f);
-    G_MainCamera.orbit.angle_vert = (float) VXRADIANS(30.0f);
-
-    FAccessor* acc1 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
-    FAccessor* acc2 = FAccessorFromFile(FACCESSOR_FLOAT32, "models/Duck/Duck0.bin", 0, 1000, 0);
-    FAccessor* acc3 = FAccessorFromFile(FACCESSOR_FLOAT32_MAT4, "models/Duck/Duck0.bin", 100, 800, 0);
-    #define DBG(acc) \
-        VXDEBUG("Accessor 0x%jx with buffer 0x%jx, offset %ju, start 0x%jx, count %ju, stride %ju", \
-            acc, acc->buffer, acc->offset, FAccessorData(acc), acc->count, acc->stride);
-    DBG(acc1);
-    DBG(acc2);
-    DBG(acc3);
-
-    // Texture* tex = GetTexture("textures/ground0/albedo.jpg", true, true);
-    // Sampler smp1 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
-    // Sampler smp2 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
-    // Sampler smp3 = GetColorSampler(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_REPEAT);
-    // Sampler smp4 = GetColorSampler(GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR, GL_REPEAT);
+    // G_MainCamera.orbit.distance = 200.0f;
+    G_MainCamera.orbit.distance = 3.0f;
+    G_MainCamera.orbit.angle_vert = (float) VXRADIANS(90.0f);
+    G_MainCamera.orbit.angle_horz = (float) VXRADIANS(fmodf(4.0f * glfwGetTime(), 360.0f));
 
     while (!glfwWindowShouldClose(window)) {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
         glViewport(0, 0, w, h);
+
+        G_MainCamera.orbit.angle_horz = (float) VXRADIANS(fmodf(10.0f * glfwGetTime(), 360.0f));
         UpdateCameraMatrices(&G_MainCamera, w, h);
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
+        glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         DrawGUI(window);
         StartRenderPass("Test");
-        PushRenderState();
-        PushRenderState();
+        SetCameraMatrices(&G_MainCamera);
         SetRenderProgram(VSH_DEFAULT, FSH_DEFAULT);
+
+        ResetModelMatrix();
+        AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
+        AddModelMatrix(MDL_DUCK.transforms[0]);
+        RenderMesh(&MDL_DUCK.meshes[0]);
+
+        ResetModelMatrix();
+        AddModelPosition((vec3){0.0f, -1.0f, 0.0f});
+        AddModelScale((vec3){1.2f, 1.2f, 1.2f});
+        AddModelMatrix(MDL_BOX_MR.transforms[0]);
+        RenderMesh(&MDL_BOX_MR.meshes[0]);
+
+        ResetModelMatrix();
+        AddModelPosition((vec3){0.0f, -4.0f, 0.0f});
+        AddModelScale((vec3){2.5f, 2.5f, 2.5f});
+        for (size_t i = 0; i < arrlenu(MDL_SPONZA.meshes); i++) {
+            PushRenderState();
+            AddModelMatrix(MDL_SPONZA.transforms[i]);
+            RenderMesh(&MDL_SPONZA.meshes[i]);
+            PopRenderState();
+        }
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

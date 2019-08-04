@@ -5,14 +5,14 @@
     X(FSH_DEFAULT,  "shaders/default.frag") \
 
 #define XM_ASSETS_SHADER_ATTRIBUTES \
-    X(ATTR_POSITION,    "aPosition") \
-    X(ATTR_NORMAL,      "aNormal") \
-    X(ATTR_TANGENT,     "aTangent") \
-    X(ATTR_TEXCOORD0,   "aTexcoord0") \
-    X(ATTR_TEXCOORD1,   "aTexcoord1") \
-    X(ATTR_COLOR,       "aColor") \
-    X(ATTR_JOINTS,      "aJoints") \
-    X(ATTR_WEIGHTS,     "aWeights") \
+    X(ATTR_POSITION,    0, "aPosition") \
+    X(ATTR_NORMAL,      1, "aNormal") \
+    X(ATTR_TANGENT,     2, "aTangent") \
+    X(ATTR_TEXCOORD0,   3, "aTexcoord0") \
+    X(ATTR_TEXCOORD1,   4, "aTexcoord1") \
+    X(ATTR_COLOR,       5, "aColor") \
+    X(ATTR_JOINTS,      6, "aJoints") \
+    X(ATTR_WEIGHTS,     7, "aWeights") \
 
 #define XM_ASSETS_SHADER_UNIFORMS \
     X(UNIF_MODEL_MATRIX,    "uModelMatrix") \
@@ -53,10 +53,10 @@
 
 #define XM_ASSETS_MODELS_GLTF \
     X(MDL_DUCK,     "models/Duck",      "Duck.gltf") \
+    X(MDL_BOX_MR,   "models/BoxTextured-MetallicRoughness", "BoxTextured.gltf") \
+    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
 
 #define XM_ASSETS_MODELS_GLTF_IGNORED \
-    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
-    X(MDL_BOX_MR,   "models/BoxTextured-MetallicRoughness", "BoxTextured.gltf") \
 
 #define XM_ASSETS_FONTS \
     X(FONT_ROBOTO_MEDIUM, "fonts/Roboto-Medium.ttf") \

@@ -31,8 +31,11 @@ XM_ASSETS_SHADERS
 #undef X
 
 #define X(name, glsl_name) extern GLint name;
-XM_ASSETS_SHADER_ATTRIBUTES
 XM_ASSETS_SHADER_UNIFORMS
+#undef X
+
+#define X(name, location, glsl_name) extern GLint name;
+XM_ASSETS_SHADER_ATTRIBUTES
 #undef X
 
 void InitRenderSystem();
@@ -52,6 +55,7 @@ void SetViewMatrix (mat4 vmat);
 void SetProjMatrix (mat4 pmat);
 void SetModelMatrix (mat4 mmat);
 void GetModelMatrix (mat4 dest);
+void AddModelMatrix (mat4 mmat);
 void AddModelPosition (vec3 position);
 void AddModelRotation (vec4 rotation);
 void AddModelScale (vec3 scale);

@@ -31,7 +31,10 @@ typedef struct {
     GLuint smp_normal;
 } Material;
 
+void InitMaterial (Material* m);
+
 typedef struct {
+    GLuint gl_vertex_array;
     FAccessor positions;
     FAccessor normals;
     FAccessor tangents;

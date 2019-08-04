@@ -6,8 +6,11 @@
 XM_ASSETS_SHADERS
 #undef X
 
-#define X(name, glsl_name) GLint name = -1;
+#define X(name, location, glsl_name) GLint name = location;
 XM_ASSETS_SHADER_ATTRIBUTES
+#undef X
+
+#define X(name, glsl_name) GLint name = -1;
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
 
@@ -101,7 +104,7 @@ void InitRenderSystem() {
 // Note that this function does NOT reset the following:
 // -> the currently bound framebuffer
 // -> any other global OpenGL state (blend mode, depth test settings, etc.)
-// This function also signals to the debug and timing systems that a new render pass is starting.
+// TODO: signal to the debug system/profiler/RenderDoc/etc. that a pass is starting.
 void StartRenderPass (const char* name) {
     ResetMatrices();
     ResetShaderDefines();
@@ -217,13 +220,19 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
             hmput(S_ProgramCache, key, v);
         }
     }
-    // Retrieve uniform and attribute locations:
+    // Retrieve uniforms and check attribute locations:
     ResetShaderVariables();
     if (program != 0) {
         #define X(name, glsl_name) name = glGetUniformLocation(program, glsl_name);
         XM_ASSETS_SHADER_UNIFORMS
         #undef X
-        #define X(name, glsl_name) name = glGetAttribLocation(program, glsl_name);
+        #define X(name, location, glsl_name) { \
+            GLint loc = glGetAttribLocation(program, glsl_name); \
+            if (!(loc == -1 || loc == location)) { \
+                VXPANIC("Expected attribute %s of program %d to have location %d (is %d)", \
+                    glsl_name, program, location, loc); \
+            } \
+        }
         XM_ASSETS_SHADER_ATTRIBUTES
         #undef X
     }
@@ -250,6 +259,7 @@ void SetViewMatrix (mat4 vmat)  { glm_mat4_copy(vmat, S_RenderState.mat_view); }
 void SetProjMatrix (mat4 pmat)  { glm_mat4_copy(pmat, S_RenderState.mat_proj); }
 void SetModelMatrix (mat4 mmat) { glm_mat4_copy(mmat, S_RenderState.mat_model); }
 void GetModelMatrix (mat4 dest) { glm_mat4_copy(S_RenderState.mat_model, dest); }
+void AddModelMatrix (mat4 mmat) { glm_mat4_mul(S_RenderState.mat_model, mmat, S_RenderState.mat_model); }
 void AddModelPosition (vec3 position) { glm_translate(S_RenderState.mat_model, position); }
 void AddModelRotation (vec4 rotation) { glm_quat_rotate(S_RenderState.mat_model, rotation, S_RenderState.mat_model); }
 void AddModelScale (vec3 scale) { glm_scale(S_RenderState.mat_model, scale); }
@@ -313,6 +323,8 @@ void ResetShaderVariables() {
 }
 
 void SetMaterial (Material* mat) {
+    glDisable(GL_STENCIL_TEST);
+
     if (mat->blend) {
         glEnable(GL_BLEND);
         glBlendFunc(mat->blend_srcf, mat->blend_dstf);
@@ -347,13 +359,33 @@ void SetMaterial (Material* mat) {
 }
 
 void RenderMesh (Mesh* mesh) {
-    mat4 model;
-    GetModelMatrix(model);
-    glUniformMatrix4fv(UNIF_MODEL_MATRIX, 16, false, model);
-    glUniformMatrix4fv(UNIF_PROJ_MATRIX,  16, false, S_RenderState.mat_proj);
-    glUniformMatrix4fv(UNIF_VIEW_MATRIX,  16, false, S_RenderState.mat_view);
-    SetMaterial(mesh->material);
-
-    // TODO:
-    // You have to actually upload the mesh to the GPU, you doofus.
+    if (mesh->gl_vertex_array != 0) {
+        S_RenderState.next_texture_unit = 0;
+        mat4 model;
+        GetModelMatrix(model);
+        VXCHECK(UNIF_MODEL_MATRIX >= 0);
+        VXCHECK(UNIF_PROJ_MATRIX >= 0);
+        VXCHECK(UNIF_VIEW_MATRIX >= 0);
+        glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, model);
+        glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, S_RenderState.mat_proj);
+        glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, S_RenderState.mat_view);
+        SetMaterial(mesh->material);
+        glBindVertexArray(mesh->gl_vertex_array);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.gl_object);
+        switch (mesh->indices.type) {
+            case FACCESSOR_UINT16:
+            case FACCESSOR_UINT16_VEC3: {
+                glDrawElements(GL_TRIANGLES, mesh->indices.count * mesh->indices.component_count,
+                    GL_UNSIGNED_SHORT, NULL);
+            } break;
+            case FACCESSOR_UINT32:
+            case FACCESSOR_UINT32_VEC3: {
+                glDrawElements(GL_TRIANGLES, mesh->indices.count * mesh->indices.component_count,
+                    GL_UNSIGNED_INT, NULL);
+            } break;
+            default: {
+                VXWARN("Mesh 0x%lx has unknown index accessor type %d", mesh, mesh->indices.type);
+            }
+        }
+    }
 }

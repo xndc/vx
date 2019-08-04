@@ -3,18 +3,15 @@
 #include <parson/parson.h>
 #include <glad/glad.h>
 #include "texture.h"
+#include "render/render.h"
 
 #define X(name, dir, file) Model name = {0};
 XM_ASSETS_MODELS_GLTF
 #undef X
 
 typedef struct {
-    vec4 rotation;
-    vec4 worldRotation;
-    vec3 position;
-    vec3 scale;
-    vec3 worldPosition;
-    vec3 worldScale;
+    mat4 matrix;
+    mat4 worldMatrix;
     int parent; // -1 if this is a root node
     int meshId; // -1 if this node is not a mesh
     bool worldTransformComputed;
@@ -28,6 +25,18 @@ void InitModelSystem() {
     #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
     XM_ASSETS_MODELS_GLTF
     #undef X
+}
+
+void InitMaterial (Material* m) {
+    memset(m, 0, sizeof(Material));
+    m->blend = false;
+    m->blend_srcf = GL_SRC_ALPHA;           // suitable for back-to-front transparency
+    m->blend_dstf = GL_ONE_MINUS_SRC_ALPHA; // suitable for back-to-front transparency
+    m->cull = true;
+    m->cull_face = GL_BACK;
+    m->depth_test = true;
+    m->depth_write = true;
+    m->depth_func = GL_GREATER;
 }
 
 static inline JSON_Value* ReadJSONFromFile (const char* filename) {
@@ -44,6 +53,7 @@ static inline JSON_Value* ReadJSONFromFile (const char* filename) {
 }
 
 static void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file) {
+    VXDEBUG("ReadModelFromFile(%s, 0x%jx, %s, %s)", name, model, dir, file);
     // Read GLTF file:
     static char path [4096]; // 4095 characters really ought to be enough for anyone...
     stbsp_snprintf(path, VXSIZE(path), "%s/%s", dir, file);
@@ -95,6 +105,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
     JSON_Array* gltf_bufferviews = json_object_get_array(root, "bufferViews");
     FAccessor* accessors = NULL;
     if (gltf_accessors && gltf_bufferviews) {
+        VXDEBUG("Loading %ju accessors:", json_array_get_count(gltf_accessors));
         for (size_t i = 0; i < json_array_get_count(gltf_accessors); i++) {
             JSON_Object* gltf_accessor = json_array_get_object(gltf_accessors, i);
             if (json_object_has_value(gltf_accessor, "sparse")) {
@@ -117,17 +128,25 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 model->buffers[bufferIndex], bufferOffset + accBufferOffset, accElementCount,
                 (uint8_t) accByteStride /* which is 0 if the key is missing */);
             arrput(accessors, acc);
+            FAccessor* p = &arrlast(accessors);
+            VXDEBUG("* idx %jd p 0x%jx buffer 0x%jx offset %ju count %ju type %s/%d (t %d cc %d cs %d st %d)",
+                arrlen(accessors) - 1, p, p->buffer, p->offset, p->count, type, componentType,
+                p->type, p->component_count, p->component_size, p->stride);
+            VXDEBUG("  from accessor %ju, bufferview %ju, buffer %ju", i, bufferViewId, bufferIndex);
         }
     }
 
     // Extract material data:
     JSON_Array* materials = json_object_get_array(root, "materials");
     if (materials) {
+        VXDEBUG("Loading %ju materials:", json_array_get_count(materials));
         for (size_t i = 0; i < json_array_get_count(materials); i++) {
             JSON_Object* material = json_array_get_object(materials, i);
-            Material mat;
+            Material mat = {0};
+            InitMaterial(&mat);
             JSON_Object* pbrMR = json_object_get_object(material, "pbrMetallicRoughness");
             if (pbrMR) {
+                VXDEBUG("* Material %ju, using PBR Metallic-Roughness workflow", i);
                 if (json_object_has_value(pbrMR, "baseColorTexture")) {
                     size_t colorTexId = (size_t) json_object_dotget_number(pbrMR, "baseColorTexture.index");
                     mat.tex_diffuse = model->textures[colorTexId];
@@ -136,6 +155,8 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     glSamplerParameteri(mat.smp_diffuse, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                     glSamplerParameteri(mat.smp_diffuse, GL_TEXTURE_WRAP_S, GL_REPEAT);
                     glSamplerParameteri(mat.smp_diffuse, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                    VXDEBUG("  -> diffuse color texture idx %ju gltex %ju glsmp %ju", colorTexId,
+                        mat.tex_diffuse, mat.smp_diffuse);
                 }
                 if (json_object_has_value(pbrMR, "metallicRoughnessTexture")) {
                     size_t mrTexId = (size_t) json_object_dotget_number(pbrMR, "metallicRoughnessTexture.index");
@@ -145,7 +166,11 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     glSamplerParameteri(mat.smp_occ_met_rgh, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                     glSamplerParameteri(mat.smp_occ_met_rgh, GL_TEXTURE_WRAP_S, GL_REPEAT);
                     glSamplerParameteri(mat.smp_occ_met_rgh, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                    VXDEBUG("  -> occ-met-rgh texture idx %ju gltex %ju glsmp %ju", mrTexId,
+                        mat.tex_occ_met_rgh, mat.smp_occ_met_rgh);
                 }
+            } else {
+                VXDEBUG("* Material %ju, using an unknown workflow", i);
             }
             if (json_object_has_value(material, "normalTexture")) {
                 size_t normalTexId = (size_t) json_object_dotget_number(material, "normalTexture.index");
@@ -155,8 +180,11 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 glSamplerParameteri(mat.smp_normal, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glSamplerParameteri(mat.smp_normal, GL_TEXTURE_WRAP_S, GL_REPEAT);
                 glSamplerParameteri(mat.smp_normal, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                VXDEBUG("  -> normal map texture idx %ju gltex %ju glsmp %ju", normalTexId,
+                    mat.tex_normal, mat.smp_normal);
             }
             // TODO: constant colors, emissive, other properties?
+            arrput(model->materials, mat);
         }
     }
 
@@ -171,7 +199,11 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
             Node* nentry = &nodeEntries[i];
             nentry->parent = -1;
             nentry->meshId = -1;
+            glm_mat4_zero(nentry->matrix);
+            glm_mat4_zero(nentry->worldMatrix);
+            nentry->worldTransformComputed = false;
         }
+        VXDEBUG("Loading %ju nodes into Node array 0x%jx:", nodeCount, nodeEntries);
         // First pass: store parents and local transform data, and compute primitive count
         size_t totalPrimitives = 0;
         for (size_t i = 0; i < nodeCount; i++) {
@@ -184,28 +216,39 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     nodeEntries[childNodeIdx].parent = (int) i;
                 }
             }
-            // Translation:
-            if (json_object_has_value_of_type(node, "translation", JSONArray)) {
-                nentry->position[0] = (float) json_array_get_number(json_object_get_array(node, "translation"), 0);
-                nentry->position[1] = (float) json_array_get_number(json_object_get_array(node, "translation"), 1);
-                nentry->position[2] = (float) json_array_get_number(json_object_get_array(node, "translation"), 2);
-            }
-            // Scale:
-            if (json_object_has_value_of_type(node, "scale", JSONArray)) {
-                nentry->scale[0] = (float) json_array_get_number(json_object_get_array(node, "scale"), 0);
-                nentry->scale[1] = (float) json_array_get_number(json_object_get_array(node, "scale"), 1);
-                nentry->scale[2] = (float) json_array_get_number(json_object_get_array(node, "scale"), 2);
+            if (json_object_has_value_of_type(node, "matrix", JSONArray)) {
+                // Already-specified matrix:
+                JSON_Array* a = json_object_get_array(node, "matrix");
+                for (size_t aidx = 0; aidx < 16; aidx++) {
+                    ((float*)nentry->matrix)[aidx] = json_array_get_number(a, aidx);
+                }
             } else {
-                glm_vec3_one(nentry->scale);
-            }
-            // Rotation:
-            if (json_object_has_value_of_type(node, "rotation", JSONArray)) {
-                nentry->rotation[0] = (float) json_array_get_number(json_object_get_array(node, "rotation"), 0);
-                nentry->rotation[1] = (float) json_array_get_number(json_object_get_array(node, "rotation"), 1);
-                nentry->rotation[2] = (float) json_array_get_number(json_object_get_array(node, "rotation"), 2);
-                nentry->rotation[3] = (float) json_array_get_number(json_object_get_array(node, "rotation"), 3);
-            } else {
-                glm_quat_identity(nentry->rotation);
+                // Translation, scale and rotation:
+                vec4 rotation = GLM_QUAT_IDENTITY_INIT;
+                vec3 translation = GLM_VEC3_ZERO_INIT;
+                vec3 scale = GLM_VEC3_ONE_INIT;
+                if (json_object_has_value_of_type(node, "rotation", JSONArray)) {
+                    JSON_Array* a = json_object_get_array(node, "rotation");
+                    for (size_t aidx = 0; aidx < 4; aidx++) {
+                        rotation[aidx] = json_array_get_number(a, aidx);
+                    }
+                }
+                if (json_object_has_value_of_type(node, "translation", JSONArray)) {
+                    JSON_Array* a = json_object_get_array(node, "translation");
+                    for (size_t aidx = 0; aidx < 3; aidx++) {
+                        translation[aidx] = json_array_get_number(a, aidx);
+                    }
+                }
+                if (json_object_has_value_of_type(node, "scale", JSONArray)) {
+                    JSON_Array* a = json_object_get_array(node, "scale");
+                    for (size_t aidx = 0; aidx < 3; aidx++) {
+                        scale[aidx] = json_array_get_number(a, aidx);
+                    }
+                }
+                glm_mat4_identity(nentry->matrix);
+                glm_translate(nentry->matrix, translation, nentry->matrix);
+                glm_quat_rotate(nentry->matrix, rotation, nentry->matrix);
+                glm_scale(nentry->matrix, scale);
             }
             // Compute primitive count:
             if (json_object_has_value_of_type(node, "mesh", JSONNumber)) {
@@ -213,13 +256,34 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 JSON_Object* mesh = json_array_get_object(meshes, nentry->meshId);
                 JSON_Array* primitives = json_object_get_array(mesh, "primitives");
                 totalPrimitives += json_array_get_count(primitives);
+                VXDEBUG("* Node %ju with attached mesh %ju (0x%jx) containing %ju primitives (%ju total so far):",
+                    i, nentry->meshId, mesh, json_array_get_count(primitives), totalPrimitives);
+            } else {
+                VXDEBUG("* Node %ju with no primitives attached:", i);
             }
+            float* m = nentry->matrix;
+            VXDEBUG("  * [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
+                "[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f]]",
+                m[0],  m[1],  m[2],  m[3],
+                m[4],  m[5],  m[6],  m[7],
+                m[8],  m[9],  m[10], m[11],
+                m[12], m[13], m[14], m[15]);
         }
         // Second pass: recursively compute world transform data
+        VXDEBUG("Computing world transforms for nodes:");
         for (size_t i = 0; i < nodeCount; i++) {
             ComputeWorldTransformForNode(nodeEntries, i);
+            Node* nentry = &nodeEntries[i];
+            float* m = nentry->worldMatrix;
+            VXDEBUG("* Node %ju: [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
+                "[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f]]", i,
+                m[0],  m[1],  m[2],  m[3],
+                m[4],  m[5],  m[6],  m[7],
+                m[8],  m[9],  m[10], m[11],
+                m[12], m[13], m[14], m[15]);
         }
         // Third pass: store meshes (i.e. GLTF primitives, not GLTF meshes) for each node
+        VXDEBUG("Extracting meshes from each node:");
         arrsetlen(model->transforms, totalPrimitives);
         arrsetlen(model->meshes,     totalPrimitives);
         size_t meshidx = 0;
@@ -228,45 +292,107 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
             JSON_Object* node = json_array_get_object(nodes, i);
             if (json_object_has_value_of_type(node, "mesh", JSONNumber)) {
                 nentry->meshId = (int) json_object_get_number(node, "mesh");
+                VXDEBUG("* Node %ju with mesh idx %d:", i, nentry->meshId);
                 JSON_Object* mesh = json_array_get_object(meshes, nentry->meshId);
                 JSON_Array* primitives = json_object_get_array(mesh, "primitives");
                 for (size_t pidx = 0; pidx < json_array_get_count(primitives); pidx++) {
                     JSON_Object* primitive = json_array_get_object(primitives, pidx);
+                    VXDEBUG("  * Primitive %ju => mesh %ju:", pidx, meshidx);
+                    // Clear out:
+                    memset(&model->meshes[meshidx], 0, sizeof(model->meshes[meshidx]));
                     // Transform:
-                    glm_mat4_identity(model->transforms[meshidx]);
-                    glm_translate(model->transforms[meshidx], nentry->worldPosition);
-                    glm_quat_rotate(model->transforms[meshidx], nentry->worldRotation, model->transforms[meshidx]);
-                    glm_scale(model->transforms[meshidx], nentry->worldScale);
+                    float* m = model->transforms[meshidx];
+                    glm_mat4_copy(nentry->worldMatrix, m);
+                    VXDEBUG("    * [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
+                        "[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f]]",
+                        m[0],  m[1],  m[2],  m[3],
+                        m[4],  m[5],  m[6],  m[7],
+                        m[8],  m[9],  m[10], m[11],
+                        m[12], m[13], m[14], m[15]);
                     // Indices:
                     size_t accessorId = (size_t) json_object_get_number(primitive, "indices");
-                    model->meshes[i].indices = accessors[accessorId];
+                    model->meshes[meshidx].indices = accessors[accessorId];
+                    VXDEBUG("    * Indices: accessor idx %ju, p 0x%jx, buf 0x%jx => mesh acc 0x%jx buf 0x%jx",
+                        accessorId, &accessors[accessorId], accessors[accessorId].buffer,
+                        &model->meshes[meshidx].indices, model->meshes[meshidx].indices.buffer);
                     // Attributes:
                     JSON_Object* attributes = json_object_get_object(primitive, "attributes");
                     #define X(gltfName, dest) \
                         if (json_object_has_value_of_type(attributes, gltfName, JSONNumber)) { \
                             accessorId = (size_t) json_object_get_number(attributes, gltfName); \
                             dest = accessors[accessorId]; \
+                            VXDEBUG("    * Attribute %s: accessor idx %ju, p 0x%jx, buf 0x%jx => mesh acc 0x%jx buf 0x%jx", \
+                                gltfName, accessorId, &accessors[accessorId], accessors[accessorId].buffer, \
+                                &dest, dest.buffer); \
                         }
-                    X("POSITION",   model->meshes[i].positions);
-                    X("NORMAL",     model->meshes[i].normals);
-                    X("TANGENT",    model->meshes[i].tangents);
-                    X("TEXCOORD_0", model->meshes[i].texcoords0);
-                    X("TEXCOORD_1", model->meshes[i].texcoords1);
-                    X("COLOR_0",    model->meshes[i].colors);
-                    X("JOINTS_0",   model->meshes[i].joints);
-                    X("WEIGHTS_0",  model->meshes[i].weights)
+                    X("POSITION",   model->meshes[meshidx].positions);
+                    X("NORMAL",     model->meshes[meshidx].normals);
+                    X("TANGENT",    model->meshes[meshidx].tangents);
+                    X("TEXCOORD_0", model->meshes[meshidx].texcoords0);
+                    X("TEXCOORD_1", model->meshes[meshidx].texcoords1);
+                    X("COLOR_0",    model->meshes[meshidx].colors);
+                    X("JOINTS_0",   model->meshes[meshidx].joints);
+                    X("WEIGHTS_0",  model->meshes[meshidx].weights)
                     #undef X
                     // Material:
                     size_t materialId = (size_t) json_object_get_number(primitive, "material");
-                    model->meshes[i].material = &model->materials[materialId];
-                    // Debug output:
-                    VXINFO("Stored mesh %d (from node %d, mesh %d, primitive %d)",
-                        meshidx, i, nentry->meshId, pidx);
+                    model->meshes[meshidx].material = &model->materials[materialId];
+                    VXDEBUG("    * Material idx %ju (0x%jx)", materialId, model->meshes[meshidx].material);
+                    // Done:
                     meshidx++;
                 }
             }
         }
     }
+
+    VXDEBUG("Uploading VBOs for %ju meshes:", arrlenu(model->meshes));
+    for (size_t i = 0; i < arrlenu(model->meshes); i++) {
+        Mesh* m = &model->meshes[i];
+        glGenVertexArrays(1, &m->gl_vertex_array);
+        glBindVertexArray(m->gl_vertex_array);
+        VXDEBUG("* Mesh %ju => VAO %u", i, m->gl_vertex_array);
+
+        #define XMLOCAL_EBO \
+            X(m->indices)
+        #define XMLOCAL_VBO \
+            X(ATTR_POSITION,   m->positions) \
+            X(ATTR_NORMAL,     m->normals) \
+            X(ATTR_TANGENT,    m->tangents) \
+            X(ATTR_TEXCOORD0,  m->texcoords0) \
+            X(ATTR_TEXCOORD1,  m->texcoords1) \
+            X(ATTR_COLOR,      m->colors) \
+            X(ATTR_JOINTS,     m->joints) \
+            X(ATTR_WEIGHTS,    m->weights)
+
+        #define X(acc) \
+            if (acc.buffer != NULL) { \
+                glGenBuffers(1, &acc.gl_object); \
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, acc.gl_object); \
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
+                    FAccessorData(&acc), GL_STATIC_DRAW); \
+                VXDEBUG("  * " #acc ": EBO %u", acc.gl_object); \
+            }
+        XMLOCAL_EBO
+        #undef X
+
+        #define X(attr, acc) \
+            if (acc.buffer != NULL) { \
+                glGenBuffers(1, &acc.gl_object); \
+                glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
+                glBufferData(GL_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
+                    FAccessorData(&acc), GL_STATIC_DRAW); \
+                glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
+                glEnableVertexAttribArray(attr); \
+                glVertexAttribPointer(attr, acc.component_count, GL_FLOAT, false, acc.stride, NULL); \
+                VXDEBUG("  * " #acc ": VBO %u", acc.gl_object); \
+            }
+        XMLOCAL_VBO
+        #undef X
+
+        #undef XMLOCAL_EBO
+        #undef XMLOCAL_VBO
+    }
+
     VXINFO("Successfully loaded GLTF model %s", name);
     // FIXME: memory leaks: JSON tree, accessors
 }
@@ -275,15 +401,12 @@ static void ComputeWorldTransformForNode (Node* list, size_t index) {
     Node* node = &list[index];
     if (!node->worldTransformComputed) {
         if (node->parent == -1) {
-            glm_vec3_copy(node->position, node->worldPosition);
-            glm_quat_copy(node->rotation, node->worldRotation);
-            glm_vec3_copy(node->scale,    node->worldScale);
+            glm_mat4_copy(node->matrix, node->worldMatrix);
         } else {
             ComputeWorldTransformForNode(list, node->parent);
             Node* parent = &list[node->parent];
-            glm_vec3_add(node->position, parent->worldPosition, node->worldPosition);
-            glm_quat_mul(node->rotation, parent->worldRotation, node->worldRotation); // FIXME: correct order?
-            glm_vec3_mul(node->scale,    parent->worldScale,    node->worldScale);
+            // FIXME: is this the correct order?
+            glm_mat4_mul(node->matrix, parent->worldMatrix, node->worldMatrix);
         }
         node->worldTransformComputed = true;
     }

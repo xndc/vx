@@ -50,6 +50,7 @@ typedef struct {
     float prev_fov;
     float prev_near;
     float prev_far;
+    float prev_aspect_hw;
     enum CameraProjection prev_projection;
     enum CameraMode prev_mode;
     char prev_props [sizeof(union CameraModeProps)];

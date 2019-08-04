@@ -434,11 +434,11 @@ try {
         # Generate cap file:
         $CapFile = "$BuildRoot/renderdoc.cap"
         $Template = Get-Content -Raw "$PSScriptRoot/renderdoc.cap"
-        $Template = $Template.Replace("__PLACEHOLDER_EXECUTABLE__", $BinaryPath.Replace("\", "\\"))
-        $Template = $Template.Replace("__PLACEHOLDER_WORKINGDIR__", $WorkingRoot.Replace("\", "\\"))
+        $Template = $Template.Replace("__PLACEHOLDER__EXECUTABLE__", $BinaryPath.Replace("\", "\\"))
+        $Template = $Template.Replace("__PLACEHOLDER__WORKINGDIR__", $WorkingRoot.Replace("\", "\\"))
         Set-Content -NoNewline $Template $CapFile
         # Launch:
-        LogInfo "Launching RenderDoc ($RenderDocPath)..."
+        LogInfo "Launching RenderDoc ($Rd)..."
         & $Rd $CapFile
     }
 

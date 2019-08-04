@@ -63,6 +63,7 @@ void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset
     acc->buffer = buffer;
     acc->offset = offset;
     acc->count = count;
+    acc->type = t;
     acc->stride = stride ? stride : FAccessorStride(t);
     acc->component_count = FAccessorComponentCount(t);
     acc->component_size  = FAccessorComponentSize(t);
