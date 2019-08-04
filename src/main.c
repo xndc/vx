@@ -169,13 +169,15 @@ int main() {
         glfwSwapInterval(1);
     }
 
-    // glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+    // Reverse Z setup:
     glDepthRangef(-1.0f, 1.0f);
 
     // Clear window to prevent white flash before loading resources:
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 
     InitTextureSystem();
     InitModelSystem();
@@ -200,12 +202,12 @@ int main() {
         G_MainCamera.orbit.angle_horz = (float) glfwGetTime() * 0.5f;
         UpdateCameraMatrices(&G_MainCamera, w, h);
 
+        StartRenderPass("Framebuffer clear");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        DrawGUI(window);
         StartRenderPass("Test");
         SetCameraMatrices(&G_MainCamera);
         SetRenderProgram(VSH_DEFAULT, FSH_DEFAULT);
@@ -224,6 +226,10 @@ int main() {
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA);
 
+        StartRenderPass("Debug UI");
+        DrawGUI(window);
+
+        StartRenderPass("Framebuffer copy");
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
