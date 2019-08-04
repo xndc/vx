@@ -186,16 +186,9 @@ int main() {
     G_MainCamera.fov  = 80.0f;
     G_MainCamera.near = 0.1f;
     G_MainCamera.far  = 0.0f;
-    // G_MainCamera.mode = CAMERA_MODE_SIMPLE;
-    // glm_vec3_copy((vec3){100.0f, 100.0f, 100.0f}, G_MainCamera.simple.position);
-    // glm_vec3_sub(GLM_VEC3_ZERO, G_MainCamera.simple.position, G_MainCamera.simple.direction);
-    // glm_vec3_normalize(G_MainCamera.simple.direction);
     G_MainCamera.mode = CAMERA_MODE_ORBIT;
     glm_vec3_zero(G_MainCamera.orbit.target);
-    // G_MainCamera.orbit.distance = 200.0f;
-    G_MainCamera.orbit.distance = 3.0f;
-    G_MainCamera.orbit.angle_vert = (float) VXRADIANS(90.0f);
-    G_MainCamera.orbit.angle_horz = (float) VXRADIANS(fmodf(4.0f * glfwGetTime(), 360.0f));
+    G_MainCamera.orbit.distance = 4.0f;
 
     while (!glfwWindowShouldClose(window)) {
         int w, h;
@@ -203,7 +196,8 @@ int main() {
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
         glViewport(0, 0, w, h);
 
-        G_MainCamera.orbit.angle_horz = (float) VXRADIANS(fmodf(10.0f * glfwGetTime(), 360.0f));
+        G_MainCamera.orbit.angle_vert = sinf(glfwGetTime() * 0.5f) * 0.5f;
+        G_MainCamera.orbit.angle_horz = (float) glfwGetTime() * 0.5f;
         UpdateCameraMatrices(&G_MainCamera, w, h);
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
@@ -218,15 +212,11 @@ int main() {
 
         ResetModelMatrix();
         AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
-        // AddModelMatrix(MDL_DUCK.transforms[0]);
-        // RenderMesh(&MDL_DUCK.meshes[0]);
         RenderModel(&MDL_DUCK);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -1.0f, 0.0f});
         AddModelScale((vec3){1.2f, 1.2f, 1.2f});
-        // AddModelMatrix(MDL_BOX_MR.transforms[0]);
-        // RenderMesh(&MDL_BOX_MR.meshes[0]);
         RenderModel(&MDL_BOX_MR);
 
         ResetModelMatrix();

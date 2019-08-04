@@ -22,5 +22,9 @@ uniform sampler2D gAux2;
 uniform sampler2D gShadow;
 
 void main() {
-    FragColor = texture(texOccMetRgh, vTexcoord);
+    vec4 diffuse = texture(texDiffuse, vTexcoord);
+    if (diffuse.a < 0.1) {
+        discard;
+    }
+    FragColor = diffuse;
 }

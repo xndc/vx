@@ -40,7 +40,6 @@ typedef unsigned int GLuint;
 #endif
 #define VXLOCATION __FILE__, __LINE__, VXFUNCTION
 
-#define VXDEBUG(...) vxLogMessage(0, VXLOCATION, __VA_ARGS__)
 #define VXINFO(...)  vxLogMessage(1, VXLOCATION, __VA_ARGS__)
 #define VXWARN(...)  vxLogMessage(2, VXLOCATION, __VA_ARGS__)
 #define VXERROR(...) vxLogMessage(3, VXLOCATION, __VA_ARGS__)
@@ -52,10 +51,12 @@ typedef unsigned int GLuint;
     (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
 
 #ifndef NDEBUG
+    #define VXDEBUG(...) vxLogMessage(0, VXLOCATION, __VA_ARGS__)
     #define VXASSERT(cond) (void)(!!(cond) || (VXPANIC("Assertion failed: %s", #cond), 0))
     #define VXASSERTM(cond, ...) \
         (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
 #else
+    #define VXDEBUG(...) (void)(0)
     #define VXASSERT(cond) (void)(0)
     #define VXASSERTM(cond, fmt, ...) (void)(0)
 #endif

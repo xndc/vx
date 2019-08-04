@@ -56,16 +56,16 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         switch (camera->mode) {
             case CAMERA_MODE_SIMPLE: {
                 struct CameraModePropsSimple p = camera->simple;
-                vec3 target;
+                vec3 target = GLM_VEC3_ZERO_INIT;
                 glm_vec3_add(p.position, p.direction, target);
                 glm_lookat(p.position, target, up, camera->view_matrix);
             } break;
             case CAMERA_MODE_ORBIT: {
                 struct CameraModePropsOrbit* p = &camera->orbit;
-                vec3 position;
+                vec3 position = GLM_VEC3_ZERO_INIT;
                 position[0] = p->target[0] + sinf(p->angle_horz) * p->distance;
-                position[1] = p->target[1] + sinf(p->angle_horz) * p->distance;
-                position[2] = p->target[2] + sinf(p->angle_vert) * p->distance;
+                position[1] = p->target[1] + sinf(p->angle_vert) * p->distance;
+                position[2] = p->target[2] + cosf(p->angle_horz) * p->distance;
                 glm_lookat(position, p->target, up, camera->view_matrix);
             } break;
             case CAMERA_MODE_FPS: {
