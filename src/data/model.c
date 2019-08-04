@@ -9,6 +9,14 @@
 XM_ASSETS_MODELS_GLTF
 #undef X
 
+#define NO_GLTF_LOADER_DEBUG
+
+#ifndef NO_GLTF_LOADER_DEBUG
+    #define LOADER_DEBUG(...) VXDEBUG(__VA_ARGS__)
+#else
+    #define LOADER_DEBUG(...)
+#endif
+
 typedef struct {
     mat4 matrix;
     mat4 worldMatrix;
@@ -53,7 +61,7 @@ static inline JSON_Value* ReadJSONFromFile (const char* filename) {
 }
 
 static void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file) {
-    VXDEBUG("ReadModelFromFile(%s, 0x%jx, %s, %s)", name, model, dir, file);
+    LOADER_DEBUG("ReadModelFromFile(%s, 0x%jx, %s, %s)", name, model, dir, file);
     // Read GLTF file:
     static char path [4096]; // 4095 characters really ought to be enough for anyone...
     stbsp_snprintf(path, VXSIZE(path), "%s/%s", dir, file);
@@ -105,7 +113,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
     JSON_Array* gltf_bufferviews = json_object_get_array(root, "bufferViews");
     FAccessor* accessors = NULL;
     if (gltf_accessors && gltf_bufferviews) {
-        VXDEBUG("Loading %ju accessors:", json_array_get_count(gltf_accessors));
+        LOADER_DEBUG("Loading %ju accessors:", json_array_get_count(gltf_accessors));
         for (size_t i = 0; i < json_array_get_count(gltf_accessors); i++) {
             JSON_Object* gltf_accessor = json_array_get_object(gltf_accessors, i);
             if (json_object_has_value(gltf_accessor, "sparse")) {
@@ -129,24 +137,24 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 (uint8_t) accByteStride /* which is 0 if the key is missing */);
             arrput(accessors, acc);
             FAccessor* p = &arrlast(accessors);
-            VXDEBUG("* idx %jd p 0x%jx buffer 0x%jx offset %ju count %ju type %s/%d (t %d cc %d cs %d st %d)",
+            LOADER_DEBUG("* idx %jd p 0x%jx buffer 0x%jx offset %ju count %ju type %s/%d (t %d cc %d cs %d st %d)",
                 arrlen(accessors) - 1, p, p->buffer, p->offset, p->count, type, componentType,
                 p->type, p->component_count, p->component_size, p->stride);
-            VXDEBUG("  from accessor %ju, bufferview %ju, buffer %ju", i, bufferViewId, bufferIndex);
+            LOADER_DEBUG("  from accessor %ju, bufferview %ju, buffer %ju", i, bufferViewId, bufferIndex);
         }
     }
 
     // Extract material data:
     JSON_Array* materials = json_object_get_array(root, "materials");
     if (materials) {
-        VXDEBUG("Loading %ju materials:", json_array_get_count(materials));
+        LOADER_DEBUG("Loading %ju materials:", json_array_get_count(materials));
         for (size_t i = 0; i < json_array_get_count(materials); i++) {
             JSON_Object* material = json_array_get_object(materials, i);
             Material mat = {0};
             InitMaterial(&mat);
             JSON_Object* pbrMR = json_object_get_object(material, "pbrMetallicRoughness");
             if (pbrMR) {
-                VXDEBUG("* Material %ju, using PBR Metallic-Roughness workflow", i);
+                LOADER_DEBUG("* Material %ju, using PBR Metallic-Roughness workflow", i);
                 if (json_object_has_value(pbrMR, "baseColorTexture")) {
                     size_t colorTexId = (size_t) json_object_dotget_number(pbrMR, "baseColorTexture.index");
                     mat.tex_diffuse = model->textures[colorTexId];
@@ -155,7 +163,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     glSamplerParameteri(mat.smp_diffuse, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                     glSamplerParameteri(mat.smp_diffuse, GL_TEXTURE_WRAP_S, GL_REPEAT);
                     glSamplerParameteri(mat.smp_diffuse, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                    VXDEBUG("  -> diffuse color texture idx %ju gltex %ju glsmp %ju", colorTexId,
+                    LOADER_DEBUG("  -> diffuse color texture idx %ju gltex %ju glsmp %ju", colorTexId,
                         mat.tex_diffuse, mat.smp_diffuse);
                 }
                 if (json_object_has_value(pbrMR, "metallicRoughnessTexture")) {
@@ -166,11 +174,11 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     glSamplerParameteri(mat.smp_occ_met_rgh, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                     glSamplerParameteri(mat.smp_occ_met_rgh, GL_TEXTURE_WRAP_S, GL_REPEAT);
                     glSamplerParameteri(mat.smp_occ_met_rgh, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                    VXDEBUG("  -> occ-met-rgh texture idx %ju gltex %ju glsmp %ju", mrTexId,
+                    LOADER_DEBUG("  -> occ-met-rgh texture idx %ju gltex %ju glsmp %ju", mrTexId,
                         mat.tex_occ_met_rgh, mat.smp_occ_met_rgh);
                 }
             } else {
-                VXDEBUG("* Material %ju, using an unknown workflow", i);
+                LOADER_DEBUG("* Material %ju, using an unknown workflow", i);
             }
             if (json_object_has_value(material, "normalTexture")) {
                 size_t normalTexId = (size_t) json_object_dotget_number(material, "normalTexture.index");
@@ -180,7 +188,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 glSamplerParameteri(mat.smp_normal, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glSamplerParameteri(mat.smp_normal, GL_TEXTURE_WRAP_S, GL_REPEAT);
                 glSamplerParameteri(mat.smp_normal, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                VXDEBUG("  -> normal map texture idx %ju gltex %ju glsmp %ju", normalTexId,
+                LOADER_DEBUG("  -> normal map texture idx %ju gltex %ju glsmp %ju", normalTexId,
                     mat.tex_normal, mat.smp_normal);
             }
             // TODO: constant colors, emissive, other properties?
@@ -203,7 +211,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
             glm_mat4_zero(nentry->worldMatrix);
             nentry->worldTransformComputed = false;
         }
-        VXDEBUG("Loading %ju nodes into Node array 0x%jx:", nodeCount, nodeEntries);
+        LOADER_DEBUG("Loading %ju nodes into Node array 0x%jx:", nodeCount, nodeEntries);
         // First pass: store parents and local transform data, and compute primitive count
         size_t totalPrimitives = 0;
         for (size_t i = 0; i < nodeCount; i++) {
@@ -256,13 +264,13 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 JSON_Object* mesh = json_array_get_object(meshes, nentry->meshId);
                 JSON_Array* primitives = json_object_get_array(mesh, "primitives");
                 totalPrimitives += json_array_get_count(primitives);
-                VXDEBUG("* Node %ju with attached mesh %ju (0x%jx) containing %ju primitives (%ju total so far):",
+                LOADER_DEBUG("* Node %ju with attached mesh %ju (0x%jx) containing %ju primitives (%ju total so far):",
                     i, nentry->meshId, mesh, json_array_get_count(primitives), totalPrimitives);
             } else {
-                VXDEBUG("* Node %ju with no primitives attached:", i);
+                LOADER_DEBUG("* Node %ju with no primitives attached:", i);
             }
             float* m = nentry->matrix;
-            VXDEBUG("  * [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
+            LOADER_DEBUG("  * [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
                 "[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f]]",
                 m[0],  m[1],  m[2],  m[3],
                 m[4],  m[5],  m[6],  m[7],
@@ -270,12 +278,12 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 m[12], m[13], m[14], m[15]);
         }
         // Second pass: recursively compute world transform data
-        VXDEBUG("Computing world transforms for nodes:");
+        LOADER_DEBUG("Computing world transforms for nodes:");
         for (size_t i = 0; i < nodeCount; i++) {
             ComputeWorldTransformForNode(nodeEntries, i);
             Node* nentry = &nodeEntries[i];
             float* m = nentry->worldMatrix;
-            VXDEBUG("* Node %ju: [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
+            LOADER_DEBUG("* Node %ju: [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
                 "[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f]]", i,
                 m[0],  m[1],  m[2],  m[3],
                 m[4],  m[5],  m[6],  m[7],
@@ -283,7 +291,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 m[12], m[13], m[14], m[15]);
         }
         // Third pass: store meshes (i.e. GLTF primitives, not GLTF meshes) for each node
-        VXDEBUG("Extracting meshes from each node:");
+        LOADER_DEBUG("Extracting meshes from each node:");
         arrsetlen(model->transforms, totalPrimitives);
         arrsetlen(model->meshes,     totalPrimitives);
         size_t meshidx = 0;
@@ -292,18 +300,18 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
             JSON_Object* node = json_array_get_object(nodes, i);
             if (json_object_has_value_of_type(node, "mesh", JSONNumber)) {
                 nentry->meshId = (int) json_object_get_number(node, "mesh");
-                VXDEBUG("* Node %ju with mesh idx %d:", i, nentry->meshId);
+                LOADER_DEBUG("* Node %ju with mesh idx %d:", i, nentry->meshId);
                 JSON_Object* mesh = json_array_get_object(meshes, nentry->meshId);
                 JSON_Array* primitives = json_object_get_array(mesh, "primitives");
                 for (size_t pidx = 0; pidx < json_array_get_count(primitives); pidx++) {
                     JSON_Object* primitive = json_array_get_object(primitives, pidx);
-                    VXDEBUG("  * Primitive %ju => mesh %ju:", pidx, meshidx);
+                    LOADER_DEBUG("  * Primitive %ju => mesh %ju:", pidx, meshidx);
                     // Clear out:
                     memset(&model->meshes[meshidx], 0, sizeof(model->meshes[meshidx]));
                     // Transform:
                     float* m = model->transforms[meshidx];
                     glm_mat4_copy(nentry->worldMatrix, m);
-                    VXDEBUG("    * [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
+                    LOADER_DEBUG("    * [[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f] "
                         "[%.04f %.04f %.04f %.04f] [%.04f %.04f %.04f %.04f]]",
                         m[0],  m[1],  m[2],  m[3],
                         m[4],  m[5],  m[6],  m[7],
@@ -312,7 +320,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     // Indices:
                     size_t accessorId = (size_t) json_object_get_number(primitive, "indices");
                     model->meshes[meshidx].indices = accessors[accessorId];
-                    VXDEBUG("    * Indices: accessor idx %ju, p 0x%jx, buf 0x%jx => mesh acc 0x%jx buf 0x%jx",
+                    LOADER_DEBUG("    * Indices: accessor idx %ju, p 0x%jx, buf 0x%jx => mesh acc 0x%jx buf 0x%jx",
                         accessorId, &accessors[accessorId], accessors[accessorId].buffer,
                         &model->meshes[meshidx].indices, model->meshes[meshidx].indices.buffer);
                     // Attributes:
@@ -321,7 +329,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                         if (json_object_has_value_of_type(attributes, gltfName, JSONNumber)) { \
                             accessorId = (size_t) json_object_get_number(attributes, gltfName); \
                             dest = accessors[accessorId]; \
-                            VXDEBUG("    * Attribute %s: accessor idx %ju, p 0x%jx, buf 0x%jx => mesh acc 0x%jx buf 0x%jx", \
+                            LOADER_DEBUG("    * Attribute %s: accessor idx %ju, p 0x%jx, buf 0x%jx => mesh acc 0x%jx buf 0x%jx", \
                                 gltfName, accessorId, &accessors[accessorId], accessors[accessorId].buffer, \
                                 &dest, dest.buffer); \
                         }
@@ -337,7 +345,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                     // Material:
                     size_t materialId = (size_t) json_object_get_number(primitive, "material");
                     model->meshes[meshidx].material = &model->materials[materialId];
-                    VXDEBUG("    * Material idx %ju (0x%jx)", materialId, model->meshes[meshidx].material);
+                    LOADER_DEBUG("    * Material idx %ju (0x%jx)", materialId, model->meshes[meshidx].material);
                     // Done:
                     meshidx++;
                 }
@@ -345,12 +353,12 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
         }
     }
 
-    VXDEBUG("Uploading VBOs for %ju meshes:", arrlenu(model->meshes));
+    LOADER_DEBUG("Uploading VBOs for %ju meshes:", arrlenu(model->meshes));
     for (size_t i = 0; i < arrlenu(model->meshes); i++) {
         Mesh* m = &model->meshes[i];
         glGenVertexArrays(1, &m->gl_vertex_array);
         glBindVertexArray(m->gl_vertex_array);
-        VXDEBUG("* Mesh %ju => VAO %u", i, m->gl_vertex_array);
+        LOADER_DEBUG("* Mesh %ju => VAO %u", i, m->gl_vertex_array);
 
         #define XMLOCAL_EBO \
             X(m->indices)
@@ -370,7 +378,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, acc.gl_object); \
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
                     FAccessorData(&acc), GL_STATIC_DRAW); \
-                VXDEBUG("  * " #acc ": EBO %u", acc.gl_object); \
+                LOADER_DEBUG("  * " #acc ": EBO %u", acc.gl_object); \
             }
         XMLOCAL_EBO
         #undef X
@@ -384,7 +392,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
                 glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
                 glEnableVertexAttribArray(attr); \
                 glVertexAttribPointer(attr, acc.component_count, GL_FLOAT, false, acc.stride, NULL); \
-                VXDEBUG("  * " #acc ": VBO %u", acc.gl_object); \
+                LOADER_DEBUG("  * " #acc ": VBO %u", acc.gl_object); \
             }
         XMLOCAL_VBO
         #undef X
@@ -393,7 +401,7 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
         #undef XMLOCAL_VBO
     }
 
-    VXINFO("Successfully loaded GLTF model %s", name);
+    VXINFO("Loaded GLTF model %s from %s/%s", name, dir, file);
     // FIXME: memory leaks: JSON tree, accessors
 }
 

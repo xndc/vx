@@ -1,5 +1,6 @@
 #include "texture.h"
 #include <glad/glad.h>
+#include <glfw/glfw3.h>
 #include <stb/stb_image.h>
 
 #define X(name, _) GLuint name = 0;
@@ -94,33 +95,46 @@ GLuint LoadTextureFromDisk (const char* name, const char* path) {
 
     // Read from disk:
     int w, h, c;
+    double tb_stbi_load = glfwGetTime();
     void* image = stbi_load(path, &w, &h, &c, 0);
     if (!image) {
         VXPANIC("Failed to load %s from %s: %s", name, path, stbi_failure_reason());
     }
 
     // Upload:
+    double tb_upload = glfwGetTime();
+    const char* type = "?";
     switch (c) {
         case 1: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, R8, %dx%d)", name, path, texture, w, h);
+            type = "R8";
         } break;
         case 2: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, w, h, 0, GL_RG, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, RG8, %dx%d)", name, path, texture, w, h);
+            type = "RG8";
         } break;
         case 3: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, RGB8, %dx%d)", name, path, texture, w, h);
+            type = "RGB8";
         } break;
         case 4: {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-            VXINFO("Uploaded %s (%s) to GPU (object %u, RGBA8, %dx%d)", name, path, texture, w, h);
+            type = "RGBA8";
         } break;
         default: {
             VXWARN("Unknown channel count %d for %s", c, name);
         }
     }
+
+    double tb_generate_mips = glfwGetTime();
     glGenerateMipmap(GL_TEXTURE_2D);
+
+    double ta_end = glfwGetTime();
+    double tt_stbi_load_ms = (tb_upload - tb_stbi_load) * 1000.0;
+    double tt_upload_ms = (tb_generate_mips - tb_upload) * 1000.0;
+    double tt_generate_mips_ms = (ta_end - tb_generate_mips) * 1000;
+    VXINFO("Uploaded %s (object %d, %s, %dx%d) (load %.02f ms, upload %.02f ms, mips %.02f ms)",
+        path, texture, type, w, h, tt_stbi_load_ms, tt_upload_ms, tt_generate_mips_ms);
+
     return texture;
 }
