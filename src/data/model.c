@@ -27,13 +27,12 @@ typedef struct {
 
 static inline JSON_Value* ReadJSONFromFile (const char* filename);
 static void ComputeWorldTransformForNode (Node* list, size_t index);
-static void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file);
 
-void InitModelSystem() {
-    #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
-    XM_ASSETS_MODELS_GLTF
-    #undef X
-}
+// void InitModelSystem() {
+//     #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
+//     XM_ASSETS_MODELS_GLTF
+//     #undef X
+// }
 
 void InitMaterial (Material* m) {
     memset(m, 0, sizeof(Material));
@@ -60,7 +59,7 @@ static inline JSON_Value* ReadJSONFromFile (const char* filename) {
     return root;
 }
 
-static void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file) {
+void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file) {
     LOADER_DEBUG("ReadModelFromFile(%s, 0x%jx, %s, %s)", name, model, dir, file);
     // Read GLTF file:
     static char path [4096]; // 4095 characters really ought to be enough for anyone...
@@ -72,7 +71,8 @@ static void ReadModelFromDisk (const char* name, Model* model, const char* dir, 
     JSON_Array* textures = json_object_get_array(root, "textures");
     JSON_Array* images   = json_object_get_array(root, "images");
     if (textures && images) {
-        for (size_t i = 0; i < json_array_get_count(textures); i++) {
+        size_t texcount = json_array_get_count(textures);
+        for (size_t i = 0; i < texcount; i++) {
             JSON_Object* texture = json_array_get_object(textures, i);
             JSON_Value* imageIndexV = json_object_get_value(texture, "source");
             if (imageIndexV && json_value_get_type(imageIndexV) == JSONNumber) {

@@ -19,20 +19,20 @@ XM_ASSETS_FRAMEBUFFERS
 
 GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
-void InitTextureSystem() {
-    // Create texture objects:
-    #define X(name, _) glGenTextures(1, &name);
-    XM_ASSETS_TEXTURES
-    #undef X
+// void InitTextureSystem() {
+//     // Create texture objects:
+//     #define X(name, _) glGenTextures(1, &name);
+//     XM_ASSETS_TEXTURES
+//     #undef X
 
-    // Load textures from disk:
-    #define X(name, path) name = LoadTextureFromDisk(#name, path);
-    XM_ASSETS_TEXTURES
-    #undef X
+//     // Load textures from disk:
+//     #define X(name, path) name = LoadTextureFromDisk(#name, path);
+//     XM_ASSETS_TEXTURES
+//     #undef X
 
-    // Generate samplers:
-    glGenSamplers(VXGL_SAMPLER_COUNT, VXGL_SAMPLER);
-}
+//     // Generate samplers:
+//     glGenSamplers(VXGL_SAMPLER_COUNT, VXGL_SAMPLER);
+// }
 
 void UpdateFramebuffers (int width, int height, int shadowsize) {
     static int last_width = 0;

@@ -38,7 +38,8 @@ XM_ASSETS_SHADER_UNIFORMS
 XM_ASSETS_SHADER_ATTRIBUTES
 #undef X
 
-void InitRenderSystem();
+// void InitRenderSystem();
+Shader* LoadShaderFromDisk (const char* name, const char* path);
 
 void StartRenderPass (const char* name);
 void PushRenderState();

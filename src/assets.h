@@ -52,14 +52,15 @@
     X(TEX_TERRAIN_SPLAT2_ROUGHNESS, "textures/ground2/roughness.jpg") \
 
 #define XM_ASSETS_MODELS_GLTF \
+    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
     X(MDL_DUCK,     "models/Duck",      "Duck.gltf") \
     X(MDL_BOX_MR,   "models/BoxTextured-MetallicRoughness", "BoxTextured.gltf") \
-    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
 
 #define XM_ASSETS_MODELS_GLTF_IGNORED \
 
 #define XM_ASSETS_FONTS \
-    X(FONT_ROBOTO_MEDIUM, "fonts/Roboto-Medium.ttf") \
+    X(FONT_ROBOTO_MEDIUM_16, "fonts/Roboto-Medium.ttf", 16) \
+    X(FONT_ROBOTO_MEDIUM_32, "fonts/Roboto-Medium.ttf", 32) \
 
 #define XM_ASSETS_RENDERTARGETS_SCREENSIZE \
     X(RT_DEPTH,         GL_DEPTH32F_STENCIL8) \

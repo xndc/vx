@@ -70,7 +70,7 @@ static bool DefineArraysEqual (ShaderDefine* a, ShaderDefine* b) {
     return true;
 }
 
-static Shader* LoadShaderFromDisk (const char* name, const char* path) {
+Shader* LoadShaderFromDisk (const char* name, const char* path) {
     Shader* shader = VXGENALLOC(1, Shader);
     shader->name = name;
     char* code = vxReadFile(path, true, NULL);
@@ -89,11 +89,11 @@ static Shader* LoadShaderFromDisk (const char* name, const char* path) {
     return shader;
 }
 
-void InitRenderSystem() {
-    #define X(name, path) name = LoadShaderFromDisk(#name, path);
-    XM_ASSETS_SHADERS
-    #undef X
-}
+// void InitRenderSystem() {
+//     #define X(name, path) name = LoadShaderFromDisk(#name, path);
+//     XM_ASSETS_SHADERS
+//     #undef X
+// }
 
 // Conceptually, starts a new render pass. Concretely, resets the following:
 // -> the current render state and stack
