@@ -29,26 +29,32 @@ const float OrderedDitheringMatrix[16] = float[] (
 );
 
 void main() {
-    int xm = int(mod(fragCoordPx.x/2.0, 2.0));
-    int ym = int(mod(fragCoordPx.y/2.0, 2.0));
-    float dither = OrderedDitheringMatrix[xm + ym * 4];
-    vec4 origColor = texture2D(gColorLDR, fragCoord01);
+    const int scalefactor = 2;
+    int xmat = int(mod(fragCoordPx.x/scalefactor, scalefactor));
+    int ymat = int(mod(fragCoordPx.y/scalefactor, scalefactor));
+    float dither = OrderedDitheringMatrix[xmat + ymat * 4];
+    ivec2 fc = (ivec2(fragCoordPx) / scalefactor) * scalefactor;
+    // NOTE: this is technically undefined behaviour
+    vec4 origColor = texelFetch(gColorLDR, fc + ivec2(scalefactor/2, scalefactor/2), 0);
 
     float r = origColor.r;
-    r += 0.315f;
+    r += 0.215f;
     r -= dither / 35.0f;
     r = floor(r * 10) / 10;
 
     float g = origColor.g;
-    g += 0.32f;
+    g += 0.22f;
     g -= dither / 35.0f;
     g = floor(g * 10) / 10;
 
     float b = origColor.b;
-    b += 0.305f;
+    b += 0.205f;
     b -= dither / 35.0f;
     b = floor(b * 10) / 10;
 
-    outColorLDR = vec4(r, g, b, 1.0f);
+    vec3 ds = vec3(r, g, b);
+    vec3 uu = texture2D(gColorLDR, fragCoord01).rgb;
+
+    outColorLDR = vec4(0.6 * ds + 0.4 * uu, 1.0);
     outAux1 = texture2D(gAux1, fragCoord01);
 }
