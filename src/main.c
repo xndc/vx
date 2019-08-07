@@ -67,13 +67,21 @@ int main() {
         glfwSwapInterval(1);
     }
 
+    if (!glfwExtensionSupported("GL_NV_texture_barrier")) {
+        VXPANIC("This program requires the GL_NV_texture_barrier extension.");
+    }
+
+    #if 1
+    G_MainCamera.projection = CAMERA_PERSPECTIVE;
+    G_MainCamera.fov  = 80.0f;
+    G_MainCamera.near = 0.1f;
+    G_MainCamera.far  = 0.0f;
+    #else
     G_MainCamera.projection = CAMERA_ORTHOGRAPHIC;
-    // G_MainCamera.fov  = 80.0f;
-    // G_MainCamera.near = 0.1f;
-    // G_MainCamera.far  = 0.0f;
     G_MainCamera.near = -100.0f;
     G_MainCamera.far  = +100.0f;
     G_MainCamera.zoom = 40.0f;
+    #endif
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
     while (!glfwWindowShouldClose(window)) {
@@ -96,6 +104,16 @@ int main() {
 
         StartRenderPass("Framebuffer clear");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
+        static const GLenum drawbuffers[] = {
+            GL_COLOR_ATTACHMENT0,
+            GL_COLOR_ATTACHMENT1,
+            GL_COLOR_ATTACHMENT2,
+            GL_COLOR_ATTACHMENT3,
+            GL_COLOR_ATTACHMENT4,
+            GL_COLOR_ATTACHMENT5,
+            GL_COLOR_ATTACHMENT6,
+        };
+        glDrawBuffers(VXSIZE(drawbuffers), drawbuffers);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -118,14 +136,21 @@ int main() {
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA);
 
+        StartRenderPass("Fullscreen Pass Test");
+        glDrawBuffers(VXSIZE(drawbuffers), drawbuffers);
+        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
+        RunFullscreenPass(w, h);
+
+        StartRenderPass("Final Pass");
+        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glDrawBuffer(GL_BACK);
+        RunFullscreenPass(w, h);
+
         StartRenderPass("GUI");
         GUI_DrawDebugOverlay(window);
         GUI_Render();
 
-        StartRenderPass("Framebuffer copy");
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_MAIN);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

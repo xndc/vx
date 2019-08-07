@@ -60,8 +60,8 @@ typedef struct {
 XM_ASSETS_MODELS_GLTF
 #undef X
 
-// Initializes the model subsystem. Reads all models defined in assets.h into memory (MDL_*).
-// void InitModelSystem();
-
 // Reads a model from disk.
 void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file);
+
+// Uploads or reuploads a mesh to the GPU.
+void UploadMeshToGPU (Mesh* mesh);

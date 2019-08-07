@@ -194,8 +194,8 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
             }
         }
         if (program == 0) {
-            ShaderDefine* defines = S_RenderState.defines;
             // Generate #define block:
+            ShaderDefine* defines = S_RenderState.defines;
             static char define_block [16 * VX_KiB];
             size_t cursor_pos = 0;
             for (size_t i = 0; i < arrlenu(defines); i++) {
@@ -241,6 +241,12 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
     S_RenderState.current_fsh = fsh;
     S_RenderState.defines_changed = false;
     glUseProgram(program);
+    // Set render target uniforms:
+    #define X(name, format) \
+        SetUniformTexture(UNIF_ ## name, name, GL_LINEAR, GL_LINEAR, GL_MIRRORED_REPEAT);
+    XM_ASSETS_RENDERTARGETS_SCREENSIZE
+    XM_ASSETS_RENDERTARGETS_SHADOWSIZE
+    #undef X
 }
 
 void AddShaderDefine (const char* name, const char* text) {
@@ -296,7 +302,7 @@ GLuint BindTextureUnit (GLuint texture, GLuint sampler) {
 }
 
 void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler) {
-    if (texture != 0 && sampler != 0) {
+    if (uniform != -1 && texture != 0 && sampler != 0) {
         GLuint tu = BindTextureUnit(texture, sampler);
         glUniform1i(uniform, tu);
     } else {
@@ -305,7 +311,7 @@ void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler) {
 }
 
 void SetUniformTexture (GLint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap) {
-    if (texture != 0) {
+    if (uniform != -1 && texture != 0) {
         GLuint tu = S_RenderState.next_texture_unit;
         GLuint sampler = VXGL_SAMPLER[tu];
         glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, min);
@@ -320,9 +326,6 @@ void ResetShaderVariables() {
     S_RenderState.next_texture_unit = 1;
     #define X(name, glsl_name) name = -1;
     XM_ASSETS_SHADER_UNIFORMS
-    #undef X
-    #define X(name, location, glsl_name) name = -1;
-    XM_ASSETS_SHADER_ATTRIBUTES
     #undef X
 }
 
@@ -401,4 +404,38 @@ void RenderModel (Model* model) {
         RenderMesh(&model->meshes[i]);
         PopRenderState();
     }
+}
+
+static bool S_FullscreenPass_Initialized = false;
+static Material S_FullscreenPass_Material = {0};
+static Mesh S_FullscreenPass_Mesh = {0};
+
+void RunFullscreenPass (int w, int h) {
+    if (!S_FullscreenPass_Initialized) {
+        InitMaterial(&S_FullscreenPass_Material);
+        S_FullscreenPass_Material.depth_test = false;
+        S_FullscreenPass_Initialized = true;
+        static float points[] = {
+            -1.0f, -1.0f,
+            -1.0f, +1.0f,
+            +1.0f, -1.0f,
+            +1.0f, +1.0f,
+        };
+        static uint16_t triangles[] = {
+            0, 2, 1,
+            1, 2, 3,
+        };
+        FAccessorInit(&S_FullscreenPass_Mesh.positions, FACCESSOR_FLOAT32_VEC2, points, 0, 4, 0);
+        FAccessorInit(&S_FullscreenPass_Mesh.indices, FACCESSOR_UINT16_VEC3, triangles, 0, 2, 0);
+        UploadMeshToGPU(&S_FullscreenPass_Mesh);
+    }
+    if (S_RenderState.current_vsh != VSH_FULLSCREEN_PASS) {
+        VXWARN("RunFullscreenPass requires the VSH_FULLSCREEN_PASS vertex shader to be used");
+    }
+    SetMaterial(&S_FullscreenPass_Material);
+    glUniform2i(UNIF_IRESOLUTION, w, h);
+    glBindVertexArray(S_FullscreenPass_Mesh.gl_vertex_array);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, S_FullscreenPass_Mesh.indices.gl_object);
+    glTextureBarrierNV(); // lets the shader both read & write to the same texture
+    glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_SHORT, NULL);
 }

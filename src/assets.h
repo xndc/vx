@@ -1,8 +1,11 @@
 #pragma once
 
 #define XM_ASSETS_SHADERS \
-    X(VSH_DEFAULT,  "shaders/default.vert") \
-    X(FSH_DEFAULT,  "shaders/default.frag") \
+    X(VSH_DEFAULT,          "shaders/default.vert") \
+    X(VSH_FULLSCREEN_PASS,  "shaders/fullscreen.vert") \
+    X(FSH_DEFAULT,          "shaders/default.frag") \
+    X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
+    X(FSH_FINAL,            "shaders/final.frag") \
 
 #define XM_ASSETS_SHADER_ATTRIBUTES \
     X(ATTR_POSITION,    0, "aPosition") \
@@ -14,7 +17,18 @@
     X(ATTR_JOINTS,      6, "aJoints") \
     X(ATTR_WEIGHTS,     7, "aWeights") \
 
+// NOTE: the UNIF_RT uniform variable names should match the render target names defined below
 #define XM_ASSETS_SHADER_UNIFORMS \
+    X(UNIF_RT_DEPTH,        "gDepth") \
+    X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
+    X(UNIF_RT_COLOR_HDR,    "gColorHDR") \
+    X(UNIF_RT_COLOR_TAA,    "gColorTAA") \
+    X(UNIF_RT_NORMAL,       "gNormal") \
+    X(UNIF_RT_VELOCITY,     "gVelocity") \
+    X(UNIF_RT_AUX1,         "gAux1") \
+    X(UNIF_RT_AUX2,         "gAux2") \
+    X(UNIF_RT_SHADOW_DEPTH, "gShadow") \
+    X(UNIF_IRESOLUTION,     "iResolution") \
     X(UNIF_MODEL_MATRIX,    "uModelMatrix") \
     X(UNIF_VIEW_MATRIX,     "uViewMatrix") \
     X(UNIF_PROJ_MATRIX,     "uProjMatrix") \
@@ -27,15 +41,6 @@
     X(UNIF_TEX_METALLIC,    "texMetallic") \
     X(UNIF_TEX_ROUGHNESS,   "texRoughness") \
     X(UNIF_TEX_NORMAL,      "texNormal") \
-    X(UNIF_RT_DEPTH,        "gDepth") \
-    X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
-    X(UNIF_RT_COLOR_HDR,    "gColorHDR") \
-    X(UNIF_RT_COLOR_TAA,    "gColorTAA") \
-    X(UNIF_RT_NORMAL,       "gNormal") \
-    X(UNIF_RT_VELOCITY,     "gVelocity") \
-    X(UNIF_RT_AUX1,         "gAux1") \
-    X(UNIF_RT_AUX2,         "gAux2") \
-    X(UNIF_RT_SHADOW_DEPTH, "gShadow") \
 
 #define XM_ASSETS_TEXTURES \
 
@@ -62,8 +67,8 @@
     X(FONT_ROBOTO_MEDIUM_16, "fonts/Roboto-Medium.ttf", 16) \
     X(FONT_ROBOTO_MEDIUM_32, "fonts/Roboto-Medium.ttf", 32) \
 
+// NOTE: render target names should match their corresponding UNIF_RT uniform variable names
 #define XM_ASSETS_RENDERTARGETS_SCREENSIZE \
-    X(RT_DEPTH,         GL_DEPTH32F_STENCIL8) \
     X(RT_COLOR_LDR,     GL_RGBA8) \
     X(RT_COLOR_HDR,     GL_RGB16F) \
     X(RT_COLOR_TAA,     GL_RGB16F) \
@@ -71,6 +76,7 @@
     X(RT_VELOCITY,      GL_RG16F) \
     X(RT_AUX1,          GL_RGBA8) \
     X(RT_AUX2,          GL_RGBA8) \
+    X(RT_DEPTH,         GL_DEPTH32F_STENCIL8) \
 
 #define XM_ASSETS_RENDERTARGETS_SHADOWSIZE \
     X(RT_SHADOW_DEPTH, GL_DEPTH_COMPONENT32F) \

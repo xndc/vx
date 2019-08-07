@@ -19,21 +19,6 @@ XM_ASSETS_FRAMEBUFFERS
 
 GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
-// void InitTextureSystem() {
-//     // Create texture objects:
-//     #define X(name, _) glGenTextures(1, &name);
-//     XM_ASSETS_TEXTURES
-//     #undef X
-
-//     // Load textures from disk:
-//     #define X(name, path) name = LoadTextureFromDisk(#name, path);
-//     XM_ASSETS_TEXTURES
-//     #undef X
-
-//     // Generate samplers:
-//     glGenSamplers(VXGL_SAMPLER_COUNT, VXGL_SAMPLER);
-// }
-
 void UpdateFramebuffers (int width, int height, int shadowsize) {
     static int last_width = 0;
     static int last_height = 0;
@@ -86,6 +71,35 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
         #undef ATTACH
         #undef END
     }
+
+    // // Generate lists for glDrawBuffers:
+    // static bool first_run = true;
+    // if (first_run) {
+    //     first_run = false;
+    //     // Count drawbuffers for each framebuffer:
+    //     size_t count = 0;
+    //     #define BEGIN(name) count = 0;
+    //     #define ATTACH(point, name) count++;
+    //     #define END(name) \
+    //         name ## _DRAWBUFFER_COUNT = count; \
+    //         name ## _DRAWBUFFERS = VXGENALLOC(count, GLuint); \
+    //     XM_ASSETS_FRAMEBUFFERS
+    //     #undef BEGIN
+    //     #undef ATTACH
+    //     #undef END
+    //     // Populate drawbuffer list for each framebuffer:
+    //     GLuint* list = NULL;
+    //     #define BEGIN(name) \
+    //         count = 0; \
+    //         list = name ## _DRAWBUFFERS;
+    //     #define ATTACH(point, name) \
+    //         list[count++] = point;
+    //     #define END(name)
+    //     XM_ASSETS_FRAMEBUFFERS
+    //     #undef BEGIN
+    //     #undef ATTACH
+    //     #undef END
+    // }
 }
 
 GLuint LoadTextureFromDisk (const char* name, const char* path) {

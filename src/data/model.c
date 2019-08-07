@@ -353,52 +353,8 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
         }
     }
 
-    LOADER_DEBUG("Uploading VBOs for %ju meshes:", arrlenu(model->meshes));
     for (size_t i = 0; i < arrlenu(model->meshes); i++) {
-        Mesh* m = &model->meshes[i];
-        glGenVertexArrays(1, &m->gl_vertex_array);
-        glBindVertexArray(m->gl_vertex_array);
-        LOADER_DEBUG("* Mesh %ju => VAO %u", i, m->gl_vertex_array);
-
-        #define XMLOCAL_EBO \
-            X(m->indices)
-        #define XMLOCAL_VBO \
-            X(ATTR_POSITION,   m->positions) \
-            X(ATTR_NORMAL,     m->normals) \
-            X(ATTR_TANGENT,    m->tangents) \
-            X(ATTR_TEXCOORD0,  m->texcoords0) \
-            X(ATTR_TEXCOORD1,  m->texcoords1) \
-            X(ATTR_COLOR,      m->colors) \
-            X(ATTR_JOINTS,     m->joints) \
-            X(ATTR_WEIGHTS,    m->weights)
-
-        #define X(acc) \
-            if (acc.buffer != NULL) { \
-                glGenBuffers(1, &acc.gl_object); \
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, acc.gl_object); \
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
-                    FAccessorData(&acc), GL_STATIC_DRAW); \
-                LOADER_DEBUG("  * " #acc ": EBO %u", acc.gl_object); \
-            }
-        XMLOCAL_EBO
-        #undef X
-
-        #define X(attr, acc) \
-            if (acc.buffer != NULL) { \
-                glGenBuffers(1, &acc.gl_object); \
-                glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
-                glBufferData(GL_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
-                    FAccessorData(&acc), GL_STATIC_DRAW); \
-                glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
-                glEnableVertexAttribArray(attr); \
-                glVertexAttribPointer(attr, acc.component_count, GL_FLOAT, false, acc.stride, NULL); \
-                LOADER_DEBUG("  * " #acc ": VBO %u", acc.gl_object); \
-            }
-        XMLOCAL_VBO
-        #undef X
-
-        #undef XMLOCAL_EBO
-        #undef XMLOCAL_VBO
+        UploadMeshToGPU(&model->meshes[i]);
     }
 
     VXINFO("Loaded GLTF model %s from %s/%s", name, dir, file);
@@ -418,4 +374,51 @@ static void ComputeWorldTransformForNode (Node* list, size_t index) {
         }
         node->worldTransformComputed = true;
     }
+}
+
+// TODO: support for reuploading
+void UploadMeshToGPU (Mesh* m) {
+    glGenVertexArrays(1, &m->gl_vertex_array);
+    glBindVertexArray(m->gl_vertex_array);
+    VXDEBUG("Uploading mesh 0x%jx to GPU as VAO %u", m, m->gl_vertex_array);
+
+    #define XMLOCAL_EBO \
+        X(m->indices)
+    #define XMLOCAL_VBO \
+        X(ATTR_POSITION,   m->positions) \
+        X(ATTR_NORMAL,     m->normals) \
+        X(ATTR_TANGENT,    m->tangents) \
+        X(ATTR_TEXCOORD0,  m->texcoords0) \
+        X(ATTR_TEXCOORD1,  m->texcoords1) \
+        X(ATTR_COLOR,      m->colors) \
+        X(ATTR_JOINTS,     m->joints) \
+        X(ATTR_WEIGHTS,    m->weights)
+
+    #define X(acc) \
+        if (acc.buffer != NULL) { \
+            glGenBuffers(1, &acc.gl_object); \
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, acc.gl_object); \
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
+                FAccessorData(&acc), GL_STATIC_DRAW); \
+            LOADER_DEBUG("* " #acc ": EBO %u", acc.gl_object); \
+        }
+    XMLOCAL_EBO
+    #undef X
+
+    #define X(attr, acc) \
+        if (acc.buffer != NULL) { \
+            glGenBuffers(1, &acc.gl_object); \
+            glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
+            glBufferData(GL_ARRAY_BUFFER, (GLsizei) (acc.count * (size_t) acc.stride), \
+                FAccessorData(&acc), GL_STATIC_DRAW); \
+            glBindBuffer(GL_ARRAY_BUFFER, acc.gl_object); \
+            glEnableVertexAttribArray(attr); \
+            glVertexAttribPointer(attr, acc.component_count, GL_FLOAT, false, acc.stride, NULL); \
+            LOADER_DEBUG("* " #acc ": VBO %u %s %d", acc.gl_object, #attr, attr); \
+        }
+    XMLOCAL_VBO
+    #undef X
+
+    #undef XMLOCAL_EBO
+    #undef XMLOCAL_VBO
 }

@@ -68,7 +68,6 @@ void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset
     acc->component_count = FAccessorComponentCount(t);
     acc->component_size  = FAccessorComponentSize(t);
     acc->gl_object = 0;
-    acc->gl_needs_upload = false;
 }
 
 void FAccessorInitFile (FAccessor* acc, FAccessorType t, const char* filename, size_t offset,

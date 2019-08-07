@@ -123,7 +123,6 @@ typedef struct {
     uint8_t stride;
     uint8_t component_count;
     uint8_t component_size;
-    bool gl_needs_upload;
     GLuint gl_object;
 } FAccessor;
 
