@@ -53,8 +53,8 @@ void main() {
     b = floor(b * 10) / 10;
 
     vec3 ds = vec3(r, g, b);
-    vec3 uu = texture2D(gColorLDR, fragCoord01).rgb;
+    vec3 uu = texture(gColorLDR, fragCoord01).rgb;
 
     outColorLDR = vec4(0.6 * ds + 0.4 * uu, 1.0);
-    outAux1 = texture2D(gAux1, fragCoord01);
+    outAux1 = texture(gAux1, fragCoord01);
 }

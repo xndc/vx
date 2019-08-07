@@ -16,5 +16,5 @@ uniform sampler2D gAux2;
 uniform sampler2D gShadow;
 
 void main() {
-    outColor = texture2D(gColorLDR, fragCoord01);
+    outColor = texture(gColorLDR, fragCoord01);
 }
