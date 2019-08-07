@@ -150,7 +150,7 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
         -Wno-nonportable-include-path           # pointless, trips on a few things
         -Wno-documentation          # trips on most documentation comments in GLFW3.h
         -Wno-reserved-id-macro      # macro names starting with _
-        -Wno-writable-strings       # passing const char* to char* arguments [1]
+        -Wno-writable-strings       # passing const char* to char* arguments
         -Wno-unused-parameter       # unreferenced function parameters
         -Wno-gnu-anonymous-struct   # useful well-supported extension
         -Wno-nested-anon-types)     # useful well-supported extension
@@ -181,7 +181,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wno-missing-braces         # trips on the common T X = {0} idiom
         -Wno-documentation          # trips on most documentation comments in GLFW3.h
         -Wno-reserved-id-macro      # macro names starting with _
-        -Wno-writable-strings       # passing const char* to char* arguments [1]
+        -Wno-writable-strings       # passing const char* to char* arguments
         -Wno-unused-parameter       # unreferenced function parameters
         -Wno-gnu-anonymous-struct   # useful well-supported extension
         -Wno-nested-anon-types)     # useful well-supported extension
