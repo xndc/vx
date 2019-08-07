@@ -40,7 +40,17 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
                 }
             } break;
             case CAMERA_ORTHOGRAPHIC: {
-                VXPANIC("TODO");
+                // Orthographic cameras are weird, probably even more so because we use reverse-Z.
+                // I don't fully understand what's going on, but doing the following lets us use
+                // "near" and "far" the same way we would for a perspective camera, by specifying
+                // plane distances relative to the current position of the camera (as determined by
+                // its view matrix). Negative near plane distances can be used to include objects
+                // behind the camera in its view.
+                float n = -camera->far;
+                float f = -camera->near;
+                float zw = camera->zoom;
+                float zh = camera->zoom * hw;
+                glm_ortho(zw/2.0f, zw/-2.0f, zh/-2.0f, zh/2.0f, n, f, camera->proj_matrix);
             } break;
         }
         camera->prev_aspect_hw = hw;
@@ -49,30 +59,11 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         camera->prev_far  = camera->far;
         camera->prev_projection = camera->projection;
     }
-    if (camera->mode != camera->prev_mode ||
-        memcmp(&camera->simple, camera->prev_props, sizeof(struct CameraModePropsFPS)) != 0)
+    if (!glm_vec3_eqv(camera->position, camera->prev_position) ||
+        !glm_vec3_eqv(camera->target, camera->prev_target))
     {
-        vec3 up = {0.0f, 1.0f, 0.0f};
-        switch (camera->mode) {
-            case CAMERA_MODE_SIMPLE: {
-                struct CameraModePropsSimple p = camera->simple;
-                vec3 target = GLM_VEC3_ZERO_INIT;
-                glm_vec3_add(p.position, p.direction, target);
-                glm_lookat(p.position, target, up, camera->view_matrix);
-            } break;
-            case CAMERA_MODE_ORBIT: {
-                struct CameraModePropsOrbit* p = &camera->orbit;
-                vec3 position = GLM_VEC3_ZERO_INIT;
-                position[0] = p->target[0] + sinf(p->angle_horz) * p->distance;
-                position[1] = p->target[1] + sinf(p->angle_vert) * p->distance;
-                position[2] = p->target[2] + cosf(p->angle_horz) * p->distance;
-                glm_lookat(position, p->target, up, camera->view_matrix);
-            } break;
-            case CAMERA_MODE_FPS: {
-                VXPANIC("TODO");
-            } break;
-        }
-        camera->prev_mode = camera->mode;
-        memcpy(camera->prev_props, &camera->simple, sizeof(struct CameraModePropsFPS));
+        glm_lookat(camera->position, camera->target, (vec3){0.0f, 1.0f, 0.0f}, camera->view_matrix);
+        glm_vec3_copy(camera->position, camera->prev_position);
+        glm_vec3_copy(camera->target, camera->prev_target);
     }
 }

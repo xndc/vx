@@ -67,13 +67,14 @@ int main() {
         glfwSwapInterval(1);
     }
 
-    G_MainCamera.projection = CAMERA_PERSPECTIVE;
-    G_MainCamera.fov  = 80.0f;
-    G_MainCamera.near = 0.1f;
-    G_MainCamera.far  = 0.0f;
-    G_MainCamera.mode = CAMERA_MODE_ORBIT;
-    glm_vec3_zero(G_MainCamera.orbit.target);
-    G_MainCamera.orbit.distance = 4.0f;
+    G_MainCamera.projection = CAMERA_ORTHOGRAPHIC;
+    // G_MainCamera.fov  = 80.0f;
+    // G_MainCamera.near = 0.1f;
+    // G_MainCamera.far  = 0.0f;
+    G_MainCamera.near = -100.0f;
+    G_MainCamera.far  = +100.0f;
+    G_MainCamera.zoom = 40.0f;
+    glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
     while (!glfwWindowShouldClose(window)) {
         int w, h;
@@ -82,8 +83,15 @@ int main() {
         glViewport(0, 0, w, h);
         GUI_StartFrame();
 
-        G_MainCamera.orbit.angle_vert = sinf(glfwGetTime() * 0.5f) * 0.5f;
-        G_MainCamera.orbit.angle_horz = (float) glfwGetTime() * 0.5f;
+        const float dist = 3.0f;
+        float angle_h = glfwGetTime() * 0.5f;
+        float angle_v = (M_PI * 0.5f) + cosf(glfwGetTime() * 0.5f) * 0.35f;
+        // NOTE: this is a standard spherical-to-cartesian coordinate mapping with
+        //   radius/rho = dist, theta = angle_v, phi = angle_h, and the Y/Z axes swapped
+        G_MainCamera.position[0] = dist * sinf(angle_v) * cosf(angle_h);
+        G_MainCamera.position[1] = dist * cosf(angle_v);
+        G_MainCamera.position[2] = dist * sinf(angle_v) * sinf(angle_h);
+        glm_vec3_add(G_MainCamera.position, G_MainCamera.target, G_MainCamera.position);
         UpdateCameraMatrices(&G_MainCamera, w, h);
 
         StartRenderPass("Framebuffer clear");

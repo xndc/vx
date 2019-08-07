@@ -70,10 +70,10 @@ extern "C" void GUI_RenderLoadingFrame (GLFWwindow* window,
     ImGui::PushFont(FONT_ROBOTO_MEDIUM_16);
     ImVec2 textsize2 = ImGui::CalcTextSize(text2);
     ImGui::PopFont();
-    float w1 = textsize1.x + 10.0f;
-    float h1 = textsize1.y + 10.0f;
-    float w2 = textsize2.x + 10.0f;
-    float h2 = textsize2.y + 10.0f;
+    float w1 = textsize1.x + 12.0f;
+    float h1 = textsize1.y + 12.0f;
+    float w2 = textsize2.x + 12.0f;
+    float h2 = textsize2.y + 12.0f;
     float x1 = (io.DisplaySize.x / 2.0f) - (w1 / 2.0f);
     float y1 = (io.DisplaySize.y / 2.0f) - (h1 / 2.0f) - textsize2.y + 8.0f;
     float x2 = (io.DisplaySize.x / 2.0f) - (w2 / 2.0f);
