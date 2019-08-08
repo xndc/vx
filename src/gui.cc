@@ -1,21 +1,18 @@
-#include "common.h"
-extern "C" {
-    #include "./gui.h"
-}
+#include "./gui.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <imgui.h>
 #include <examples/imgui_impl_opengl3.h>
 #include <examples/imgui_impl_glfw.h>
 
-bool UI_ShowDebugOverlay = false;
-int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
+static bool UI_ShowDebugOverlay = false;
+static int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
 
-#define X(name, path, size) ImFont* name;
+#define X(name, path, size) VXEXPORT ImFont* name;
 XM_ASSETS_FONTS
 #undef X
 
-extern "C" void GUI_Init (GLFWwindow* window) {
+VXEXPORT void GUI_Init (GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -39,18 +36,18 @@ extern "C" void GUI_Init (GLFWwindow* window) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 }
 
-extern "C" void GUI_StartFrame() {
+VXEXPORT void GUI_StartFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-extern "C" void GUI_Render() {
+VXEXPORT void GUI_Render() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-extern "C" void GUI_RenderLoadingFrame (GLFWwindow* window,
+VXEXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     const char* text1, const char* text2,
     float bgr, float bgg, float bgb,
     float fgr, float fgg, float fgb)
@@ -106,7 +103,7 @@ extern "C" void GUI_RenderLoadingFrame (GLFWwindow* window,
     glfwPollEvents();
 }
 
-extern "C" void GUI_DrawLoadingText (const char* text, float r, float g, float b) {
+VXEXPORT void GUI_DrawLoadingText (const char* text, float r, float g, float b) {
     // NOTE: Modelled after ShowExampleAppSimpleOverlay in imgui_demo.cpp
     ImGuiIO& io = ImGui::GetIO();
     ImGui::PushFont(FONT_ROBOTO_MEDIUM_32);
@@ -123,7 +120,7 @@ extern "C" void GUI_DrawLoadingText (const char* text, float r, float g, float b
     ImGui::PopFont();
 }
 
-extern "C" void GUI_DrawDebugOverlay (GLFWwindow* window) {
+VXEXPORT void GUI_DrawDebugOverlay (GLFWwindow* window) {
     static int debugOverlayKeyState = GLFW_RELEASE;
     if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS &&
         debugOverlayKeyState == GLFW_RELEASE) {
