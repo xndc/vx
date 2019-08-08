@@ -10,6 +10,12 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#ifdef __cplusplus
+    #define VXEXPORT extern "C"
+#else
+    #define VXEXPORT
+#endif
+
 #include <stb/stb_ds.h>
 // shgeti returns 0 instead of -1: https://github.com/nothings/stb/pull/781
 #undef stbds_shgeti
@@ -67,21 +73,21 @@ typedef unsigned int GLuint;
 #define VX_LOGSOURCE_ERROR 3
 #define VX_LOGSOURCE_ALLOC 100
 
-void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args);
-void vxSprintf  (size_t size, char* dst, const char* fmt, ...);
-char* vxSprintfStatic (const char* fmt, ...);
+VXEXPORT void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args);
+VXEXPORT void vxSprintf  (size_t size, char* dst, const char* fmt, ...);
+VXEXPORT char* vxSprintfStatic (const char* fmt, ...);
 
-extern size_t vxLogBufferSize;
-extern size_t vxLogBufferUsed;
-extern char*  vxLogBuffer;
-void vxLogWrite (size_t size, const char* str);
-void vxLogPrintf (const char* fmt, ...);
-void vxLogMessage (int source, const char* file, int line, const char* func, const char* fmt, ...);
+VXEXPORT extern size_t vxLogBufferSize;
+VXEXPORT extern size_t vxLogBufferUsed;
+VXEXPORT extern char*  vxLogBuffer;
+VXEXPORT void vxLogWrite (size_t size, const char* str);
+VXEXPORT void vxLogPrintf (const char* fmt, ...);
+VXEXPORT void vxLogMessage (int source, const char* file, int line, const char* func, const char* fmt, ...);
 
-char* vxStringDuplicate (const char* src);
+VXEXPORT char* vxStringDuplicate (const char* src);
 
-char* vxReadFileEx (size_t size, char* dst, size_t* read_bytes, FILE* file);
-char* vxReadFile (const char* filename, bool text_mode, size_t* read_bytes);
+VXEXPORT char* vxReadFileEx (size_t size, char* dst, size_t* read_bytes, FILE* file);
+VXEXPORT char* vxReadFile (const char* filename, bool text_mode, size_t* read_bytes);
 
 // Specification for a generic memory allocation/deallocation function.
 // * block: Memory block to reallocate or free. Set to NULL to allocate a new block.
@@ -93,13 +99,14 @@ typedef void* (*VXAllocator) (void* block, size_t count, size_t itemsize, size_t
     const char* file, int line, const char* func);
 
 // Generic allocator, defers to platform allocation functions.
-void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
+VXEXPORT void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
 #define VXGENALLOCA(count, type, align) \
     (type*) vxGenAlloc(NULL, count, sizeof(type), align, VXLOCATION);
 #define VXGENALLOC(count, type) VXGENALLOCA(count, type, 0)
 #define VXGENFREE(block) vxGenAlloc(block, 0, 0, 0, VXLOCATION);
 
+#if 0
 // Per-frame linear allocator, should be reset using vxFrameAllocReset at the start of each frame.
 void* vxFrameAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
@@ -107,25 +114,4 @@ void vxFrameAllocReset();
 #define VXFRAMEALLOCA(count, type, align) \
     (type*) vxFrameAlloc(NULL, count, sizeof(type), align, VXLOCATION);
 #define VXFRAMEALLOC(count, type) VXFRAMEALLOCA(count, type, 0)
-
-#if 0
-typedef void* (*VXAllocFunction) (size_t count, size_t itemsize, size_t alignment,
-    const char* file, int line, const char* func);
-typedef void (*VXFreeFunction) (void* mem, const char* file, int line, const char* func);
-
-// General allocator: passes arguments to aligned_alloc, with logging.
-void* vxGenAllocEx (size_t count, size_t itemsize, size_t alignment,
-    const char* file, int line, const char* func);
-void vxGenFreeEx (void* mem, const char* file, int line, const char* func);
-#define VXGENALLOC(count, type) \
-    (type*) vxGenAllocEx(count, sizeof(type), sizeof(type), __FILE__, __LINE__, VXFUNCTION)
-#define VXGENFREE(mem) vxGenFreeEx(mem, __FILE__, __LINE__, VXFUNCTION);
-
-// Frame allocator: linear allocator, should be reset every frame.
-void* vxFrameAllocEx (size_t count, size_t itemsize, size_t alignment, const char* file,
-    int line, const char* func);
-void vxFrameAllocSize (size_t heapsize);
-void vxFrameAllocReset ();
-#define VXFRAMEALLOC(type) \
-    (type*) vxFrameAllocEx(count, sizeof(type), sizeof(type), __FILE__, __LINE__, VXFUNCTION)
 #endif
