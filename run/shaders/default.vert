@@ -8,7 +8,8 @@ layout (location = 5) in vec3 aColor;
 layout (location = 6) in vec3 aJoints;
 layout (location = 7) in vec3 aWeights;
 
-out vec2 vTexcoord;
+out vec2 texcoord0;
+out vec2 texcoord1;
 
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
@@ -16,5 +17,6 @@ uniform mat4 uProjMatrix;
 
 void main() {
     gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
-    vTexcoord = aTexcoord0;
+    texcoord0 = aTexcoord0;
+    texcoord1 = aTexcoord1;
 }

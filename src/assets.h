@@ -3,7 +3,7 @@
 #define XM_ASSETS_SHADERS \
     X(VSH_DEFAULT,          "shaders/default.vert") \
     X(VSH_FULLSCREEN_PASS,  "shaders/fullscreen.vert") \
-    X(FSH_DEFAULT,          "shaders/default.frag") \
+    X(FSH_FWD_OPAQUE,       "shaders/fwd_opaque.frag") \
     X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
     X(FSH_FINAL,            "shaders/final.frag") \
 

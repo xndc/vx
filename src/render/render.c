@@ -89,12 +89,6 @@ Shader* LoadShaderFromDisk (const char* name, const char* path) {
     return shader;
 }
 
-// void InitRenderSystem() {
-//     #define X(name, path) name = LoadShaderFromDisk(#name, path);
-//     XM_ASSETS_SHADERS
-//     #undef X
-// }
-
 // Conceptually, starts a new render pass. Concretely, resets the following:
 // -> the current render state and stack
 // -> the currently selected shaders
@@ -302,11 +296,13 @@ GLuint BindTextureUnit (GLuint texture, GLuint sampler) {
 }
 
 void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler) {
-    if (uniform != -1 && texture != 0 && sampler != 0) {
-        GLuint tu = BindTextureUnit(texture, sampler);
-        glUniform1i(uniform, tu);
-    } else {
-        glUniform1i(uniform, 0);
+    if (uniform != -1) {
+        if (texture != 0 && sampler != 0) {
+            GLuint tu = BindTextureUnit(texture, sampler);
+            glUniform1i(uniform, tu);
+        } else {
+            glUniform1i(uniform, 0);
+        }
     }
 }
 

@@ -71,35 +71,6 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
         #undef ATTACH
         #undef END
     }
-
-    // // Generate lists for glDrawBuffers:
-    // static bool first_run = true;
-    // if (first_run) {
-    //     first_run = false;
-    //     // Count drawbuffers for each framebuffer:
-    //     size_t count = 0;
-    //     #define BEGIN(name) count = 0;
-    //     #define ATTACH(point, name) count++;
-    //     #define END(name) \
-    //         name ## _DRAWBUFFER_COUNT = count; \
-    //         name ## _DRAWBUFFERS = VXGENALLOC(count, GLuint); \
-    //     XM_ASSETS_FRAMEBUFFERS
-    //     #undef BEGIN
-    //     #undef ATTACH
-    //     #undef END
-    //     // Populate drawbuffer list for each framebuffer:
-    //     GLuint* list = NULL;
-    //     #define BEGIN(name) \
-    //         count = 0; \
-    //         list = name ## _DRAWBUFFERS;
-    //     #define ATTACH(point, name) \
-    //         list[count++] = point;
-    //     #define END(name)
-    //     XM_ASSETS_FRAMEBUFFERS
-    //     #undef BEGIN
-    //     #undef ATTACH
-    //     #undef END
-    // }
 }
 
 GLuint LoadTextureFromDisk (const char* name, const char* path) {

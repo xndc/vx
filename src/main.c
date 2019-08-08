@@ -29,6 +29,10 @@ int main() {
     glfwMakeContextCurrent(window);
     gladLoadGL();
 
+    if (!glfwExtensionSupported("GL_NV_texture_barrier")) {
+        VXPANIC("This program requires the GL_NV_texture_barrier extension.");
+    }
+
     // Reverse Z setup:
     glDepthRangef(-1.0f, 1.0f);
 
@@ -67,10 +71,6 @@ int main() {
         glfwSwapInterval(1);
     }
 
-    if (!glfwExtensionSupported("GL_NV_texture_barrier")) {
-        VXPANIC("This program requires the GL_NV_texture_barrier extension.");
-    }
-
     #if 1
     G_MainCamera.projection = CAMERA_PERSPECTIVE;
     G_MainCamera.fov  = 80.0f;
@@ -105,22 +105,22 @@ int main() {
         StartRenderPass("Framebuffer clear");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
         static const GLenum drawbuffers[] = {
-            GL_COLOR_ATTACHMENT0,
-            GL_COLOR_ATTACHMENT1,
-            GL_COLOR_ATTACHMENT2,
-            GL_COLOR_ATTACHMENT3,
-            GL_COLOR_ATTACHMENT4,
-            GL_COLOR_ATTACHMENT5,
-            GL_COLOR_ATTACHMENT6,
+            GL_COLOR_ATTACHMENT0, // RT_COLOR_LDR
+            GL_COLOR_ATTACHMENT1, // RT_COLOR_HDR
+            GL_COLOR_ATTACHMENT2, // RT_COLOR_TAA
+            GL_COLOR_ATTACHMENT3, // RT_NORMAL
+            GL_COLOR_ATTACHMENT4, // RT_VELOCITY
+            GL_COLOR_ATTACHMENT5, // RT_AUX1
+            GL_COLOR_ATTACHMENT6, // RT_AUX2
         };
         glDrawBuffers(VXSIZE(drawbuffers), drawbuffers);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        StartRenderPass("Test");
+        StartRenderPass("Main Render");
         SetCameraMatrices(&G_MainCamera);
-        SetRenderProgram(VSH_DEFAULT, FSH_DEFAULT);
+        SetRenderProgram(VSH_DEFAULT, FSH_FWD_OPAQUE);
 
         ResetModelMatrix();
         AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
