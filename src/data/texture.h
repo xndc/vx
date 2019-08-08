@@ -8,12 +8,28 @@ XM_ASSETS_RENDERTARGETS_SCREENSIZE
 XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #undef X
 
-#define BEGIN(name) extern GLuint name;
-#define ATTACH(point, name)
-#define END(name)
+#define VXGL_COLOR_ATTACHMENT0 (0x8CE0)
+#define VXGL_COLOR_ATTACHMENT1 (VXGL_COLOR_ATTACHMENT0 + 1)
+#define VXGL_COLOR_ATTACHMENT2 (VXGL_COLOR_ATTACHMENT0 + 2)
+#define VXGL_COLOR_ATTACHMENT3 (VXGL_COLOR_ATTACHMENT0 + 3)
+#define VXGL_COLOR_ATTACHMENT4 (VXGL_COLOR_ATTACHMENT0 + 4)
+#define VXGL_COLOR_ATTACHMENT5 (VXGL_COLOR_ATTACHMENT0 + 5)
+#define VXGL_COLOR_ATTACHMENT6 (VXGL_COLOR_ATTACHMENT0 + 6)
+#define VXGL_COLOR_ATTACHMENT7 (VXGL_COLOR_ATTACHMENT0 + 7)
+#define VXGL_COLOR_ATTACHMENT8 (VXGL_COLOR_ATTACHMENT0 + 8)
+
+#define BEGIN(name) \
+    extern GLuint name; \
+    static const GLenum name ## _BUFFERS [] = {
+#define DEPTH(point, name)
+#define COLOR(point, name) VX ## point ,
+#define END(name) \
+    0 }; \
+    static const size_t name ## _BUFFER_COUNT = VXSIZE(name ## _BUFFERS) - 1;
 XM_ASSETS_FRAMEBUFFERS
 #undef BEGIN
-#undef ATTACH
+#undef DEPTH
+#undef COLOR
 #undef END
 
 #define VXGL_SAMPLER_COUNT 32

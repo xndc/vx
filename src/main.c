@@ -32,6 +32,7 @@ int main() {
     if (!glfwExtensionSupported("GL_NV_texture_barrier")) {
         VXPANIC("This program requires the GL_NV_texture_barrier extension.");
     }
+    VXASSERT(GL_COLOR_ATTACHMENT0 == VXGL_COLOR_ATTACHMENT0);
 
     // Reverse Z setup:
     glDepthRangef(-1.0f, 1.0f);
@@ -104,16 +105,7 @@ int main() {
 
         StartRenderPass("Framebuffer clear");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
-        static const GLenum drawbuffers[] = {
-            GL_COLOR_ATTACHMENT0, // RT_COLOR_LDR
-            GL_COLOR_ATTACHMENT1, // RT_COLOR_HDR
-            GL_COLOR_ATTACHMENT2, // RT_COLOR_TAA
-            GL_COLOR_ATTACHMENT3, // RT_NORMAL
-            GL_COLOR_ATTACHMENT4, // RT_VELOCITY
-            GL_COLOR_ATTACHMENT5, // RT_AUX1
-            GL_COLOR_ATTACHMENT6, // RT_AUX2
-        };
-        glDrawBuffers(VXSIZE(drawbuffers), drawbuffers);
+        glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -137,7 +129,7 @@ int main() {
         RenderModel(&MDL_SPONZA);
 
         StartRenderPass("Fullscreen Pass Test");
-        glDrawBuffers(VXSIZE(drawbuffers), drawbuffers);
+        glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
         RunFullscreenPass(w, h);
 

@@ -10,11 +10,13 @@ XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #undef X
 
 #define BEGIN(name) GLuint name = 0;
-#define ATTACH(point, name)
+#define DEPTH(point, name)
+#define COLOR(point, name)
 #define END(name)
 XM_ASSETS_FRAMEBUFFERS
 #undef BEGIN
-#undef ATTACH
+#undef DEPTH
+#undef COLOR
 #undef END
 
 GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
@@ -59,7 +61,9 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
             if (name != 0) { glDeleteFramebuffers(1, &name); } \
             glGenFramebuffers(1, &name); \
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, name);
-        #define ATTACH(point, name) \
+        #define DEPTH(point, name) \
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, point, GL_TEXTURE_2D, name, 0);
+        #define COLOR(point, name) \
             glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, point, GL_TEXTURE_2D, name, 0);
         #define END(name) \
             status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER); \
@@ -68,7 +72,8 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
             }
         XM_ASSETS_FRAMEBUFFERS
         #undef BEGIN
-        #undef ATTACH
+        #undef DEPTH
+        #undef COLOR
         #undef END
     }
 }
