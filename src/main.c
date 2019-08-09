@@ -29,8 +29,8 @@ int main() {
     glfwMakeContextCurrent(window);
     gladLoadGL();
 
-    if (!glfwExtensionSupported("GL_NV_texture_barrier")) {
-        VXPANIC("This program requires the GL_NV_texture_barrier extension.");
+    if (!(glfwExtensionSupported("GL_NV_texture_barrier") || glfwExtensionSupported("GL_ARB_texture_barrier"))) {
+        VXPANIC("This program requires the GL_*_texture_barrier extension.");
     }
     VXASSERT(GL_COLOR_ATTACHMENT0 == VXGL_COLOR_ATTACHMENT0);
 

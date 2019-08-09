@@ -432,6 +432,6 @@ void RunFullscreenPass (int w, int h) {
     glUniform2i(UNIF_IRESOLUTION, w, h);
     glBindVertexArray(S_FullscreenPass_Mesh.gl_vertex_array);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, S_FullscreenPass_Mesh.indices.gl_object);
-    glTextureBarrierNV(); // lets the shader both read & write to the same texture
+    glTextureBarrier(); // lets the shader both read & write to the same texture
     glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_SHORT, NULL);
 }
