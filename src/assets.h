@@ -7,6 +7,14 @@
     X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
     X(FSH_FINAL,            "shaders/final.frag") \
 
+#define XM_ASSETS_PROGRAMS \
+    X(PROG_FWD_OPAQUE, VSH_DEFAULT, FSH_FWD_OPAQUE) \
+    X(PROG_FX_DITHER,  VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
+    X(PROG_FINAL,      VSH_FULLSCREEN_PASS, FSH_FINAL) \
+
+// Syntax for attributes:
+// X(location global name, layout location index, GLSL name)
+
 #define XM_ASSETS_SHADER_ATTRIBUTES \
     X(ATTR_POSITION,    0, "aPosition") \
     X(ATTR_NORMAL,      1, "aNormal") \
@@ -17,7 +25,10 @@
     X(ATTR_JOINTS,      6, "aJoints") \
     X(ATTR_WEIGHTS,     7, "aWeights") \
 
+// Syntax for uniforms:
+// X(location global name, GLSL name)
 // NOTE: the UNIF_RT uniform variable names should match the render target names defined below
+
 #define XM_ASSETS_SHADER_UNIFORMS \
     X(UNIF_RT_DEPTH,        "gDepth") \
     X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
@@ -42,19 +53,25 @@
     X(UNIF_TEX_ROUGHNESS,   "texRoughness") \
     X(UNIF_TEX_NORMAL,      "texNormal") \
 
+// Syntax for textures:
+// X(name, target (GL_TEXTURE_*), needs mipmaps, path)
+
 #define XM_ASSETS_TEXTURES \
 
 #define XM_ASSETS_TEXTURES_IGNORED \
-    X(TEX_TERRAIN_HEIGHTMAP,        "terrain/testmap.png") \
-    X(TEX_TERRAIN_SPLAT0_DIFFUSE,   "textures/ground0/albedo.jpg") \
-    X(TEX_TERRAIN_SPLAT0_NORMAL,    "textures/ground0/normal.jpg") \
-    X(TEX_TERRAIN_SPLAT0_ROUGHNESS, "textures/ground0/roughness.jpg") \
-    X(TEX_TERRAIN_SPLAT1_DIFFUSE,   "textures/ground1/albedo.jpg") \
-    X(TEX_TERRAIN_SPLAT1_NORMAL,    "textures/ground1/normal.jpg") \
-    X(TEX_TERRAIN_SPLAT1_ROUGHNESS, "textures/ground1/roughness.jpg") \
-    X(TEX_TERRAIN_SPLAT2_DIFFUSE,   "textures/ground2/albedo.jpg") \
-    X(TEX_TERRAIN_SPLAT2_NORMAL,    "textures/ground2/normal.jpg") \
-    X(TEX_TERRAIN_SPLAT2_ROUGHNESS, "textures/ground2/roughness.jpg") \
+    X(TEX_TERRAIN_HEIGHTMAP,        GL_TEXTURE_2D, false, "terrain/testmap.png") \
+    X(TEX_TERRAIN_SPLAT0_DIFFUSE,   GL_TEXTURE_2D, true,  "textures/ground0/albedo.jpg") \
+    X(TEX_TERRAIN_SPLAT0_NORMAL,    GL_TEXTURE_2D, true,  "textures/ground0/normal.jpg") \
+    X(TEX_TERRAIN_SPLAT0_ROUGHNESS, GL_TEXTURE_2D, true,  "textures/ground0/roughness.jpg") \
+    X(TEX_TERRAIN_SPLAT1_DIFFUSE,   GL_TEXTURE_2D, true,  "textures/ground1/albedo.jpg") \
+    X(TEX_TERRAIN_SPLAT1_NORMAL,    GL_TEXTURE_2D, true,  "textures/ground1/normal.jpg") \
+    X(TEX_TERRAIN_SPLAT1_ROUGHNESS, GL_TEXTURE_2D, true,  "textures/ground1/roughness.jpg") \
+    X(TEX_TERRAIN_SPLAT2_DIFFUSE,   GL_TEXTURE_2D, true,  "textures/ground2/albedo.jpg") \
+    X(TEX_TERRAIN_SPLAT2_NORMAL,    GL_TEXTURE_2D, true,  "textures/ground2/normal.jpg") \
+    X(TEX_TERRAIN_SPLAT2_ROUGHNESS, GL_TEXTURE_2D, true,  "textures/ground2/roughness.jpg") \
+
+// Syntax for models:
+// X(name, base directory, main GLTF file name)
 
 #define XM_ASSETS_MODELS_GLTF \
     X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
@@ -67,7 +84,10 @@
     X(FONT_ROBOTO_MEDIUM_16, "fonts/Roboto-Medium.ttf", 16) \
     X(FONT_ROBOTO_MEDIUM_32, "fonts/Roboto-Medium.ttf", 32) \
 
+// Syntax for render targets:
+// X(name, format)
 // NOTE: render target names should match their corresponding UNIF_RT uniform variable names
+
 #define XM_ASSETS_RENDERTARGETS_SCREENSIZE \
     X(RT_COLOR_LDR,     GL_RGBA8) \
     X(RT_COLOR_HDR,     GL_RGB16F) \
@@ -80,6 +100,11 @@
 
 #define XM_ASSETS_RENDERTARGETS_SHADOWSIZE \
     X(RT_SHADOW_DEPTH, GL_DEPTH_COMPONENT32F) \
+
+// Syntax for framebuffers:
+// [BEGIN|END](framebuffer name)
+// [COLOR|DEPTH](attachment point, render target name)
+// Framebuffers can only have one depth attachment.
 
 #define XM_ASSETS_FRAMEBUFFERS \
     BEGIN(FB_MAIN) \

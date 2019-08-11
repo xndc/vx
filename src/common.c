@@ -9,6 +9,12 @@
     #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+    #include <malloc/malloc.h>
+#else
+    #include <malloc.h>
+#endif
+
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb_sprintf.h>
 #define STB_DS_IMPLEMENTATION
@@ -187,6 +193,64 @@ char* vxReadFile (const char* filename, const char* mode, size_t* outLength) {
     return buf;
 }
 
+// Generic aligned_alloc, malloc_size and free functions.
+static inline void* vxAlignedAlloc (size_t size, size_t alignment) {
+    #if defined(_MSC_VER)
+        return _aligned_malloc(size, alignment);
+    #elif defined(__APPLE__)
+        void* p;
+        posix_memalign(&p, alignment, size);
+        return p;
+    #else
+        return aligned_alloc(alignment, size);
+    #endif
+}
+static inline size_t vxAlignedMemSize (void* block, size_t alignment) {
+    #if defined(_MSC_VER)
+        return _aligned_msize(block, alignment, 0);
+    #elif defined(__APPLE__)
+        return malloc_size(block);
+    #else
+        return malloc_usable_size(block);
+    #endif
+}
+static inline void vxAlignedFree (void* block) {
+    #if defined(_MSC_VER)
+        _aligned_free(block);
+    #else
+        free(block);
+    #endif
+}
+
+// Allocates (block=NULL), reallocates or frees (count*size = 0) a block of memory using the system
+// default aligned memory allocator. The given alignment should be a power of 2 and a multiple of
+// the system pointer size.
+void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment) {
+    void* p = NULL;
+    size_t size = count * itemsize; // FIXME: check for overflow, somehow
+    if (alignment == 0) { alignment = sizeof(void*); }
+
+    if (size == 0) {
+        if (block) {
+            vxAlignedFree(block);
+        }
+    } else {
+        if (block) {
+            #if defined(_MSC_VER)
+                p = _aligned_realloc(block, size, alignment);
+            #else
+                p = vxAlignedAlloc(size, alignment);
+                // NOTE: This can return a bogus value on Windows if the alignments are different.
+                size_t block_size = vxAlignedMemSize(block, alignment);
+                memcpy(p, block, vxMin(block_size, size));
+            #endif
+        } else {
+            p = vxAlignedAlloc(size, alignment);
+        }
+    }
+    return p;
+}
+
 #if 0
 #ifdef __APPLE__
     #include <malloc/malloc.h>
@@ -337,7 +401,7 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
 // #define VX_GEN_ALLOC_DISABLE_REALLOC
 
 // Generic aligned_alloc, malloc_size and free functions.
-static inline void* SystemAlloc (size_t size, size_t alignment) {
+static inline void* vxAlignedAlloc (size_t size, size_t alignment) {
     #if defined(_MSC_VER)
         return _aligned_malloc(size, alignment);
     #elif defined(__APPLE__)
@@ -410,7 +474,7 @@ void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
             #if defined(_MSC_VER) && !defined(VX_GEN_ALLOC_DISABLE_REALLOC)
                 p = _aligned_realloc(block, size, alignment);
             #else
-                p = SystemAlloc(size, alignment);
+                p = vxAlignedAlloc(size, alignment);
                 vxDebug("p = 0x%jx", p);
                 // NOTE: This can return a bogus value on Windows if the alignments are different.
                 size_t block_size = SystemMemSize(block, alignment);
@@ -429,7 +493,7 @@ void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
                     "vxGenAlloc: Allocating %jd items of size %jd with alignment %jd (given: %jd)",
                     count, itemsize, alignment, given_alignment);
             #endif
-            p = SystemAlloc(size, alignment);
+            p = vxAlignedAlloc(size, alignment);
             #if !defined(VX_NO_ALLOC_MESSAGES)
                 vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
                     "vxGenAlloc: Allocated block: 0x%jx", p);

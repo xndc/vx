@@ -44,22 +44,17 @@ int main() {
     GUI_Init(window);
     #define LOADING_BG 0.2f, 0.3f, 0.4f
     #define LOADING_FG 1.0f, 1.0f, 1.0f
+    GUI_RenderLoadingFrame(window, "Loading assets...", "", LOADING_BG, LOADING_FG);
     // Shaders:
-    #define X(name, path) \
-        GUI_RenderLoadingFrame(window, "Loading shaders", path, LOADING_BG, LOADING_FG); \
-        name = LoadShaderFromDisk(#name, path);
+    #define X(name, path) name = LoadShaderFromDisk(#name, path);
     XM_ASSETS_SHADERS
     #undef X
     // Models:
-    #define X(name, dir, file) \
-        GUI_RenderLoadingFrame(window, "Loading models", dir "/" file, LOADING_BG, LOADING_FG); \
-        ReadModelFromDisk(#name, &name, dir, file);
+    #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
     XM_ASSETS_MODELS_GLTF
     #undef X
     // Textures:
-    #define X(name, path) \
-        GUI_RenderLoadingFrame(window, "Loading textures", path, LOADING_BG, LOADING_FG); \
-        name = LoadTextureFromDisk(#name, path);
+    #define X(name, path) name = LoadTextureFromDisk(#name, path);
     XM_ASSETS_TEXTURES
     #undef X
     // Samplers:
@@ -131,10 +126,10 @@ int main() {
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA);
 
-        StartRenderPass("Fullscreen Pass Test");
-        glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
-        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
-        RunFullscreenPass(w, h);
+        // StartRenderPass("Fullscreen Pass Test");
+        // glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
+        // SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
+        // RunFullscreenPass(w, h);
 
         StartRenderPass("Final Pass");
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);

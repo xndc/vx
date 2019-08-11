@@ -202,7 +202,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
     if (nodes && meshes) {
         // Allocate and clear out Node list:
         size_t nodeCount = json_array_get_count(nodes);
-        Node* nodeEntries = calloc(nodeCount, sizeof(Node));
+        Node* nodeEntries = vxAlloc(nodeCount, Node);
         for (size_t i = 0; i < nodeCount; i++) {
             Node* nentry = &nodeEntries[i];
             nentry->parent = -1;

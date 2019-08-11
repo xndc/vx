@@ -121,7 +121,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         /wd4201  # gnu-anonymous-struct and nested-anon-types
         /wd4204  # non-constant aggregate initializer - struct x y = {a, b}
         /wd4127) # constant conditional expressions - while(1)
-    # Prevent MSVCRT from nagging us to use Microsoft's non-standard "secure" functions:
+    # Prevent MSVCRT from nagging us to use Microsoft's non-standard functions and names:
+    target_compile_definitions(Game PRIVATE _CRT_NONSTDC_NO_WARNINGS)
     target_compile_definitions(Game PRIVATE _CRT_SECURE_NO_WARNINGS)
     # Generate PDB files only if required:
     target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Zi /Zo>)
@@ -156,6 +157,7 @@ elseif (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
         -Wno-gnu-anonymous-struct   # useful well-supported extension
         -Wno-nested-anon-types)     # useful well-supported extension
     # Prevent MSVCRT from nagging us to use Microsoft's non-standard "secure" functions:
+    target_compile_definitions(Game PRIVATE _CRT_NONSTDC_NO_WARNINGS)
     target_compile_definitions(Game PRIVATE _CRT_SECURE_NO_WARNINGS)
     # Generate PDB files only if required:
     target_compile_options(Game PRIVATE $<$<CONFIG:Debug>:/Zi /Zo>)

@@ -11,6 +11,9 @@
         "system_error": "c",
         "xlocale": "c",
         "ios": "c",
-        "xiosbase": "c"
+        "xiosbase": "c",
+        "initializer_list": "c",
+        "type_traits": "c",
+        "xstring": "c"
     }
 }

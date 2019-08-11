@@ -106,6 +106,16 @@ extern void vxEnableSignalHandlers();
 
 char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
 
+#ifdef _MSC_VER
+    #define vxAlignOf(t) __alignof(t)
+#else
+    #include <stdalign.h>
+    #define vxAlignOf(t) alignof(t)
+#endif
+
+extern void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
+#define vxAlloc(count, type) (type*) vxAlignedRealloc(NULL, count, sizeof(type), vxAlignOf(type));
+
 #if 0
 #ifdef _MSC_VER
     #define VXFUNCTION __FUNCTION__
