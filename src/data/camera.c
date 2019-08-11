@@ -11,7 +11,7 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         switch (camera->projection) {
             case CAMERA_PERSPECTIVE: {
                 // Convert HFOV to VFOV:
-                float vfov = 2.0f * atanf(tanf((float) VXRADIANS(camera->fov) / 2.0f) * hw);
+                float vfov = 2.0f * atanf(tanf((float) vxRadians(camera->fov) / 2.0f) * hw);
                 // See the following for info about pespective projection matrix generation:
                 // * http://dev.theomader.com/depth-precision/ (NOTE: given matrices are transposed)
                 // * https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/

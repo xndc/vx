@@ -2,8 +2,6 @@
 #include "common.h"
 #include "assets.h"
 #include "flib/accessor.h"
-#include "flib/vec.h"
-#include <cglm/cglm.h>
 
 typedef struct {
     bool blend;

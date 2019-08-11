@@ -67,7 +67,7 @@ static inline uint8_t FAccessorComponentCount (FAccessorType t) {
     if (t >= FACCESSOR_UINT8_MAT2 && t <= FACCESSOR_FLOAT32_MAT2) { return 4; }
     if (t >= FACCESSOR_UINT8_MAT3 && t <= FACCESSOR_FLOAT32_MAT3) { return 9; }
     if (t >= FACCESSOR_UINT8_MAT4 && t <= FACCESSOR_FLOAT32_MAT4) { return 16; }
-    VXPANIC("FAccessor type %d is invalid", t);
+    vxPanic("FAccessor type %d is invalid", t);
 }
 
 static inline uint8_t FAccessorComponentSize (FAccessorType t) {
@@ -83,7 +83,7 @@ static inline uint8_t FAccessorComponentSize (FAccessorType t) {
         case FACCESSOR_FLOAT32:
             return 4;
     }
-    VXPANIC("FAccessor type %d is invalid", t);
+    vxPanic("FAccessor type %d is invalid", t);
 }
 
 static inline uint8_t FAccessorStride (FAccessorType t) {
@@ -112,7 +112,7 @@ static inline FAccessorType FAccessorTypeFromGltf (const char* type, uint32_t co
     else if (strcmp(type, "MAT2") == 0) { switch (component_type) { CASES_VECTOR(MAT2) } }
     else if (strcmp(type, "MAT3") == 0) { switch (component_type) { CASES_VECTOR(MAT3) } }
     else if (strcmp(type, "MAT4") == 0) { switch (component_type) { CASES_VECTOR(MAT4) } }
-    VXPANIC("GLTF types (%s, %d) don't match any FAccessorType", type, component_type);
+    vxPanic("GLTF types (%s, %d) don't match any FAccessorType", type, component_type);
 }
 
 typedef struct {

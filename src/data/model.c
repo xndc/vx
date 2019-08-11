@@ -1,5 +1,5 @@
 #include "model.h"
-#include <stb/stb_sprintf.h>
+#include <stb_sprintf.h>
 #include <parson/parson.h>
 #include <glad/glad.h>
 #include "texture.h"
@@ -12,7 +12,7 @@ XM_ASSETS_MODELS_GLTF
 #define NO_GLTF_LOADER_DEBUG
 
 #ifndef NO_GLTF_LOADER_DEBUG
-    #define LOADER_DEBUG(...) VXDEBUG(__VA_ARGS__)
+    #define LOADER_DEBUG(...) vxDebug(__VA_ARGS__)
 #else
     #define LOADER_DEBUG(...)
 #endif
@@ -51,9 +51,9 @@ static inline JSON_Value* ReadJSONFromFile (const char* filename) {
     if (root == NULL) {
         FILE* fp = fopen(filename, "r");
         if (fp == NULL) {
-            VXPANIC("Failed to read file %s (%s)", filename, strerror(errno));
+            vxPanic("Failed to read file %s (%s)", filename, strerror(errno));
         } else {
-            VXPANIC("Failed to parse JSON from %s (unknown error in parson)", filename);
+            vxPanic("Failed to parse JSON from %s (unknown error in parson)", filename);
         }
     }
     return root;
@@ -63,8 +63,8 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
     LOADER_DEBUG("ReadModelFromFile(%s, 0x%jx, %s, %s)", name, model, dir, file);
     // Read GLTF file:
     static char path [4096]; // 4095 characters really ought to be enough for anyone...
-    stbsp_snprintf(path, VXSIZE(path), "%s/%s", dir, file);
-    VXINFO("Loading GLTF model %s from %s...", name, path);
+    stbsp_snprintf(path, vxSize(path), "%s/%s", dir, file);
+    vxLog("Loading GLTF model %s from %s...", name, path);
     JSON_Object* root = json_value_get_object(ReadJSONFromFile(path));
 
     // Extract texture information and load referenced textures into memory:
@@ -81,9 +81,9 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
                 const char* uri = json_object_get_string(image, "uri");
                 if (uri) {
                     // TODO: should we spend the time to make this work with relative filenames?
-                    stbsp_snprintf(path, VXSIZE(path), "%s/%s", dir, uri);
+                    stbsp_snprintf(path, vxSize(path), "%s/%s", dir, uri);
                     GLuint gltexture = LoadTextureFromDisk(uri, path);
-                    arrput(model->textures, gltexture);
+                    stbds_arrput(model->textures, gltexture);
                 }
             }
         }
@@ -100,9 +100,9 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
             size_t len = (size_t) json_object_get_number(buffer, "byteLength");
             if (uri && len != 0) {
                 stbsp_snprintf(path, 4096, "%s/%s", dir, uri);
-                char* buf = vxReadFile(path, false, NULL); // TODO: check length?
-                arrput(model->buffers, buf);
-                arrput(model->bufsizes, len);
+                char* buf = vxReadFile(path, "rb", NULL); // TODO: check length?
+                stbds_arrput(model->buffers, buf);
+                stbds_arrput(model->bufsizes, len);
             }
         }
     }
@@ -117,7 +117,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
         for (size_t i = 0; i < json_array_get_count(gltf_accessors); i++) {
             JSON_Object* gltf_accessor = json_array_get_object(gltf_accessors, i);
             if (json_object_has_value(gltf_accessor, "sparse")) {
-                VXPANIC("Sparse accessors are not supported yet");
+                vxPanic("Sparse accessors are not supported yet");
             }
             // Relevant data from GLTF accessor:
             const char* type = json_object_get_string(gltf_accessor, "type");
@@ -135,10 +135,10 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
             FAccessorInit(&acc, FAccessorTypeFromGltf(type, componentType),
                 model->buffers[bufferIndex], bufferOffset + accBufferOffset, accElementCount,
                 (uint8_t) accByteStride /* which is 0 if the key is missing */);
-            arrput(accessors, acc);
-            FAccessor* p = &arrlast(accessors);
+            stbds_arrput(accessors, acc);
+            FAccessor* p = &stbds_arrlast(accessors);
             LOADER_DEBUG("* idx %jd p 0x%jx buffer 0x%jx offset %ju count %ju type %s/%d (t %d cc %d cs %d st %d)",
-                arrlen(accessors) - 1, p, p->buffer, p->offset, p->count, type, componentType,
+                stbds_arrlen(accessors) - 1, p, p->buffer, p->offset, p->count, type, componentType,
                 p->type, p->component_count, p->component_size, p->stride);
             LOADER_DEBUG("  from accessor %ju, bufferview %ju, buffer %ju", i, bufferViewId, bufferIndex);
         }
@@ -192,7 +192,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
                     mat.tex_normal, mat.smp_normal);
             }
             // TODO: constant colors, emissive, other properties?
-            arrput(model->materials, mat);
+            stbds_arrput(model->materials, mat);
         }
     }
 
@@ -202,7 +202,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
     if (nodes && meshes) {
         // Allocate and clear out Node list:
         size_t nodeCount = json_array_get_count(nodes);
-        Node* nodeEntries = VXGENALLOC(nodeCount, Node);
+        Node* nodeEntries = calloc(nodeCount, sizeof(Node));
         for (size_t i = 0; i < nodeCount; i++) {
             Node* nentry = &nodeEntries[i];
             nentry->parent = -1;
@@ -292,8 +292,8 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
         }
         // Third pass: store meshes (i.e. GLTF primitives, not GLTF meshes) for each node
         LOADER_DEBUG("Extracting meshes from each node:");
-        arrsetlen(model->transforms, totalPrimitives);
-        arrsetlen(model->meshes,     totalPrimitives);
+        stbds_arrsetlen(model->transforms, totalPrimitives);
+        stbds_arrsetlen(model->meshes,     totalPrimitives);
         size_t meshidx = 0;
         for (size_t i = 0; i < nodeCount; i++) {
             Node* nentry = &nodeEntries[i];
@@ -353,11 +353,11 @@ void ReadModelFromDisk (const char* name, Model* model, const char* dir, const c
         }
     }
 
-    for (size_t i = 0; i < arrlenu(model->meshes); i++) {
+    for (size_t i = 0; i < stbds_arrlenu(model->meshes); i++) {
         UploadMeshToGPU(&model->meshes[i]);
     }
 
-    VXINFO("Loaded GLTF model %s from %s/%s", name, dir, file);
+    vxLog("Loaded GLTF model %s from %s/%s", name, dir, file);
     // FIXME: memory leaks: JSON tree, accessors
 }
 
@@ -380,7 +380,7 @@ static void ComputeWorldTransformForNode (Node* list, size_t index) {
 void UploadMeshToGPU (Mesh* m) {
     glGenVertexArrays(1, &m->gl_vertex_array);
     glBindVertexArray(m->gl_vertex_array);
-    VXDEBUG("Uploading mesh 0x%jx to GPU as VAO %u", m, m->gl_vertex_array);
+    vxDebug("Uploading mesh 0x%jx to GPU as VAO %u", m, m->gl_vertex_array);
 
     #define XMLOCAL_EBO \
         X(m->indices)

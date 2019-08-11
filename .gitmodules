@@ -5,7 +5,7 @@
 	path = lib/glad
 	url = https://github.com/Dav1dde/glad
 [submodule "lib/etc/stb"]
-	path = lib/etc/stb
+	path = lib/stb
 	url = https://github.com/nothings/stb
 [submodule "lib/etc/imgui"]
 	path = lib/etc/imgui

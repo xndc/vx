@@ -4,7 +4,6 @@
 #include "data/texture.h"
 #include "data/model.h"
 #include "data/camera.h"
-#include <cglm/cglm.h>
 
 // The process of rendering something in VX looks something like this:
 // * Start a new render pass.

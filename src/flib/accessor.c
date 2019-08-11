@@ -22,23 +22,23 @@ AccessorCacheEntry* S_AccessorCache = NULL;
 static void InitCaches() {
     if (!S_CachesInitialized) {
         S_CachesInitialized = true;
-        sh_new_arena(S_BufferCache);
+        stbds_sh_new_arena(S_BufferCache);
     }
 }
 
 char* FBufferFromFile (const char* filename, size_t* out_size) {
     char* buffer;
     InitCaches();
-    ptrdiff_t i = shgeti(S_BufferCache, filename);
+    ptrdiff_t i = stbds_shgeti(S_BufferCache, filename);
     size_t size;
     if (i >= 0) {
         buffer = S_BufferCache[i].value.mem;
         size   = S_BufferCache[i].value.size;
     } else {
-        buffer = vxReadFile(filename, false, &size);
-        VXCHECK(buffer != NULL);
+        buffer = vxReadFile(filename, "rb", &size);
+        vxCheck(buffer != NULL);
         BufferCacheValue v = {buffer, size};
-        shput(S_BufferCache, filename, v);
+        stbds_shput(S_BufferCache, filename, v);
     }
     if (out_size) {
         *out_size = size;
@@ -48,10 +48,10 @@ char* FBufferFromFile (const char* filename, size_t* out_size) {
 
 void FBufferFree (char* buffer) {
     InitCaches();
-    for (size_t i = 0; i < shlenu(S_BufferCache); i++) {
+    for (size_t i = 0; i < stbds_shlenu(S_BufferCache); i++) {
         if (S_BufferCache[i].value.mem == buffer) {
-            VXGENFREE(buffer);
-            shdel(S_BufferCache, S_BufferCache[i].key);
+            free(buffer);
+            stbds_shdel(S_BufferCache, S_BufferCache[i].key);
             break;
         }
     }
@@ -83,13 +83,13 @@ FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
     FAccessor* cached;
     FAccessor acc;
     FAccessorInit(&acc, t, buffer, offset, count, stride);
-    ptrdiff_t i = hmgeti(S_AccessorCache, acc);
+    ptrdiff_t i = stbds_hmgeti(S_AccessorCache, acc);
     if (i >= 0) {
         cached = S_AccessorCache[i].value;
     } else {
-        cached = VXGENALLOCA(1, FAccessor, sizeof(void*));
+        cached = calloc(1, sizeof(FAccessor));
         memcpy(cached, &acc, sizeof(FAccessor));
-        hmput(S_AccessorCache, acc, cached);
+        stbds_hmput(S_AccessorCache, acc, cached);
     }
     return cached;
 }

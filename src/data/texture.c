@@ -1,7 +1,7 @@
 #include "texture.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 #define X(name, _) GLuint name = 0;
 XM_ASSETS_TEXTURES
@@ -68,7 +68,7 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
         #define END(name) \
             status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER); \
             if (status != GL_FRAMEBUFFER_COMPLETE) { \
-                VXPANIC("Couldn't create framebuffer " #name ": error %d", status); \
+                vxPanic("Couldn't create framebuffer " #name ": error %d", status); \
             }
         XM_ASSETS_FRAMEBUFFERS
         #undef BEGIN
@@ -88,7 +88,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path) {
     double tb_stbi_load = glfwGetTime();
     void* image = stbi_load(path, &w, &h, &c, 0);
     if (!image) {
-        VXPANIC("Failed to load %s from %s: %s", name, path, stbi_failure_reason());
+        vxPanic("Failed to load %s from %s: %s", name, path, stbi_failure_reason());
     }
 
     // Upload:
@@ -112,7 +112,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path) {
             type = "RGBA8";
         } break;
         default: {
-            VXWARN("Unknown channel count %d for %s", c, name);
+            vxLog("Warning: Unknown channel count %d for %s", c, name);
         }
     }
 
@@ -123,7 +123,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path) {
     double tt_stbi_load_ms = (tb_upload - tb_stbi_load) * 1000.0;
     double tt_upload_ms = (tb_generate_mips - tb_upload) * 1000.0;
     double tt_generate_mips_ms = (ta_end - tb_generate_mips) * 1000;
-    VXINFO("Uploaded %s (object %d, %s, %dx%d) (load %.02f ms, upload %.02f ms, mips %.02f ms)",
+    vxLog("Uploaded %s (object %d, %s, %dx%d) (load %.02f ms, upload %.02f ms, mips %.02f ms)",
         path, texture, type, w, h, tt_stbi_load_ms, tt_upload_ms, tt_generate_mips_ms);
 
     return texture;

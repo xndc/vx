@@ -1,6 +1,6 @@
 #include "render.h"
 #include <glad/glad.h>
-#include <stb/stb_sprintf.h>
+#include <stb_sprintf.h>
 
 #define X(name, path) Shader* name = NULL;
 XM_ASSETS_SHADERS
@@ -54,16 +54,16 @@ RenderState* S_RenderStateStack = NULL;
 ProgramCacheEntry* S_ProgramCache = NULL;
 
 static void DefineArrayCopy (ShaderDefine* src, ShaderDefine** dst) {
-    for (ptrdiff_t i = 0; i < arrlen(src); i++) {
-        arrput(*dst, src[i]);
+    for (ptrdiff_t i = 0; i < stbds_arrlen(src); i++) {
+        stbds_arrput(*dst, src[i]);
     }
 }
 
 static bool DefineArraysEqual (ShaderDefine* a, ShaderDefine* b) {
-    if (arrlen(a) != arrlen(b)) {
+    if (stbds_arrlen(a) != stbds_arrlen(b)) {
         return false;
     }
-    for (ptrdiff_t i = 0; i < arrlen(a); i++) {
+    for (ptrdiff_t i = 0; i < stbds_arrlen(a); i++) {
         if (strcmp(a[i].name, b[i].name) != 0) { return false; }
         if (strcmp(a[i].text, b[i].text) != 0) { return false; }
     }
@@ -71,21 +71,21 @@ static bool DefineArraysEqual (ShaderDefine* a, ShaderDefine* b) {
 }
 
 Shader* LoadShaderFromDisk (const char* name, const char* path) {
-    Shader* shader = VXGENALLOC(1, Shader);
+    Shader* shader = calloc(1, sizeof(Shader));
     shader->name = name;
-    char* code = vxReadFile(path, true, NULL);
+    char* code = vxReadFile(path, "r", NULL);
     shader->full = code;
     if (strncmp(code, "#version", 8) == 0) {
         char* newline = strchr(code, '\n');
         shader->body = newline + 1;
         size_t linesize = (size_t)(newline - code + 1);
-        shader->version = VXGENALLOC(linesize + 1, char);
+        shader->version = calloc(linesize + 1, sizeof(char));
         strncpy(shader->version, code, linesize);
         shader->version[linesize] = '\0';
     } else {
-        VXPANIC("Shader %s (%s) has no #version declaration", name, path);
+        vxPanic("Shader %s (%s) has no #version declaration", name, path);
     }
-    VXINFO("Loaded shader %s from %s", name, path);
+    vxLog("Loaded shader %s from %s", name, path);
     return shader;
 }
 
@@ -104,25 +104,25 @@ void StartRenderPass (const char* name) {
     ResetShaderDefines();
     SetRenderProgram(NULL, NULL);
     // Free render state and stack:
-    arrfree(S_RenderState.defines);
+    stbds_arrfree(S_RenderState.defines);
     S_RenderState = (RenderState){0};
-    for (ptrdiff_t i = 0; i < arrlen(S_RenderStateStack); i++) {
-        arrfree(S_RenderStateStack[i].defines);
+    for (ptrdiff_t i = 0; i < stbds_arrlen(S_RenderStateStack); i++) {
+        stbds_arrfree(S_RenderStateStack[i].defines);
     }
-    arrfree(S_RenderStateStack);
+    stbds_arrfree(S_RenderStateStack);
 }
 
 void PushRenderState() {
-    arrput(S_RenderStateStack, S_RenderState);
-    arrlast(S_RenderStateStack).defines = NULL;
-    DefineArrayCopy(S_RenderState.defines, &arrlast(S_RenderStateStack).defines);
+    stbds_arrput(S_RenderStateStack, S_RenderState);
+    stbds_arrlast(S_RenderStateStack).defines = NULL;
+    DefineArrayCopy(S_RenderState.defines, &stbds_arrlast(S_RenderStateStack).defines);
 }
 
 void PopRenderState() {
-    if (arrlen(S_RenderStateStack) > 0) {
-        arrfree(S_RenderState.defines);
-        S_RenderState = arrlast(S_RenderStateStack);
-        arrpop(S_RenderStateStack);
+    if (stbds_arrlen(S_RenderStateStack) > 0) {
+        stbds_arrfree(S_RenderState.defines);
+        S_RenderState = stbds_arrlast(S_RenderStateStack);
+        stbds_arrpop(S_RenderStateStack);
     }
 }
 
@@ -134,15 +134,15 @@ static GLuint CompileShader (const char* name, GLenum type, size_t nsources, con
     glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
     glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &logsize);
     if (logsize > 0) {
-        char* log = VXGENALLOC(logsize, char);
+        char* log = calloc(logsize, sizeof(char));
         glGetShaderInfoLog(sh, logsize, NULL, log);
-        VXINFO("Compilation log for shader %s:\n%s", name, log);
-        VXGENFREE(log);
+        vxLog("Compilation log for shader %s:\n%s", name, log);
+        free(log);
     }
     if (ok) {
-        VXINFO("Compiled vertex shader %s into OpenGL shader object %u", name, sh);
+        vxLog("Compiled vertex shader %s into OpenGL shader object %u", name, sh);
     } else {
-        VXPANIC("Failed to compile vertex shader %s", name);
+        vxPanic("Failed to compile vertex shader %s", name);
     }
     return sh;
 }
@@ -156,15 +156,15 @@ static GLuint LinkProgram (const char* vsh_name, GLuint vsh, const char* fsh_nam
     glGetProgramiv(program, GL_LINK_STATUS, &ok);
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logsize);
     if (logsize > 0) {
-        char* log = VXGENALLOC(logsize, char);
+        char* log = calloc(logsize, sizeof(char));
         glGetProgramInfoLog(program, logsize, NULL, log);
-        VXINFO("Link log for program (%s, %s):\n%s", vsh_name, fsh_name, log);
-        VXGENFREE(log);
+        vxLog("Link log for program (%s, %s):\n%s", vsh_name, fsh_name, log);
+        free(log);
     }
     if (ok) {
-        VXINFO("Linked program (%s, %s) into OpenGL object %u", vsh_name, fsh_name, program);
+        vxLog("Linked program (%s, %s) into OpenGL object %u", vsh_name, fsh_name, program);
     } else {
-        VXPANIC("Failed to link program (%s, %s)", vsh_name, fsh_name);
+        vxPanic("Failed to link program (%s, %s)", vsh_name, fsh_name);
     }
     return program;
 }
@@ -181,7 +181,7 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
         if (program == 0 || S_RenderState.defines_changed) {
             // Cache lookup:
             ProgramCacheKey key = {vsh, fsh};
-            ptrdiff_t pidx = hmgeti(S_ProgramCache, key);
+            ptrdiff_t pidx = stbds_hmgeti(S_ProgramCache, key);
             ProgramCacheValue* v = (pidx >= 0) ? &S_ProgramCache[pidx].value : NULL;
             if (v != NULL && DefineArraysEqual(v->defines, S_RenderState.defines)) {
                 program = v->program;
@@ -192,26 +192,26 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
             ShaderDefine* defines = S_RenderState.defines;
             static char define_block [16 * VX_KiB];
             size_t cursor_pos = 0;
-            for (size_t i = 0; i < arrlenu(defines); i++) {
+            for (size_t i = 0; i < stbds_arrlenu(defines); i++) {
                 char* cursor = &define_block[cursor_pos];
-                size_t space = VXSIZE(define_block) - cursor_pos;
+                size_t space = vxSize(define_block) - cursor_pos;
                 size_t written = stbsp_snprintf(cursor, (int) space, "#define %s %s\n",
                     defines[i].name, defines[i].text);
-                VXCHECK(written > 0);
+                vxCheck(written > 0);
                 cursor_pos += written;
             }
             define_block[cursor_pos] = '\0';
             // Compile shaders and link program:
             const char* vs_src[] = {vsh->version, define_block, vsh->body};
             const char* fs_src[] = {fsh->version, define_block, fsh->body};
-            GLuint glvs = CompileShader(vsh->name, GL_VERTEX_SHADER,   VXSIZE(vs_src), vs_src);
-            GLuint glfs = CompileShader(fsh->name, GL_FRAGMENT_SHADER, VXSIZE(fs_src), fs_src);
+            GLuint glvs = CompileShader(vsh->name, GL_VERTEX_SHADER,   vxSize(vs_src), vs_src);
+            GLuint glfs = CompileShader(fsh->name, GL_FRAGMENT_SHADER, vxSize(fs_src), fs_src);
             program = LinkProgram(vsh->name, glvs, fsh->name, glfs);
             // Save program to cache:
             ProgramCacheKey key = {vsh, fsh};
             ProgramCacheValue v = {NULL, program};
             DefineArrayCopy(defines, &v.defines);
-            hmput(S_ProgramCache, key, v);
+            stbds_hmput(S_ProgramCache, key, v);
         }
     }
     // Retrieve uniforms and check attribute locations:
@@ -223,7 +223,7 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
         #define X(name, location, glsl_name) { \
             GLint loc = glGetAttribLocation(program, glsl_name); \
             if (!(loc == -1 || loc == location)) { \
-                VXPANIC("Expected attribute %s of program %d to have location %d (is %d)", \
+                vxPanic("Expected attribute %s of program %d to have location %d (is %d)", \
                     glsl_name, program, location, loc); \
             } \
         }
@@ -247,12 +247,12 @@ void AddShaderDefine (const char* name, const char* text) {
     ShaderDefine def = {0};
     strcpy(def.name, name);
     strcpy(def.text, text);
-    arrput(S_RenderState.defines, def);
+    stbds_arrput(S_RenderState.defines, def);
     S_RenderState.defines_changed = true;
 }
 
 void ResetShaderDefines() {
-    arrfree(S_RenderState.defines);
+    stbds_arrfree(S_RenderState.defines);
 }
 
 void SetViewMatrix (mat4 vmat)  { glm_mat4_copy(vmat, S_RenderState.mat_view); }
@@ -287,10 +287,10 @@ GLuint BindTextureUnit (GLuint texture, GLuint sampler) {
             glBindTexture(GL_TEXTURE_2D, texture);
             glBindSampler(tu, sampler);
         } else {
-            VXPANIC("Invalid parameters (texture %u, sampler %u)", texture, sampler);
+            vxPanic("Invalid parameters (texture %u, sampler %u)", texture, sampler);
         }
     } else {
-        VXWARN("Texture unit limit (%u) reached, not binding texture %u", max_units, texture);
+        vxLog("Warning: Texture unit limit (%u) reached, not binding texture %u", max_units, texture);
     }
     return tu;
 }
@@ -366,9 +366,9 @@ void RenderMesh (Mesh* mesh) {
         S_RenderState.next_texture_unit = 1;
         mat4 model;
         GetModelMatrix(model);
-        VXCHECK(UNIF_MODEL_MATRIX >= 0);
-        VXCHECK(UNIF_PROJ_MATRIX >= 0);
-        VXCHECK(UNIF_VIEW_MATRIX >= 0);
+        vxCheck(UNIF_MODEL_MATRIX >= 0);
+        vxCheck(UNIF_PROJ_MATRIX >= 0);
+        vxCheck(UNIF_VIEW_MATRIX >= 0);
         glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, model);
         glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, S_RenderState.mat_proj);
         glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, S_RenderState.mat_view);
@@ -387,14 +387,14 @@ void RenderMesh (Mesh* mesh) {
                     GL_UNSIGNED_INT, NULL);
             } break;
             default: {
-                VXWARN("Mesh 0x%lx has unknown index accessor type %d", mesh, mesh->indices.type);
+                vxLog("Warning: Mesh 0x%lx has unknown index accessor type %d", mesh, mesh->indices.type);
             }
         }
     }
 }
 
 void RenderModel (Model* model) {
-    for (size_t i = 0; i < arrlenu(model->meshes); i++) {
+    for (size_t i = 0; i < stbds_arrlenu(model->meshes); i++) {
         PushRenderState();
         AddModelMatrix(model->transforms[i]);
         RenderMesh(&model->meshes[i]);
@@ -426,7 +426,7 @@ void RunFullscreenPass (int w, int h) {
         UploadMeshToGPU(&S_FullscreenPass_Mesh);
     }
     if (S_RenderState.current_vsh != VSH_FULLSCREEN_PASS) {
-        VXWARN("RunFullscreenPass requires the VSH_FULLSCREEN_PASS vertex shader to be used");
+        vxLog("Warning: RunFullscreenPass requires the VSH_FULLSCREEN_PASS vertex shader to be used");
     }
     SetMaterial(&S_FullscreenPass_Material);
     glUniform2i(UNIF_IRESOLUTION, w, h);

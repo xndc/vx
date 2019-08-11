@@ -41,16 +41,10 @@ if (MSVC)
 endif()
 
 # Libraries:
-# * EASTL       portable C++ STL implementation
 # * GLFW        window and OpenGL context management
-# * GLM         vector and matrix math library
 # * dear imgui  user interface
-
-# add_subdirectory(lib/eastl)
-# add_subdirectory(lib/eastl/test/packages/EAAssert)
-# add_subdirectory(lib/eastl/test/packages/EABase)
-# add_subdirectory(lib/eastl/test/packages/EAStdC)
-# add_subdirectory(lib/eastl/test/packages/EAThread)
+# * stb         collection of useful libraries
+# * cglm        C port of the GLM math library
 
 set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
@@ -60,6 +54,12 @@ if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     # GLFW trips some really stupid warnings with clang-cl, so let's just disable all of them.
     target_compile_options(glfw PRIVATE /W0)
 endif()
+
+add_library(cglm INTERFACE)
+target_include_directories(cglm INTERFACE "lib/cglm/include")
+
+add_library(stb INTERFACE)
+target_include_directories(stb INTERFACE "lib/stb")
 
 # set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 # add_subdirectory(lib/glm)
@@ -92,12 +92,13 @@ add_executable(Game ${GameSourcesC} ${GameSourcesCXX} ${GameHeaders} "src/misc/m
 target_include_directories(Game PRIVATE "src")
 target_include_directories(Game PRIVATE "lib/etc")          # header-only libraries
 target_include_directories(Game PRIVATE "build/include")    # auto-generated, e.g. OpenGL loader
-target_include_directories(Game PRIVATE "lib/cglm/include") # cglm library
 
 # Libraries:
 
 target_link_libraries(Game PRIVATE glfw)
 target_link_libraries(Game PRIVATE imgui)
+target_link_libraries(Game PRIVATE cglm)
+target_link_libraries(Game PRIVATE stb)
 
 # Compiler and linker options:
 

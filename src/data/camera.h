@@ -1,6 +1,5 @@
 #pragma once
 #include "common.h"
-#include <cglm/cglm.h>
 
 typedef struct {
     mat4 proj_matrix;

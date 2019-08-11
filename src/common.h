@@ -1,4 +1,9 @@
 #pragma once
+
+// Common header containing functionality required by a large portion of game TUs.
+// We include things like cglm and the OpenGL headers here, although that's probably not the best
+// idea. It shouldn't hurt our build times too much, though.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,35 +15,98 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#ifdef __cplusplus
-    #define VXEXPORT extern "C"
-#else
-    #define VXEXPORT
-#endif
+#include <debug_break.h>
+#include <cglm/cglm.h>
+#include <glad/glad.h>
+#include <stb_sprintf.h>
 
-#include <stb/stb_ds.h>
-// shgeti returns 0 instead of -1: https://github.com/nothings/stb/pull/781
+#define STBDS_NO_SHORT_NAMES
+#include <stb_ds.h>
+// WORKAROUND: stbds_shgeti returns 0 instead of -1: https://github.com/nothings/stb/pull/781
 #undef stbds_shgeti
 #define stbds_shgeti(t,k) \
     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
     stbds_temp(t-1))
 
+// Generally useful macros and constants:
+#ifdef __cplusplus
+    #define VX_EXPORT extern "C"
+#else
+    #define VX_EXPORT
+#endif
+
+#define VX_STRINGIFY_HELPER(x) #x
+#define VX_STRINGIFY(x) VX_STRINGIFY_HELPER(x)
+
+#define vxMin(a, b) (((a) < (b))? (a) : (b))
+#define vxMax(a, b) (((a) > (b))? (a) : (b))
+#define vxClamp(x, min, max) vxMin(vxMax(x, min), max)
+#define vxSize(arr) (sizeof(arr)/sizeof(arr[0]))
+#define vxRadians(deg) (deg * M_PI / 180.0)
+#define vxDegrees(rad) (rad * 180.0 / M_PI)
+
 #define VX_KiB 1024
 #define VX_MiB 1048576
 #define VX_GiB 1073741824
+ // Randomly generated 32-bit value, for use with hash functions:
+#define VX_SEED 4105099677U
 
-typedef int GLint;
-typedef unsigned int GLenum;
-typedef unsigned int GLbitfield;
-typedef unsigned int GLuint;
+#ifdef _MSC_VER
+    #define VX_LOCATION __FILE__ ":" VX_STRINGIFY(__LINE__) " @" __FUNCTION__
+#else
+    // NOTE: __func__ can't be concatenated with anything else, at least on Clang
+    #define VX_LOCATION __FILE__ ":" VX_STRINGIFY(__LINE__)
+#endif
 
-#define VXMIN(a, b) (((a) < (b))? (a) : (b))
-#define VXMAX(a, b) (((a) > (b))? (a) : (b))
-#define VXCLAMP(x, min, max) VXMIN(VXMAX(x, min), max)
-#define VXSIZE(arr) (sizeof(arr)/sizeof(arr[0]))
-#define VXRADIANS(deg) (deg * M_PI / 180.0)
-#define VXDEGREES(rad) (rad * 180.0 / M_PI)
+extern size_t vxFrameNumber;
+extern void vxAdvanceFrame();
 
+extern bool vxLogBufEnabled;
+extern size_t vxLogBufSize;
+extern size_t vxLogBufUsed;
+extern size_t vxLogBufHashForThisFrame;
+extern size_t vxLogBufHashForLastFrame;
+extern char* vxLogBuf;
+
+extern void vxConfigureLogging();
+extern void vxEnableLogBuffer();
+extern void vxDisableLogBuffer();
+
+extern void vxLogPrint(const char* location, const char* fmt, ...);
+#define vxLog(...) vxLogPrint(VX_LOCATION, __VA_ARGS__)
+#ifdef NDEBUG
+    #define vxDebug(...) vxLog(__VA_ARGS__)
+#else
+    #define vxDebug(...)
+#endif
+
+extern void vxEnableSignalHandlers();
+#define vxPanic(...) do { \
+    vxDisableLogBuffer(); \
+    vxLog(__VA_ARGS__); \
+    debug_break(); \
+    abort(); \
+} while(0)
+#define vxCheck(cond) do { if (!(cond)) { \
+    vxDisableLogBuffer(); \
+    vxPanic("Check failed: " #cond); \
+}} while(0)
+#define vxCheckMsg(cond, ...) do { if (!(cond)) { \
+    vxDisableLogBuffer(); \
+    vxLog("Check failed: " #cond); \
+    vxPanic(__VA_ARGS__); \
+}} while(0)
+#ifndef NDEBUG
+    #define vxAssert(...) vxCheck(__VA_ARGS__)
+    #define vxAssertMsg(...) vxCheckMsg(__VA_ARGS__)
+#else
+    #define vxAssert(...)
+    #define vxAssertMsg(...)
+#endif
+
+char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
+
+#if 0
 #ifdef _MSC_VER
     #define VXFUNCTION __FUNCTION__
 #else
@@ -46,23 +114,23 @@ typedef unsigned int GLuint;
 #endif
 #define VXLOCATION __FILE__, __LINE__, VXFUNCTION
 
-#define VXINFO(...)  vxLogMessage(1, VXLOCATION, __VA_ARGS__)
+#define vxLog(...)  vxLogMessage(1, VXLOCATION, __VA_ARGS__)
 #define VXWARN(...)  vxLogMessage(2, VXLOCATION, __VA_ARGS__)
 #define VXERROR(...) vxLogMessage(3, VXLOCATION, __VA_ARGS__)
 
 #define VXABORT()     (void)(abort(), 0)
-#define VXPANIC(...)  (void)(VXERROR(__VA_ARGS__), VXABORT(), 0)
-#define VXCHECK(cond) (void)(!!(cond) || (VXPANIC("Check failed: %s", #cond), 0))
+#define vxPanic(...)  (void)(VXERROR(__VA_ARGS__), VXABORT(), 0)
+#define VXCHECK(cond) (void)(!!(cond) || (vxPanic("Check failed: %s", #cond), 0))
 #define VXCHECKM(cond, ...) \
-    (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
+    (void)(!!(cond) || (vxPanic(__VA_ARGS__), 0))
 
 #ifndef NDEBUG
-    #define VXDEBUG(...) vxLogMessage(0, VXLOCATION, __VA_ARGS__)
-    #define VXASSERT(cond) (void)(!!(cond) || (VXPANIC("Assertion failed: %s", #cond), 0))
+    #define vxDebug(...) vxLogMessage(0, VXLOCATION, __VA_ARGS__)
+    #define VXASSERT(cond) (void)(!!(cond) || (vxPanic("Assertion failed: %s", #cond), 0))
     #define VXASSERTM(cond, ...) \
-        (void)(!!(cond) || (VXPANIC(__VA_ARGS__), 0))
+        (void)(!!(cond) || (vxPanic(__VA_ARGS__), 0))
 #else
-    #define VXDEBUG(...) (void)(0)
+    #define vxDebug(...) (void)(0)
     #define VXASSERT(cond) (void)(0)
     #define VXASSERTM(cond, fmt, ...) (void)(0)
 #endif
@@ -73,21 +141,21 @@ typedef unsigned int GLuint;
 #define VX_LOGSOURCE_ERROR 3
 #define VX_LOGSOURCE_ALLOC 100
 
-VXEXPORT void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args);
-VXEXPORT void vxSprintf  (size_t size, char* dst, const char* fmt, ...);
-VXEXPORT char* vxSprintfStatic (const char* fmt, ...);
+VX_EXPORT void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args);
+VX_EXPORT void vxSprintf  (size_t size, char* dst, const char* fmt, ...);
+VX_EXPORT char* vxSprintfStatic (const char* fmt, ...);
 
-VXEXPORT extern size_t vxLogBufferSize;
-VXEXPORT extern size_t vxLogBufferUsed;
-VXEXPORT extern char*  vxLogBuffer;
-VXEXPORT void vxLogWrite (size_t size, const char* str);
-VXEXPORT void vxLogPrintf (const char* fmt, ...);
-VXEXPORT void vxLogMessage (int source, const char* file, int line, const char* func, const char* fmt, ...);
+VX_EXPORT extern size_t vxLogBufferSize;
+VX_EXPORT extern size_t vxLogBufferUsed;
+VX_EXPORT extern char*  vxLogBuffer;
+VX_EXPORT void vxLogWrite (size_t size, const char* str);
+VX_EXPORT void vxLogPrintf (const char* fmt, ...);
+VX_EXPORT void vxLogMessage (int source, const char* file, int line, const char* func, const char* fmt, ...);
 
-VXEXPORT char* vxStringDuplicate (const char* src);
+VX_EXPORT char* vxStringDuplicate (const char* src);
 
-VXEXPORT char* vxReadFileEx (size_t size, char* dst, size_t* read_bytes, FILE* file);
-VXEXPORT char* vxReadFile (const char* filename, bool text_mode, size_t* read_bytes);
+VX_EXPORT char* vxReadFileEx (size_t size, char* dst, size_t* read_bytes, FILE* file);
+VX_EXPORT char* vxReadFile (const char* filename, bool text_mode, size_t* read_bytes);
 
 // Specification for a generic memory allocation/deallocation function.
 // * block: Memory block to reallocate or free. Set to NULL to allocate a new block.
@@ -99,7 +167,7 @@ typedef void* (*VXAllocator) (void* block, size_t count, size_t itemsize, size_t
     const char* file, int line, const char* func);
 
 // Generic allocator, defers to platform allocation functions.
-VXEXPORT void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
+VX_EXPORT void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     const char* file, int line, const char* func);
 #define VXGENALLOCA(count, type, align) \
     (type*) vxGenAlloc(NULL, count, sizeof(type), align, VXLOCATION);
@@ -114,4 +182,5 @@ void vxFrameAllocReset();
 #define VXFRAMEALLOCA(count, type, align) \
     (type*) vxFrameAlloc(NULL, count, sizeof(type), align, VXLOCATION);
 #define VXFRAMEALLOC(count, type) VXFRAMEALLOCA(count, type, 0)
+#endif
 #endif

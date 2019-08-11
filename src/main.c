@@ -1,14 +1,13 @@
 #include "common.h"
 #include "gui.h"
 #include "flib/accessor.h"
-#include "flib/array.h"
 #include "data/camera.h"
 #include "render/render.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
 static void GlfwErrorCallback (int code, const char* error) {
-    VXERROR("GLFW error %d: %s", code, error);
+    vxLog("GLFW error %d: %s", code, error);
 }
 
 int G_WindowConfig_W = 1280;
@@ -18,8 +17,10 @@ Camera G_MainCamera = {0};
 Camera G_ShadowCamera = {0};
 
 int main() {
+    vxEnableSignalHandlers();
+    vxConfigureLogging();
     glfwSetErrorCallback(GlfwErrorCallback);
-    VXCHECK(glfwInit());
+    vxCheck(glfwInit());
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
@@ -29,10 +30,11 @@ int main() {
     glfwMakeContextCurrent(window);
     gladLoadGL();
 
+    // TODO: Retrieve and use the correct glTextureBarrier (regular or NV) function for this system
     if (!(glfwExtensionSupported("GL_NV_texture_barrier") || glfwExtensionSupported("GL_ARB_texture_barrier"))) {
-        VXPANIC("This program requires the GL_*_texture_barrier extension.");
+        vxPanic("This program requires the GL_*_texture_barrier extension.");
     }
-    VXASSERT(GL_COLOR_ATTACHMENT0 == VXGL_COLOR_ATTACHMENT0);
+    vxAssert(GL_COLOR_ATTACHMENT0 == VXGL_COLOR_ATTACHMENT0);
 
     // Reverse Z setup:
     glDepthRangef(-1.0f, 1.0f);
@@ -86,6 +88,7 @@ int main() {
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
     while (!glfwWindowShouldClose(window)) {
+        vxAdvanceFrame();
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);

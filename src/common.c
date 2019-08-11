@@ -1,30 +1,198 @@
 #include "common.h"
-#include <string.h>
-#include <time.h>
-
-#ifdef __APPLE__
-    #include <malloc/malloc.h>
-#else
-    #include <malloc.h>
-#endif
+#include <signal.h>
 
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #define VC_EXTRALEAN
     #define NOMINMAX
     #undef APIENTRY
-    #include <Windows.h>
+    #include <windows.h>
 #endif
 
 #define STB_SPRINTF_IMPLEMENTATION
-#include <stb/stb_sprintf.h>
+#include <stb_sprintf.h>
 #define STB_DS_IMPLEMENTATION
-#include <stb/stb_ds.h>
+#include <stb_ds.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 #include <glad/glad.c>
 #include <parson/parson.c>
+
+size_t vxFrameNumber = 0;
+bool vxLogBufEnabled;
+size_t vxLogBufSize = 64 * VX_KiB;
+size_t vxLogBufUsed;
+size_t vxLogBufHashForThisFrame;
+size_t vxLogBufHashForLastFrame;
+char* vxLogBuf = NULL;
+
+// Initializes the frame log buffer. Should be run before using vxLogBuf in any way.
+static void vxLogBufInit() {
+    if (!vxLogBuf) {
+        vxLogBuf = (char*) malloc(vxLogBufSize);
+    }
+}
+
+// Configures the logging system.
+extern void vxConfigureLogging() {
+    vxLogBufInit();
+    #ifdef _WIN32
+    if (IsDebuggerPresent()) {
+        FreeConsole(); // we don't need both a console and a debugger
+    }
+    #endif
+}
+
+static inline void vxPutStrLn (char* str) {
+    #ifdef _WIN32
+    if (IsDebuggerPresent()) {
+        OutputDebugStringA(str);
+        OutputDebugStringA("\n");
+    }
+    if (GetConsoleWindow()) {
+        puts(str);
+    }
+    #else
+    puts(str);
+    #endif
+}
+
+// Prints out the current frame log buffer.
+static void vxLogBufPrint() {
+    vxLogBufInit();
+    if (vxLogBufUsed > 0) {
+        if (vxFrameNumber > 0) {
+            static char buf [256];
+            int written = stbsp_snprintf(buf, 256, "Engine log for frame %ju:\n", vxFrameNumber);
+            written += stbsp_snprintf(buf + written, 256 - written,
+                "================================================================================");
+            buf[written] = 0;
+            vxPutStrLn(buf);
+        }
+        vxPutStrLn(vxLogBuf);
+    }
+}
+
+// Sets the current log destination to the frame log buffer.
+void vxEnableLogBuffer() {
+    vxLogBufEnabled = true;
+}
+
+// Sets the current log destination to stdout.
+void vxDisableLogBuffer() {
+    vxLogBufPrint();
+    vxLogBufEnabled = false;
+    vxLogBufUsed = 0;
+    vxLogBuf[0] = 0;
+}
+
+// Prints a message to the current log destination (either stdout or the frame log buffer).
+void vxLogPrint (const char* location, const char* fmt, ...) {
+    vxLogBufInit();
+    size_t initPos = vxLogBufUsed;
+    // Strip long path prefixes from location:
+    const char* s;
+    s = strstr(location, "src/");  if (s != NULL) { location = s + 4; };
+    s = strstr(location, "src\\"); if (s != NULL) { location = s + 4; };
+    s = strstr(location, "lib/");  if (s != NULL) { location = s; };
+    s = strstr(location, "lib\\"); if (s != NULL) { location = s; };
+    s = strstr(location, "include/");  if (s != NULL) { location = s + 8; };
+    s = strstr(location, "include\\"); if (s != NULL) { location = s + 8; };
+    va_list va;
+    va_start(va, fmt);
+    if (vxLogBufEnabled) {
+        // Log message to buffer:
+        vxLogBufUsed += (size_t) stbsp_snprintf (vxLogBuf + vxLogBufUsed, vxLogBufSize - vxLogBufUsed - 2, "[%s] ", location);
+        vxLogBufUsed += (size_t) stbsp_vsnprintf(vxLogBuf + vxLogBufUsed, vxLogBufSize - vxLogBufUsed - 2, fmt, va);
+        vxLogBuf[vxLogBufUsed++] = '\n';
+        vxLogBuf[vxLogBufUsed] = 0; // no ++, we want the NUL to be overwritten by the next print
+        // Compute hash:
+        vxLogBufHashForThisFrame ^= stbds_hash_bytes(vxLogBuf + initPos, vxLogBufUsed - initPos, VX_SEED);
+    } else {
+        // Log message to stdout:
+        static char buf [1024];
+        int written = 0;
+        written += stbsp_snprintf (buf + written, 1024 - written - 2, "[%s] ", location);
+        written += stbsp_vsnprintf(buf + written, 1024 - written - 2, fmt, va);
+        buf[written] = 0;
+        vxPutStrLn(buf);
+    }
+    va_end(va);
+}
+
+// Signals to the logging system that a new frame is starting. Prints the last frame's log buffer.
+void vxAdvanceFrame() {
+    vxDisableLogBuffer();
+    vxEnableLogBuffer();
+    vxFrameNumber++;
+}
+
+// Handles a signal by printing the log buffer and exiting.
+VX_EXPORT void vxHandleSignal (int sig) {
+    signal(sig, SIG_DFL);
+    vxDisableLogBuffer();
+    switch (sig) {
+        case SIGABRT: { puts("Signal SIGABRT received."); } break;
+        case SIGFPE:  { puts("Signal SIGFPE received.");  } break;
+        case SIGILL:  { puts("Signal SIGILL received.");  } break;
+        case SIGINT:  { puts("Signal SIGINT received.");  } break;
+        case SIGSEGV: { puts("Signal SIGSEGV received."); } break;
+        case SIGTERM: { puts("Signal SIGTERM received."); } break;
+        default: { printf("Unknown signal %d received.", sig); }
+    }
+    // Convenience feature: if we're running in console mode, keep the console open.
+    #ifdef _WIN32
+    if (!IsDebuggerPresent() && GetConsoleWindow()) {
+        printf("Press any key to quit the program.\n");
+        getchar();
+    }
+    #endif
+    debug_break();
+    abort(); // debug_break doesn't quit the apps without a debugger attached, on some platforms
+}
+
+// Register signal handlers.
+// Required if you want debug output to be printed in case of early termination.
+void vxEnableSignalHandlers() {
+    signal(SIGABRT, vxHandleSignal);
+    signal(SIGFPE,  vxHandleSignal);
+    signal(SIGILL,  vxHandleSignal);
+    signal(SIGINT,  vxHandleSignal);
+    signal(SIGSEGV, vxHandleSignal);
+    signal(SIGTERM, vxHandleSignal);
+}
+
+// Reads a file from disk into memory, returning a null-terminated buffer.
+// Writes the file's length, not including the final NUL, to [outLength] if provided.
+// The returned buffer can be released using free().
+char* vxReadFile (const char* filename, const char* mode, size_t* outLength) {
+    char* buf = NULL;
+    FILE* file = fopen(filename, mode);
+    if (!file) {
+        vxLog("Warning: couldn't read file %s (%s)", filename, strerror(errno));
+    } else {
+        fseek(file, 0L, SEEK_END);
+        size_t size = ftell(file);
+        if (outLength) {
+            *outLength = size;
+        }
+        rewind(file);
+        buf = (char*) malloc(size + 1);
+        // NOTE: due to newline conversion, we might read less than size bytes
+        size_t read = fread(buf, sizeof(char), size, file);
+        fclose(file);
+        buf[read] = 0;
+    }
+    return buf;
+}
+
+#if 0
+#ifdef __APPLE__
+    #include <malloc/malloc.h>
+#else
+    #include <malloc.h>
+#endif
 
 void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args) {
     stbsp_vsnprintf(dst, (int) size, fmt, args);
@@ -39,7 +207,7 @@ void vxSprintf (size_t size, char* dst, const char* fmt, ...) {
 
 char* vxVsprintfStatic (const char* fmt, va_list args) {
     static char str [16 * VX_KiB];
-    stbsp_vsnprintf(str, VXSIZE(str), fmt, args);
+    stbsp_vsnprintf(str, vxSize(str), fmt, args);
     return str;
 }
 
@@ -62,7 +230,7 @@ void vxLogWrite (size_t size, const char* str) {
     }
     if (vxLogBufferUsed + size > vxLogBufferSize) {
         memcpy(&vxLogBuffer[0], &vxLogBuffer[vxLogBufferSize/2], vxLogBufferSize/2);
-        vxLogBufferUsed = VXCLAMP(vxLogBufferUsed - vxLogBufferSize/2, 0, SIZE_MAX);
+        vxLogBufferUsed = vxClamp(vxLogBufferUsed - vxLogBufferSize/2, 0, SIZE_MAX);
         memset(&vxLogBuffer[vxLogBufferUsed], 0, vxLogBufferSize - vxLogBufferUsed);
     }
     strncpy(&vxLogBuffer[vxLogBufferUsed], str, size);
@@ -134,7 +302,7 @@ char* vxStringDuplicate (const char* src) {
 
 char* vxReadFileEx (size_t size, char* dst, size_t* out_read_bytes, FILE* file) {
     fseek(file, 0L, SEEK_END);
-    size = VXCLAMP(ftell(file), 0, size);
+    size = vxClamp(ftell(file), 0, size);
     rewind(file);
     size_t read_bytes = fread(dst, sizeof(char), size, file);
     dst[read_bytes] = '\0';
@@ -153,7 +321,7 @@ char* vxReadFile (const char* filename, bool text_mode, size_t* out_read_bytes) 
         file = fopen(filename, "rb");
     }
     if (!file) {
-        VXWARN("Failed to read file %s (%s)", filename, strerror(errno));
+        vxLog("Warning: Failed to read file %s (%s)", filename, strerror(errno));
         return NULL;
     }
     fseek(file, 0L, SEEK_END);
@@ -243,13 +411,13 @@ void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
                 p = _aligned_realloc(block, size, alignment);
             #else
                 p = SystemAlloc(size, alignment);
-                VXDEBUG("p = 0x%jx", p);
+                vxDebug("p = 0x%jx", p);
                 // NOTE: This can return a bogus value on Windows if the alignments are different.
                 size_t block_size = SystemMemSize(block, alignment);
-                VXDEBUG("block_size = %jd", block_size);
-                VXDEBUG("block = 0x%jx", block);
-                VXDEBUG("copying %jd bytes", VXMIN(block_size, size));
-                memcpy(p, block, VXMIN(block_size, size));
+                vxDebug("block_size = %jd", block_size);
+                vxDebug("block = 0x%jx", block);
+                vxDebug("copying %jd bytes", vxMin(block_size, size));
+                memcpy(p, block, vxMin(block_size, size));
             #endif
             #if !defined(VX_NO_ALLOC_MESSAGES)
                 vxLogMessage(VX_LOGSOURCE_ALLOC, file, line, func,
@@ -270,3 +438,4 @@ void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
     }
     return p;
 }
+#endif

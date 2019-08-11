@@ -25,7 +25,7 @@ XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #define COLOR(point, name) VX ## point ,
 #define END(name) \
     0 }; \
-    static const size_t name ## _BUFFER_COUNT = VXSIZE(name ## _BUFFERS) - 1;
+    static const size_t name ## _BUFFER_COUNT = vxSize(name ## _BUFFERS) - 1;
 XM_ASSETS_FRAMEBUFFERS
 #undef BEGIN
 #undef DEPTH
