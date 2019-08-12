@@ -203,7 +203,7 @@ else()
 endif()
 
 # Enable Xcode scheme file generation. We need this in order to set the working directory before starting Xcode.
-set(CMAKE_XCODE_GENERATE_SCHEME ON)
+set_target_properties(Game PROPERTIES XCODE_GENERATE_SCHEME ON)
 
 # Set the working directory and startup project for Visual Studio:
 # * https://stackoverflow.com/questions/23950887/

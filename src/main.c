@@ -31,7 +31,11 @@ int main() {
     gladLoadGL();
 
     // TODO: Retrieve and use the correct glTextureBarrier (regular or NV) function for this system
-    if (!(glfwExtensionSupported("GL_NV_texture_barrier") || glfwExtensionSupported("GL_ARB_texture_barrier"))) {
+    if (glfwExtensionSupported("GL_NV_texture_barrier")) {
+        vxglTextureBarrier = (PFNGLTEXTUREBARRIERPROC) glTextureBarrierNV;
+    } else if (glfwExtensionSupported("GL_ARB_texture_barrier")) {
+        vxglTextureBarrier = glTextureBarrier;
+    } else {
         vxPanic("This program requires the GL_*_texture_barrier extension.");
     }
     vxAssert(GL_COLOR_ATTACHMENT0 == VXGL_COLOR_ATTACHMENT0);
@@ -126,10 +130,10 @@ int main() {
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA);
 
-        // StartRenderPass("Fullscreen Pass Test");
-        // glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
-        // SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
-        // RunFullscreenPass(w, h);
+        StartRenderPass("Fullscreen Pass Test");
+        glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
+        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
+        RunFullscreenPass(w, h);
 
         StartRenderPass("Final Pass");
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);

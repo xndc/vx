@@ -14,6 +14,9 @@ XM_ASSETS_SHADER_ATTRIBUTES
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
 
+// Should be set to either glTextureBarrier or glTextureBarrierNV by main():
+PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = NULL;
+
 typedef struct {
     char name [64];
     char text [128];
@@ -432,6 +435,6 @@ void RunFullscreenPass (int w, int h) {
     glUniform2i(UNIF_IRESOLUTION, w, h);
     glBindVertexArray(S_FullscreenPass_Mesh.gl_vertex_array);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, S_FullscreenPass_Mesh.indices.gl_object);
-    glTextureBarrier(); // lets the shader both read & write to the same texture
+    vxglTextureBarrier(); // lets the shader both read & write to the same texture
     glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_SHORT, NULL);
 }

@@ -74,3 +74,6 @@ void RenderModel (Model* model);
 // Executes a full-screen pass using the current vertex and fragment shader.
 // NOTE: The vertex shader should be set to VSH_FULLSCREEN_PASS before running this pass.
 void RunFullscreenPass (int w, int h);
+
+// Should be set to either glTextureBarrier or glTextureBarrierNV by main():
+extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
