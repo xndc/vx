@@ -1,18 +1,53 @@
 #pragma once
 
-#define FLIB_DECLARE_RINGBUFFER_STATIC(name, itemtype, size) \
-    static ptrdiff_t name ## _Size = size; \
-    static ptrdiff_t name ## _Used = 0; \
-    static ptrdiff_t name ## _Head = 0; \
-    static ptrdiff_t name ## _Last = 0; \
-    static ptrdiff_t name ## _Next = 0; \
+#define RingBufferDeclare(name, itemtype, size) \
+    const ptrdiff_t name ## __Size = size; \
+    const ptrdiff_t name ## __Item = sizeof(itemtype); \
+    ptrdiff_t name ## __Used = 0; \
+    ptrdiff_t name ## __Head = 0; \
+    ptrdiff_t name ## __Last = 0; \
+    ptrdiff_t name ## __Next = 0; \
+    itemtype* name ## __Temp = NULL; \
+    itemtype name [size];
+
+#define RingBufferDeclareStatic(name, itemtype, size) \
+    static const ptrdiff_t name ## __Size = size; \
+    static const ptrdiff_t name ## __Item = sizeof(itemtype); \
+    static ptrdiff_t name ## __Used = 0; \
+    static ptrdiff_t name ## __Head = 0; \
+    static ptrdiff_t name ## __Last = 0; \
+    static ptrdiff_t name ## __Next = 0; \
+    static itemtype* name ## __Temp = NULL; \
     static itemtype name [size];
 
-#define FRingBufferFull(rb) (rb ## _Used >= rb ## _Size)
+#define RingBufferFull(rb) (rb ## __Used >= rb ## __Size)
+#define RingBufferSize(rb) (rb ## __Size)
+#define RingBufferUsed(rb) (rb ## __Used)
 
 // Pushes an empty item to the given ringbuffer. Returns a pointer to the item.
-#define FRingBufferPush(rb) (\
-    (rb ## _Used ++), \
-    (rb ## _Last = rb ## _Next), \
-    (rb ## _Next = (rb ## _Next + 1) % rb ## _Size), \
-    &(rb [(rb ## _Last)]))
+#define RingBufferPush(rb) (\
+    (rb ## __Used ++), \
+    (rb ## __Last = rb ## __Next), \
+    (rb ## __Next = (rb ## __Next + 1) % rb ## __Size), \
+    &(rb [(rb ## __Last)]))
+
+// Pushes an item to the given ringbuffer. Returns a pointer to the item.
+#define RingBufferPushItem(rb, item) (\
+    (rb ## __Temp = RingBufferPush(rb)), \
+    (*(rb ## __Temp) = item), \
+    (rb ## __Temp)) \
+
+// static void test() {
+//     RingBufferDeclare(buf, int, 8);
+//     while (!RingBufferFull(buf)) {
+//         RingBufferPushItem(buf, 1);
+//         RingBufferPushItem(buf, 2);
+//         RingBufferPushItem(buf, 3);
+//         RingBufferPushItem(buf, 4);
+//         RingBufferPushItem(buf, 5);
+//         RingBufferPushItem(buf, 6);
+//     }
+//     for (int* pitem = RingBufferFirst(buf); pitem != NULL; pitem = RingBufferNext(buf, pitem)) {
+//         printf("* %d\n", *pitem);
+//     }
+// }

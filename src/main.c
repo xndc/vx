@@ -1,5 +1,5 @@
 #include "common.h"
-#include "gui.h"
+#include "gui/gui.h"
 #include "flib/accessor.h"
 #include "data/camera.h"
 #include "render/render.h"
@@ -30,7 +30,7 @@ int main() {
     glfwMakeContextCurrent(window);
     gladLoadGL();
 
-    // TODO: Retrieve and use the correct glTextureBarrier (regular or NV) function for this system
+    // Retrieve the correct glTextureBarrier (regular or NV) function for this system
     if (glfwExtensionSupported("GL_NV_texture_barrier")) {
         vxglTextureBarrier = (PFNGLTEXTUREBARRIERPROC) glTextureBarrierNV;
     } else if (glfwExtensionSupported("GL_ARB_texture_barrier")) {

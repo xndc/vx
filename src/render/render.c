@@ -14,7 +14,7 @@ XM_ASSETS_SHADER_ATTRIBUTES
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
 
-// Should be set to either glTextureBarrier or glTextureBarrierNV by main():
+// Should be set to either glTextureBarrier or glTextureBarrierNV by main().
 PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = NULL;
 
 typedef struct {
@@ -409,6 +409,8 @@ static bool S_FullscreenPass_Initialized = false;
 static Material S_FullscreenPass_Material = {0};
 static Mesh S_FullscreenPass_Mesh = {0};
 
+// Executes a full-screen pass using the current vertex and fragment shader.
+// NOTE: The vertex shader should be set to VSH_FULLSCREEN_PASS before running this pass.
 void RunFullscreenPass (int w, int h) {
     if (!S_FullscreenPass_Initialized) {
         InitMaterial(&S_FullscreenPass_Material);

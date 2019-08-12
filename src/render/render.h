@@ -37,6 +37,8 @@ XM_ASSETS_SHADER_UNIFORMS
 XM_ASSETS_SHADER_ATTRIBUTES
 #undef X
 
+extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
+
 Shader* LoadShaderFromDisk (const char* name, const char* path);
 
 void StartRenderPass (const char* name);
@@ -71,9 +73,4 @@ void SetMaterial (Material* mat);
 void RenderMesh (Mesh* mesh);
 void RenderModel (Model* model);
 
-// Executes a full-screen pass using the current vertex and fragment shader.
-// NOTE: The vertex shader should be set to VSH_FULLSCREEN_PASS before running this pass.
 void RunFullscreenPass (int w, int h);
-
-// Should be set to either glTextureBarrier or glTextureBarrierNV by main():
-extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
