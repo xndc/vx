@@ -72,16 +72,14 @@ static inline void vxPutStrLn (char* str) {
 // Prints out the current frame log buffer.
 static void vxLogBufPrint() {
     vxLogBufInit();
-    if (vxLogBufUsed > 0) {
-        if (vxFrameNumber > 0) {
-            static char buf [256];
-            int written = stbsp_snprintf(buf, 256, "Engine log for frame %ju:\n", vxFrameNumber);
-            written += stbsp_snprintf(buf + written, 256 - written,
-                "============================================================"
-                "============================================================");
-            buf[written] = 0;
-            vxPutStrLn(buf);
-        }
+    if (vxLogBufUsed > 0 && (vxLogBufHashForLastFrame != vxLogBufHashForThisFrame)) {
+        static char buf [256];
+        int written = stbsp_snprintf(buf, 256, "Engine log for frame %ju:\n", vxFrameNumber);
+        written += stbsp_snprintf(buf + written, 256 - written,
+            "============================================================"
+            "============================================================");
+        buf[written] = 0;
+        vxPutStrLn(buf);
         vxPutStrLn(vxLogBuf);
     }
 }
@@ -140,6 +138,8 @@ void vxAdvanceFrame() {
     vxDisableLogBuffer();
     vxEnableLogBuffer();
     vxFrameNumber++;
+    vxLogBufHashForLastFrame = vxLogBufHashForThisFrame;
+    vxLogBufHashForThisFrame = 0;
 }
 
 // Handles a signal by printing the log buffer and exiting.

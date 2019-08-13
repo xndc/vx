@@ -13,6 +13,9 @@ static void GlfwErrorCallback (int code, const char* error) {
 #ifdef GLAD_DEBUG
 static void GladPostCallback (const char *name, void *funcptr, int len_args, ...) {
     GLenum error;
+    // NOTE: glGetError seems to crash the Nvidia Windows driver for some reason, under some
+    //   circumstances that I can't figure out. If you get weird crashes in an nvoglv64 worker
+    //   thread, remove this call and see if they go away.
     error = glad_glGetError();
     if (error != GL_NO_ERROR) {
         const char* str = "<UNKNOWN>";
@@ -26,7 +29,7 @@ static void GladPostCallback (const char *name, void *funcptr, int len_args, ...
             case GL_STACK_UNDERFLOW:               { str = "GL_STACK_UNDERFLOW";               } break;
             case GL_OUT_OF_MEMORY:                 { str = "GL_OUT_OF_MEMORY";                 } break;
         }
-        vxLog("OpenGL error: %s (%d) in %s", str, error, name);
+        vxLog("%s (%d) in %s(%s)", str, error, name);
     }
 }
 #endif
@@ -172,6 +175,8 @@ int main() {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glDrawBuffer(GL_BACK);
         RunFullscreenPass(w, h);
+
+        glUniform1f(331, 0);
 
         StartRenderPass("GUI");
         GUI_DrawDebugOverlay(window);
