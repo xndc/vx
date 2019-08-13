@@ -18,7 +18,7 @@ typedef struct GameObject {
         GAMEOBJECT_PROBE,
         GAMEOBJECT_POINT_LIGHT,
     } type;
-    union GameObject_Data {
+    union {
         Mesh* mesh;
 
         struct GameObject_Data_Probe {
@@ -34,7 +34,7 @@ typedef struct GameObject {
         struct GameObject_Data_DirectionalLight {
             vec3 direction;
             vec3 color; // HDR
-        };
+        } directionalLight;
 
         struct GameObject_Data_PointLight {
             vec3 position;
