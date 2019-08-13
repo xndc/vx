@@ -6,12 +6,17 @@
     #define NOMINMAX
     #undef APIENTRY
     #include <windows.h>
-#endif
-
-#ifdef __APPLE__
+    #include <shlwapi.h>
+    #pragma comment(lib, "shlwapi.lib")
+#elif __APPLE__
     #include <malloc/malloc.h>
+    #include <sys/stat.h>
+    // #include <mach-o/dyld.h>
+    // #include <copyfile.h>
 #else
     #include <malloc.h>
+    #include <unistd.h>
+    // #include <dlfcn.h>
 #endif
 
 #define STB_DS_IMPLEMENTATION
@@ -231,12 +236,22 @@ uint64_t vxGetFileMtime (const char* path) {
 static inline void* vxAlignedAlloc (size_t size, size_t alignment) {
     #if defined(_MSC_VER)
         return _aligned_malloc(size, alignment);
-    #elif defined(__APPLE__)
-        void* p;
-        posix_memalign(&p, alignment, size);
-        return p;
     #else
-        return aligned_alloc(alignment, size);
+        // POSIX systems want the alignment to be a multiple of the system pointer size.
+        while (alignment % sizeof(void*) != 0) {
+            alignment *= 2;
+        }
+        #if defined(__APPLE__)
+            void* p = NULL;
+            posix_memalign(&p, alignment, size);
+            return p;
+        #else
+            // POSIX/C11 aligned_alloc wants the size to be a multiple of the alignment:
+            while (size % alignment != 0) {
+                size *= 2;
+            }
+            return aligned_alloc(alignment, size);
+        #endif
     #endif
 }
 static inline size_t vxAlignedMemSize (void* block, size_t alignment) {
@@ -257,13 +272,26 @@ static inline void vxAlignedFree (void* block) {
 }
 
 // Allocates (block=NULL), reallocates or frees (count*size = 0) a block of memory using the system
-// default aligned memory allocator. The given alignment should be a power of 2 and a multiple of
-// the system pointer size.
+// default aligned memory allocator. The given alignment should be a power of 2.
 // When freeing, the alignnment is not relevant on any of our supported platforms. Just pass 0.
 void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment) {
     void* p = NULL;
     size_t size = count * itemsize; // FIXME: check for overflow, somehow
-    if (alignment == 0) { alignment = sizeof(void*); }
+    if (alignment == 0) {
+        alignment = sizeof(void*);
+    }
+    
+    #if 0
+    // All systems want the alignment to be a power of 2:
+    // https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+    alignment--;
+    alignment |= alignment >> 1;
+    alignment |= alignment >> 2;
+    alignment |= alignment >> 4;
+    alignment |= alignment >> 8;
+    alignment |= alignment >> 16;
+    alignment++;
+    #endif
 
     if (size == 0) {
         if (block) {

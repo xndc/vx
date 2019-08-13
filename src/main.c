@@ -29,7 +29,7 @@ static void GladPostCallback (const char *name, void *funcptr, int len_args, ...
             case GL_STACK_UNDERFLOW:               { str = "GL_STACK_UNDERFLOW";               } break;
             case GL_OUT_OF_MEMORY:                 { str = "GL_OUT_OF_MEMORY";                 } break;
         }
-        vxLog("%s (%d) in %s(%s)", str, error, name);
+        vxLog("%s (%d) in %s", str, error, name);
     }
 }
 #endif
@@ -175,8 +175,6 @@ int main() {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glDrawBuffer(GL_BACK);
         RunFullscreenPass(w, h);
-
-        glUniform1f(331, 0);
 
         StartRenderPass("GUI");
         GUI_DrawDebugOverlay(window);
