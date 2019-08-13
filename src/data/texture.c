@@ -27,6 +27,11 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
     static int last_shadowsize = 0;
     bool regenerate_framebuffers = false;
 
+    // We get called with zeroes when the window is minimized. Just skip the update in this case.
+    if (width == 0 || height == 0) {
+        return;
+    }
+
     // Resize screen-sized render targets:
     if (width != last_width || height != last_height) {
         regenerate_framebuffers = true;
