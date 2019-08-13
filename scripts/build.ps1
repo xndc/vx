@@ -361,7 +361,7 @@ try {
         }
         LogInfo "Building OpenGL loader..."
         Set-Location "$GLADLocation"
-        python -m glad --out-path "$GLLoaderPath" --generator c-debug --local-files --api "gl=4.1" `
+        python -m glad --out-path "$GLLoaderPath" --generator c-debug --local-files --api "gl=3.3" `
             --profile core --reproducible | Out-Host
         CheckExitCode
         StopTimer "Generate OpenGL loader with GLAD"
