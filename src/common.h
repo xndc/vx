@@ -21,7 +21,7 @@
 #include <stb_sprintf.h>
 
 // stb_ds trips some warnings and has one bug that we have to fix:
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push)
 #pragma warning(disable:4456)
 #pragma warning(disable:4244)
@@ -34,7 +34,7 @@
 #define stbds_shgeti(t,k) \
     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
     stbds_temp(t-1))
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
 #endif
 
@@ -61,7 +61,7 @@
  // Randomly generated 32-bit value, for use with hash functions:
 #define VX_SEED 4105099677U
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
     #define VX_LOCATION __FILE__ ":" VX_STRINGIFY(__LINE__) " @" __FUNCTION__
 #else
     // NOTE: __func__ can't be concatenated with anything else, at least on Clang
@@ -117,7 +117,7 @@ VX_EXPORT void vxEnableSignalHandlers();
 VX_EXPORT char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
 VX_EXPORT uint64_t vxGetFileMtime (const char* path);
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
     #define vxAlignOf(t) __alignof(t)
 #else
     #include <stdalign.h>
@@ -127,82 +127,3 @@ VX_EXPORT uint64_t vxGetFileMtime (const char* path);
 VX_EXPORT void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
 #define vxAlloc(count, type) (type*) vxAlignedRealloc(NULL, count, sizeof(type), vxAlignOf(type));
 #define vxFree(block) vxAlignedRealloc(block, 0, 0, 0);
-
-#if 0
-#ifdef _MSC_VER
-    #define VXFUNCTION __FUNCTION__
-#else
-    #define VXFUNCTION __func__
-#endif
-#define VXLOCATION __FILE__, __LINE__, VXFUNCTION
-
-#define vxLog(...)  vxLogMessage(1, VXLOCATION, __VA_ARGS__)
-#define VXWARN(...)  vxLogMessage(2, VXLOCATION, __VA_ARGS__)
-#define VXERROR(...) vxLogMessage(3, VXLOCATION, __VA_ARGS__)
-
-#define VXABORT()     (void)(abort(), 0)
-#define vxPanic(...)  (void)(VXERROR(__VA_ARGS__), VXABORT(), 0)
-#define VXCHECK(cond) (void)(!!(cond) || (vxPanic("Check failed: %s", #cond), 0))
-#define VXCHECKM(cond, ...) \
-    (void)(!!(cond) || (vxPanic(__VA_ARGS__), 0))
-
-#ifndef NDEBUG
-    #define vxDebug(...) vxLogMessage(0, VXLOCATION, __VA_ARGS__)
-    #define VXASSERT(cond) (void)(!!(cond) || (vxPanic("Assertion failed: %s", #cond), 0))
-    #define VXASSERTM(cond, ...) \
-        (void)(!!(cond) || (vxPanic(__VA_ARGS__), 0))
-#else
-    #define vxDebug(...) (void)(0)
-    #define VXASSERT(cond) (void)(0)
-    #define VXASSERTM(cond, fmt, ...) (void)(0)
-#endif
-
-#define VX_LOGSOURCE_DEBUG 0
-#define VX_LOGSOURCE_INFO  1
-#define VX_LOGSOURCE_WARN  2
-#define VX_LOGSOURCE_ERROR 3
-#define VX_LOGSOURCE_ALLOC 100
-
-VX_EXPORT void vxVsprintf (size_t size, char* dst, const char* fmt, va_list args);
-VX_EXPORT void vxSprintf  (size_t size, char* dst, const char* fmt, ...);
-VX_EXPORT char* vxSprintfStatic (const char* fmt, ...);
-
-VX_EXPORT extern size_t vxLogBufferSize;
-VX_EXPORT extern size_t vxLogBufferUsed;
-VX_EXPORT extern char*  vxLogBuffer;
-VX_EXPORT void vxLogWrite (size_t size, const char* str);
-VX_EXPORT void vxLogPrintf (const char* fmt, ...);
-VX_EXPORT void vxLogMessage (int source, const char* file, int line, const char* func, const char* fmt, ...);
-
-VX_EXPORT char* vxStringDuplicate (const char* src);
-
-VX_EXPORT char* vxReadFileEx (size_t size, char* dst, size_t* read_bytes, FILE* file);
-VX_EXPORT char* vxReadFile (const char* filename, bool text_mode, size_t* read_bytes);
-
-// Specification for a generic memory allocation/deallocation function.
-// * block: Memory block to reallocate or free. Set to NULL to allocate a new block.
-// * count: The number of "items" to allocate. Set this (or itemsize) to 0 to free a given block.
-// * itemsize: The size in bytes of each "item". Set this (or count) to 0 to free a given block.
-// * alignment: The alignment of the allocated block. Set this to 0 to align on itemsize.
-// * file, line, func: Used for debug output. Use the VXLOCATION macro to fill these parameters.
-typedef void* (*VXAllocator) (void* block, size_t count, size_t itemsize, size_t alignment,
-    const char* file, int line, const char* func);
-
-// Generic allocator, defers to platform allocation functions.
-VX_EXPORT void* vxGenAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
-    const char* file, int line, const char* func);
-#define VXGENALLOCA(count, type, align) \
-    (type*) vxGenAlloc(NULL, count, sizeof(type), align, VXLOCATION);
-#define VXGENALLOC(count, type) VXGENALLOCA(count, type, 0)
-#define VXGENFREE(block) vxGenAlloc(block, 0, 0, 0, VXLOCATION);
-
-#if 0
-// Per-frame linear allocator, should be reset using vxFrameAllocReset at the start of each frame.
-void* vxFrameAlloc (void* block, size_t count, size_t itemsize, size_t alignment,
-    const char* file, int line, const char* func);
-void vxFrameAllocReset();
-#define VXFRAMEALLOCA(count, type, align) \
-    (type*) vxFrameAlloc(NULL, count, sizeof(type), align, VXLOCATION);
-#define VXFRAMEALLOC(count, type) VXFRAMEALLOCA(count, type, 0)
-#endif
-#endif

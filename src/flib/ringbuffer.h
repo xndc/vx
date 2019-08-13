@@ -40,7 +40,7 @@
 // Removes an item from the front of the given ringbuffer.
 #define RingBufferPop(rb) ((rb ## __Used > 0)? \
     ((rb ## __Used --), (rb ## __Head = ((rb ## __Head + 1) % rb ## __Size))) : \
-    (void)(0))
+    (ptrdiff_t)(0))
 
 // static void test() {
 //     RingBufferDeclare(buf, int, 8);

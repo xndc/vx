@@ -292,10 +292,10 @@ try {
 
     # Download and unpack LLVM/Clang if requested:
     if ($Clang) {
-        $LLVMVersion = "8.0.0"
+        $LLVMVersion = "8.0.1"
         $LLVMPlatform = $HostArch.Replace("x86", "win32").Replace("x64", "win64")
         $LLVMPackageName = "LLVM-$LLVMVersion-$LLVMPlatform"
-        $LLVMDownloadURL = "https://releases.llvm.org/$LLVMVersion/$LLVMPackageName.exe"
+        $LLVMDownloadURL = "https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVMVersion/$LLVMPackageName.exe"
         $LLVMDirectory = "$BuildRoot/$LLVMPackageName"
         $LLVMInstaller = "$BuildRoot/$LLVMPackageName.exe"
 
@@ -310,7 +310,7 @@ try {
             # NOTE: curl is quite a bit faster.
             # FIXME: if the URL is wrong this will just download a 404 page without complaining.
             if (CommandExists "curl.exe") {
-                curl.exe -o $LLVMInstaller $LLVMDownloadURL
+                curl.exe --fail -o $LLVMInstaller --location $LLVMDownloadURL
                 CheckExitCode
             }
             else {
@@ -338,7 +338,7 @@ try {
             cmake "$RepositoryRoot" -G "$Generator" -DCMAKE_BUILD_TYPE="$BuildType" `
                 -DCMAKE_C_COMPILER:PATH="$LLVMDirectory/bin/clang-cl.exe" `
                 -DCMAKE_CXX_COMPILER:PATH="$LLVMDirectory/bin/clang-cl.exe" `
-                -DCMAKE_LINKER:PATH="$LLVMDirectory/bin/lld-link.exe" `
+                -DCMAKE_LINKER:PATH="$LLVMDirectory/bin/lld-link.exe"
             CheckExitCode
         } else {
             LogInfo "Running CMake ($CMakeReason) with generator `"$Generator`"..."
