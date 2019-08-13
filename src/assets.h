@@ -32,28 +32,31 @@
 // NOTE: the UNIF_RT uniform variable names should match the render target names defined below
 
 #define XM_ASSETS_SHADER_UNIFORMS \
-    X(UNIF_RT_DEPTH,        "gDepth") \
-    X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
-    X(UNIF_RT_COLOR_HDR,    "gColorHDR") \
-    X(UNIF_RT_COLOR_TAA,    "gColorTAA") \
-    X(UNIF_RT_NORMAL,       "gNormal") \
-    X(UNIF_RT_VELOCITY,     "gVelocity") \
-    X(UNIF_RT_AUX1,         "gAux1") \
-    X(UNIF_RT_AUX2,         "gAux2") \
-    X(UNIF_RT_SHADOW_DEPTH, "gShadow") \
-    X(UNIF_IRESOLUTION,     "iResolution") \
-    X(UNIF_MODEL_MATRIX,    "uModelMatrix") \
-    X(UNIF_VIEW_MATRIX,     "uViewMatrix") \
-    X(UNIF_PROJ_MATRIX,     "uProjMatrix") \
-    X(UNIF_CONST_DIFFUSE,   "uDiffuse") \
-    X(UNIF_CONST_METALLIC,  "uMetallic") \
-    X(UNIF_CONST_ROUGHNESS, "uRoughness") \
-    X(UNIF_TEX_DIFFUSE,     "texDiffuse") \
-    X(UNIF_TEX_OCC_MET_RGH, "texOccMetRgh") \
-    X(UNIF_TEX_OCCLUSION,   "texOcclusion") \
-    X(UNIF_TEX_METALLIC,    "texMetallic") \
-    X(UNIF_TEX_ROUGHNESS,   "texRoughness") \
-    X(UNIF_TEX_NORMAL,      "texNormal") \
+    X(UNIF_RT_DEPTH,            "gDepth") \
+    X(UNIF_RT_COLOR_LDR,        "gColorLDR") \
+    X(UNIF_RT_COLOR_HDR,        "gColorHDR") \
+    X(UNIF_RT_COLOR_TAA,        "gColorTAA") \
+    X(UNIF_RT_NORMAL,           "gNormal") \
+    X(UNIF_RT_VELOCITY,         "gVelocity") \
+    X(UNIF_RT_AUX1,             "gAux1") \
+    X(UNIF_RT_AUX2,             "gAux2") \
+    X(UNIF_RT_SHADOW_DEPTH,     "gShadow") \
+    X(UNIF_IRESOLUTION,         "iResolution") \
+    X(UNIF_STIPPLE,             "uStipple") \
+    X(UNIF_STIPPLE_HARD_CUTOFF, "uStippleHardCutoff") \
+    X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
+    X(UNIF_MODEL_MATRIX,        "uModelMatrix") \
+    X(UNIF_VIEW_MATRIX,         "uViewMatrix") \
+    X(UNIF_PROJ_MATRIX,         "uProjMatrix") \
+    X(UNIF_CONST_DIFFUSE,       "uDiffuse") \
+    X(UNIF_CONST_METALLIC,      "uMetallic") \
+    X(UNIF_CONST_ROUGHNESS,     "uRoughness") \
+    X(UNIF_TEX_DIFFUSE,         "texDiffuse") \
+    X(UNIF_TEX_OCC_MET_RGH,     "texOccMetRgh") \
+    X(UNIF_TEX_OCCLUSION,       "texOcclusion") \
+    X(UNIF_TEX_METALLIC,        "texMetallic") \
+    X(UNIF_TEX_ROUGHNESS,       "texRoughness") \
+    X(UNIF_TEX_NORMAL,          "texNormal") \
 
 // Syntax for textures:
 // X(name, target (GL_TEXTURE_*), needs mipmaps, path)
@@ -84,6 +87,7 @@
 
 #define XM_ASSETS_FONTS \
     X(FONT_ROBOTO_MEDIUM_16, "fonts/Roboto-Medium.ttf", 16) \
+    X(FONT_ROBOTO_BOLD_16,   "fonts/Roboto-Black.ttf",  16) \
     X(FONT_ROBOTO_MEDIUM_32, "fonts/Roboto-Medium.ttf", 32) \
 
 // Syntax for render targets:

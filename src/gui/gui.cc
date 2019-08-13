@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <examples/imgui_impl_opengl3.h>
 #include <examples/imgui_impl_glfw.h>
+#include <flib/ringbuffer.h>
 
 static bool UI_ShowDebugOverlay = false;
 static int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
@@ -121,13 +122,74 @@ VX_EXPORT void GUI_DrawLoadingText (const char* text, float r, float g, float b)
 }
 
 VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window) {
-    static int debugOverlayKeyState = GLFW_RELEASE;
-    if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS &&
-        debugOverlayKeyState == GLFW_RELEASE) {
-        UI_ShowDebugOverlay = !UI_ShowDebugOverlay;
+    ImGui::ShowDemoWindow();
+}
+
+VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
+    RingBufferDeclareStatic(lastMsMainThread, float, 100);
+    RingBufferDeclareStatic(lastMsRenderThread, float, 100);
+
+    ImGui::SetNextWindowPos(ImVec2(10, 10));
+    ImGui::SetNextWindowBgAlpha(0.4f);
+    ImGui::Begin("Statistics", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav);
+    ImGui::PushFont(FONT_ROBOTO_MEDIUM_16);
+
+    static double avgMs = 0;
+    if (avgMs == 0) { avgMs = stats->msFrame; }
+    avgMs = (99.0 * avgMs + stats->msFrame) / 100.0;
+    double avgFps = 1000.0f / avgMs;
+
+    ImGui::PushFont(FONT_ROBOTO_BOLD_16);
+    ImGui::Text("Graphics:");
+    ImGui::PopFont();
+    ImGui::SameLine(180); ImGui::Text("%.0lf FPS (%.02lf ms)", avgFps, avgMs);
+
+    if (RingBufferFull(lastMsMainThread)) {
+        RingBufferPop(lastMsMainThread);
     }
-    debugOverlayKeyState = glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT);
-    if (UI_ShowDebugOverlay) {
-        ImGui::ShowDemoWindow();
+    RingBufferPushItem(lastMsMainThread, (float) stats->msMainThread);
+    float avgMsMainThread = 0;
+    float maxMsMainThread = 0;
+    for (ptrdiff_t i = 0; i < RingBufferUsed(lastMsMainThread); i++) {
+        avgMsMainThread += lastMsMainThread[i];
+        if (lastMsMainThread[i] > maxMsMainThread) {
+            maxMsMainThread = lastMsMainThread[i];
+        }
     }
+    avgMsMainThread /= (float) RingBufferUsed(lastMsMainThread);
+
+    if (RingBufferFull(lastMsRenderThread)) {
+        RingBufferPop(lastMsRenderThread);
+    }
+    RingBufferPushItem(lastMsRenderThread, (float) stats->msRenderThread);
+    float avgMsRenderThread = 0;
+    float maxMsRenderThread = 0;
+    for (ptrdiff_t i = 0; i < RingBufferUsed(lastMsRenderThread); i++) {
+        avgMsRenderThread += lastMsRenderThread[i];
+        if (lastMsRenderThread[i] > maxMsRenderThread) {
+            maxMsRenderThread = lastMsRenderThread[i];
+        }
+    }
+    avgMsRenderThread /= (float) RingBufferUsed(lastMsRenderThread);
+
+    ImGui::Text("Main thread:");
+    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsMainThread);
+    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsMainThread);
+
+    ImGui::Text("Renderer:");
+    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsRenderThread);
+    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsRenderThread);
+
+    ImGui::Text("Tris: %.01fk", ((float) stats->triangles) / 1000.0f);
+    ImGui::SameLine(100); ImGui::Text("Verts: %.01fk", ((float) stats->vertices) / 1000.0f);
+    ImGui::SameLine(200); ImGui::Text("Draws: %ju", stats->drawcalls);
+
+    #if 0
+    ImGui::Text("Ringbuffer used: %ju", RingBufferUsed(lastMsMainThread));
+    #endif
+
+    ImGui::PopFont();
+    ImGui::End();
 }

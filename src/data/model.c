@@ -41,13 +41,19 @@ void InitMaterial (Material* m) {
     m->blend_srcf = GL_SRC_ALPHA;           // suitable for back-to-front transparency
     m->blend_dstf = GL_ONE_MINUS_SRC_ALPHA; // suitable for back-to-front transparency
     m->stipple = false;
-    m->stipple_hard_cutoff = 1.0f;
-    m->stipple_soft_cutoff = 0.0f;
+    // NOTE: 0.5 is the GLTF default alpha cutoff. GLTF also doesn't include the concept of a soft
+    //   cutoff at all, so setting it to anything over 0.5 would result in models rendering
+    //   incorrectly. This is very visible on Sponza, for instance.
+    m->stipple_hard_cutoff = 0.5f; // below this alpha value, the pixel is not rendered at all
+    m->stipple_soft_cutoff = 0.5f; // above this alpha value, the pixel is always rendered
     m->cull = true;
     m->cull_face = GL_BACK;
     m->depth_test = true;
     m->depth_write = true;
     m->depth_func = GL_GREATER;
+    glm_vec4_one(m->const_diffuse);
+    m->const_metallic  = 1.0f;
+    m->const_roughness = 1.0f;
 }
 
 #if 0
@@ -652,12 +658,14 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
         }
         // Extract alpha mode: (default is OPAQUE, i.e. no blending or stippling)
         const char* jalphamode = json_object_get_string(jmat, "alphaMode");
-        float jalphacutoff = (float) json_object_get_number(jmat, "alphaCutoff");
-        m->stipple_hard_cutoff = json_object_has_value(jmat, "alphaCutoff") ? jalphacutoff : 0.5f;
-        m->stipple = false;
+        if (json_object_has_value(jmat, "alphaCutoff")) {
+            float jalphacutoff = (float) json_object_get_number(jmat, "alphaCutoff");
+            m->stipple_hard_cutoff = jalphacutoff;
+            m->stipple_soft_cutoff = jalphacutoff;
+        }
         if (jalphamode) {
             if      (strcmp(jalphamode, "MASK")  == 0) { m->stipple = true; }
-            else if (strcmp(jalphamode, "BLEND") == 0) { m->blend = true; }
+            else if (strcmp(jalphamode, "BLEND") == 0) { m->blend   = true; }
         }
         // Extract cull mode:
         bool jdoublesided = json_object_get_boolean(jmat, "doubleSided");

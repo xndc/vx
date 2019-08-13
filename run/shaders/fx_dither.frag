@@ -9,7 +9,7 @@ layout(location = 6) out vec4 outAux2;
 in vec2 fragCoord;
 in vec2 fragCoord01;
 in vec2 fragCoordPx;
-uniform ivec2 iResolution;
+uniform vec2 iResolution;
 
 uniform sampler2D gDepth;
 uniform sampler2D gColorLDR;

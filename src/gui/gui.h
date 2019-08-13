@@ -17,3 +17,14 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     float bgr, float bgg, float bgb,
     float fgr, float fgg, float fgb);
 VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window);
+
+typedef struct GUI_Statistics {
+    double msFrame;
+    double msMainThread;
+    double msRenderThread;
+    size_t drawcalls;
+    size_t vertices;
+    size_t triangles;
+} GUI_Statistics;
+
+VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats);

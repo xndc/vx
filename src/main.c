@@ -3,6 +3,7 @@
 #include "flib/accessor.h"
 #include "data/camera.h"
 #include "render/render.h"
+#include "scene/scene.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -113,7 +114,23 @@ int main() {
     #endif
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
+    MDL_DUCK.materials[0].stipple = true;
+    MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
+    MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
+    MDL_DUCK.materials[0].const_diffuse[0] = 1.0f;
+    MDL_DUCK.materials[0].const_diffuse[1] = 1.0f;
+    MDL_DUCK.materials[0].const_diffuse[2] = 1.0f;
+    MDL_DUCK.materials[0].const_diffuse[3] = 0.5f;
+
     while (!glfwWindowShouldClose(window)) {
+        static double lastFrameFullTime;
+        static double lastFrameMainTime;
+        static double lastFrameRenderTime;
+        static double tFrameStart;
+        static double tFrameRenderStart;
+        static double tFramePreSync;
+        static double tFramePostSync;
+
         // Pause the game if it loses focus:
         if (!glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
             double t = glfwGetTime();
@@ -122,12 +139,12 @@ int main() {
             continue;
         }
 
+        tFrameStart = glfwGetTime();
         vxAdvanceFrame();
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
         glViewport(0, 0, w, h);
-        GUI_StartFrame();
 
         const float dist = 3.0f;
         float angle_h = glfwGetTime() * 0.5f;
@@ -139,6 +156,8 @@ int main() {
         G_MainCamera.position[2] = dist * sinf(angle_v) * sinf(angle_h);
         glm_vec3_add(G_MainCamera.position, G_MainCamera.target, G_MainCamera.position);
         UpdateCameraMatrices(&G_MainCamera, w, h);
+
+        tFrameRenderStart = glfwGetTime();
 
         StartRenderPass("Framebuffer clear");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
@@ -153,22 +172,22 @@ int main() {
 
         ResetModelMatrix();
         AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
-        RenderModel(&MDL_DUCK);
+        RenderModel(&MDL_DUCK, w, h);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -1.0f, 0.0f});
         AddModelScale((vec3){1.2f, 1.2f, 1.2f});
-        RenderModel(&MDL_BOX_MR);
+        RenderModel(&MDL_BOX_MR, w, h);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -4.0f, 0.0f});
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
-        RenderModel(&MDL_SPONZA);
+        RenderModel(&MDL_SPONZA, w, h);
 
-        StartRenderPass("Fullscreen Pass Test");
-        glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
-        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
-        RunFullscreenPass(w, h);
+        // StartRenderPass("Dither Effect");
+        // glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
+        // SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
+        // RunFullscreenPass(w, h);
 
         StartRenderPass("Final Pass");
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);
@@ -177,11 +196,34 @@ int main() {
         RunFullscreenPass(w, h);
 
         StartRenderPass("GUI");
-        GUI_DrawDebugOverlay(window);
+        GUI_StartFrame();
+        static bool showDebugOverlay = false;
+        static int debugOverlayKeyState = GLFW_RELEASE;
+        if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS && debugOverlayKeyState == GLFW_RELEASE) {
+            showDebugOverlay = !showDebugOverlay;
+        }
+        debugOverlayKeyState = glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT);
+        if (showDebugOverlay) {
+            static GUI_Statistics stats;
+            stats.msFrame        = lastFrameFullTime   * 1000.0f;
+            stats.msMainThread   = lastFrameMainTime   * 1000.0f;
+            stats.msRenderThread = lastFrameRenderTime * 1000.0f;
+            stats.drawcalls = 0;
+            stats.triangles = 0;
+            stats.vertices  = 0;
+            GUI_DrawStatistics(&stats);
+            GUI_DrawDebugOverlay(window);
+        }
         GUI_Render();
 
+        tFramePreSync = glfwGetTime();
         glfwSwapBuffers(window);
         glfwPollEvents();
+        tFramePostSync = glfwGetTime();
+
+        lastFrameFullTime = tFramePostSync - tFrameStart;
+        lastFrameMainTime = tFrameRenderStart - tFrameStart;
+        lastFrameRenderTime = tFramePreSync - tFrameRenderStart;
     }
 
     return 0;

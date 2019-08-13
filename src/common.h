@@ -78,11 +78,11 @@ extern size_t vxLogBufHashForThisFrame;
 extern size_t vxLogBufHashForLastFrame;
 extern char* vxLogBuf;
 
-extern void vxConfigureLogging();
-extern void vxEnableLogBuffer();
-extern void vxDisableLogBuffer();
+VX_EXPORT void vxConfigureLogging();
+VX_EXPORT void vxEnableLogBuffer();
+VX_EXPORT void vxDisableLogBuffer();
 
-extern void vxLogPrint(const char* location, const char* fmt, ...);
+VX_EXPORT void vxLogPrint(const char* location, const char* fmt, ...);
 #define vxLog(...) vxLogPrint(VX_LOCATION, __VA_ARGS__)
 #ifdef NDEBUG
     #define vxDebug(...) vxLog(__VA_ARGS__)
@@ -90,7 +90,7 @@ extern void vxLogPrint(const char* location, const char* fmt, ...);
     #define vxDebug(...)
 #endif
 
-extern void vxEnableSignalHandlers();
+VX_EXPORT void vxEnableSignalHandlers();
 #define vxPanic(...) do { \
     vxDisableLogBuffer(); \
     vxLog(__VA_ARGS__); \
@@ -114,8 +114,8 @@ extern void vxEnableSignalHandlers();
     #define vxAssertMsg(...)
 #endif
 
-char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
-uint64_t vxGetFileMtime (const char* path);
+VX_EXPORT char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
+VX_EXPORT uint64_t vxGetFileMtime (const char* path);
 
 #ifdef _MSC_VER
     #define vxAlignOf(t) __alignof(t)
@@ -124,7 +124,7 @@ uint64_t vxGetFileMtime (const char* path);
     #define vxAlignOf(t) alignof(t)
 #endif
 
-extern void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
+VX_EXPORT void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
 #define vxAlloc(count, type) (type*) vxAlignedRealloc(NULL, count, sizeof(type), vxAlignOf(type));
 #define vxFree(block) vxAlignedRealloc(block, 0, 0, 0);
 

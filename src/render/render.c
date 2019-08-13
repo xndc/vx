@@ -353,7 +353,15 @@ void SetMaterial (Material* mat) {
         glDisable(GL_DEPTH_TEST);
     }
 
-    glUniform4fv(UNIF_CONST_DIFFUSE, 4, mat->const_diffuse);
+    if (mat->stipple) {
+        glUniform1i(UNIF_STIPPLE, 1);
+        glUniform1f(UNIF_STIPPLE_HARD_CUTOFF, mat->stipple_hard_cutoff);
+        glUniform1f(UNIF_STIPPLE_SOFT_CUTOFF, mat->stipple_soft_cutoff);
+    } else {
+        glUniform1i(UNIF_STIPPLE, 0);
+    }
+
+    glUniform4fv(UNIF_CONST_DIFFUSE, 1, (float*) mat->const_diffuse);
     glUniform1f(UNIF_CONST_METALLIC,  mat->const_metallic);
     glUniform1f(UNIF_CONST_ROUGHNESS, mat->const_roughness);
     SetUniformTexSampler(UNIF_TEX_DIFFUSE,      mat->tex_diffuse,       mat->smp_diffuse);
@@ -364,17 +372,15 @@ void SetMaterial (Material* mat) {
     SetUniformTexSampler(UNIF_TEX_NORMAL,       mat->tex_normal,        mat->smp_normal);
 }
 
-void RenderMesh (Mesh* mesh) {
+void RenderMesh (Mesh* mesh, int w, int h) {
     if (mesh->gl_vertex_array && mesh->material) {
         S_RenderState.next_texture_unit = 1;
         mat4 model;
         GetModelMatrix(model);
-        vxCheck(UNIF_MODEL_MATRIX >= 0);
-        vxCheck(UNIF_PROJ_MATRIX >= 0);
-        vxCheck(UNIF_VIEW_MATRIX >= 0);
         glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, (float*) model);
         glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, (float*) S_RenderState.mat_proj);
         glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, (float*) S_RenderState.mat_view);
+        glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
         SetMaterial(mesh->material);
         glBindVertexArray(mesh->gl_vertex_array);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->gl_element_array);
@@ -406,11 +412,11 @@ void RenderMesh (Mesh* mesh) {
     }
 }
 
-void RenderModel (Model* model) {
+void RenderModel (Model* model, int w, int h) {
     for (size_t i = 0; i < model->meshCount; i++) {
         PushRenderState();
         AddModelMatrix(model->meshTransforms[i]);
-        RenderMesh(&model->meshes[i]);
+        RenderMesh(&model->meshes[i], w, h);
         PopRenderState();
     }
 }
@@ -455,7 +461,7 @@ void RunFullscreenPass (int w, int h) {
         vxLog("Warning: RunFullscreenPass requires the VSH_FULLSCREEN_PASS vertex shader to be used");
     }
     SetMaterial(&mat);
-    glUniform2i(UNIF_IRESOLUTION, w, h);
+    glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
     glBindVertexArray(vao);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     vxglTextureBarrier(); // lets the shader both read & write to the same texture
