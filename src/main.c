@@ -10,6 +10,27 @@ static void GlfwErrorCallback (int code, const char* error) {
     vxLog("GLFW error %d: %s", code, error);
 }
 
+#ifdef GLAD_DEBUG
+static void GladPostCallback (const char *name, void *funcptr, int len_args, ...) {
+    GLenum error;
+    error = glad_glGetError();
+    if (error != GL_NO_ERROR) {
+        const char* str = "<UNKNOWN>";
+        switch (error) {
+            // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glGetError.xhtml
+            case GL_INVALID_ENUM:                  { str = "GL_INVALID_ENUM";                  } break;
+            case GL_INVALID_VALUE:                 { str = "GL_INVALID_VALUE";                 } break;
+            case GL_INVALID_OPERATION:             { str = "GL_INVALID_OPERATION";             } break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION: { str = "GL_INVALID_FRAMEBUFFER_OPERATION"; } break;
+            case GL_STACK_OVERFLOW:                { str = "GL_STACK_OVERFLOW";                } break;
+            case GL_STACK_UNDERFLOW:               { str = "GL_STACK_UNDERFLOW";               } break;
+            case GL_OUT_OF_MEMORY:                 { str = "GL_OUT_OF_MEMORY";                 } break;
+        }
+        vxLog("OpenGL error: %s (%d) in %s", str, error, name);
+    }
+}
+#endif
+
 int G_WindowConfig_W = 1280;
 int G_WindowConfig_H = 1024;
 int G_RenderConfig_ShadowMapSize = 2048;
@@ -29,6 +50,9 @@ int main() {
     GLFWwindow* window = glfwCreateWindow(G_WindowConfig_W, G_WindowConfig_H, "VX", NULL, NULL);
     glfwMakeContextCurrent(window);
     gladLoadGL();
+    #ifdef GLAD_DEBUG
+    glad_set_post_callback(GladPostCallback);
+    #endif
 
     // Retrieve the correct glTextureBarrier (regular or NV) function for this system
     if (glfwExtensionSupported("GL_NV_texture_barrier")) {
@@ -87,6 +111,14 @@ int main() {
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
     while (!glfwWindowShouldClose(window)) {
+        // Pause the game if it loses focus:
+        if (!glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+            double t = glfwGetTime();
+            glfwWaitEvents();
+            glfwSetTime(t);
+            continue;
+        }
+
         vxAdvanceFrame();
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);

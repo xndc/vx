@@ -13,17 +13,19 @@
     X(PROG_FINAL,      VSH_FULLSCREEN_PASS, FSH_FINAL) \
 
 // Syntax for attributes:
-// X(location global name, layout location index, GLSL name)
+// X(location global name, layout location index, GLSL name, GLTF name)
+// See https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#meshes for
+// GLTF attribute names.
 
-#define XM_ASSETS_SHADER_ATTRIBUTES \
-    X(ATTR_POSITION,    0, "aPosition") \
-    X(ATTR_NORMAL,      1, "aNormal") \
-    X(ATTR_TANGENT,     2, "aTangent") \
-    X(ATTR_TEXCOORD0,   3, "aTexcoord0") \
-    X(ATTR_TEXCOORD1,   4, "aTexcoord1") \
-    X(ATTR_COLOR,       5, "aColor") \
-    X(ATTR_JOINTS,      6, "aJoints") \
-    X(ATTR_WEIGHTS,     7, "aWeights") \
+#define XM_ATTRIBUTE_LOCATIONS \
+    X(ATTR_POSITION,    0, "aPosition",  "POSITION")    \
+    X(ATTR_NORMAL,      1, "aNormal",    "NORMAL")      \
+    X(ATTR_TANGENT,     2, "aTangent",   "TANGENT")     \
+    X(ATTR_TEXCOORD0,   3, "aTexcoord0", "TEXCOORD_0")  \
+    X(ATTR_TEXCOORD1,   4, "aTexcoord1", "TEXCOORD_1")  \
+    X(ATTR_COLOR,       5, "aColor",     "COLOR_0")     \
+    X(ATTR_JOINTS,      6, "aJoints",    "JOINTS_0")    \
+    X(ATTR_WEIGHTS,     7, "aWeights",   "WEIGHTS_0")   \
 
 // Syntax for uniforms:
 // X(location global name, GLSL name)

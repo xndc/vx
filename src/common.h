@@ -20,6 +20,13 @@
 #include <glad/glad.h>
 #include <stb_sprintf.h>
 
+// stb_ds trips some warnings and has one bug that we have to fix:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4456)
+#pragma warning(disable:4244)
+#pragma warning(disable:4702)
+#endif
 #define STBDS_NO_SHORT_NAMES
 #include <stb_ds.h>
 // WORKAROUND: stbds_shgeti returns 0 instead of -1: https://github.com/nothings/stb/pull/781
@@ -27,6 +34,9 @@
 #define stbds_shgeti(t,k) \
     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
     stbds_temp(t-1))
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 // Generally useful macros and constants:
 #ifdef __cplusplus
@@ -105,6 +115,7 @@ extern void vxEnableSignalHandlers();
 #endif
 
 char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
+uint64_t vxGetFileMtime (const char* path);
 
 #ifdef _MSC_VER
     #define vxAlignOf(t) __alignof(t)
@@ -115,6 +126,7 @@ char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
 
 extern void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
 #define vxAlloc(count, type) (type*) vxAlignedRealloc(NULL, count, sizeof(type), vxAlignOf(type));
+#define vxFree(block) vxAlignedRealloc(block, 0, 0, 0);
 
 #if 0
 #ifdef _MSC_VER

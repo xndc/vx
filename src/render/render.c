@@ -6,11 +6,11 @@
 XM_ASSETS_SHADERS
 #undef X
 
-#define X(name, location, glsl_name) GLint name = location;
-XM_ASSETS_SHADER_ATTRIBUTES
+#define X(name, location, glslname, gltfname) const GLint name = location;
+XM_ATTRIBUTE_LOCATIONS
 #undef X
 
-#define X(name, glsl_name) GLint name = -1;
+#define X(name, glslname) GLint name = -1;
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
 
@@ -220,17 +220,17 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
     // Retrieve uniforms and check attribute locations:
     ResetShaderVariables();
     if (program != 0) {
-        #define X(name, glsl_name) name = glGetUniformLocation(program, glsl_name);
+        #define X(name, glslname) name = glGetUniformLocation(program, glslname);
         XM_ASSETS_SHADER_UNIFORMS
         #undef X
-        #define X(name, location, glsl_name) { \
-            GLint loc = glGetAttribLocation(program, glsl_name); \
+        #define X(name, location, glslname, gltfname) { \
+            GLint loc = glGetAttribLocation(program, glslname); \
             if (!(loc == -1 || loc == location)) { \
                 vxPanic("Expected attribute %s of program %d to have location %d (is %d)", \
-                    glsl_name, program, location, loc); \
+                    glslname, program, location, loc); \
             } \
         }
-        XM_ASSETS_SHADER_ATTRIBUTES
+        XM_ATTRIBUTE_LOCATIONS
         #undef X
     }
     S_RenderState.program = program;
@@ -365,78 +365,99 @@ void SetMaterial (Material* mat) {
 }
 
 void RenderMesh (Mesh* mesh) {
-    if (mesh->gl_vertex_array != 0) {
+    if (mesh->gl_vertex_array && mesh->material) {
         S_RenderState.next_texture_unit = 1;
         mat4 model;
         GetModelMatrix(model);
         vxCheck(UNIF_MODEL_MATRIX >= 0);
         vxCheck(UNIF_PROJ_MATRIX >= 0);
         vxCheck(UNIF_VIEW_MATRIX >= 0);
-        glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, model);
-        glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, S_RenderState.mat_proj);
-        glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, S_RenderState.mat_view);
+        glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, (float*) model);
+        glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, (float*) S_RenderState.mat_proj);
+        glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, (float*) S_RenderState.mat_view);
         SetMaterial(mesh->material);
         glBindVertexArray(mesh->gl_vertex_array);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.gl_object);
-        switch (mesh->indices.type) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->gl_element_array);
+        // TODO: Make this more generic (somehow...)
+        switch (mesh->gl_element_type) {
+            case FACCESSOR_UINT8:
+            case FACCESSOR_UINT8_VEC3: {
+                glDrawElements(mesh->type,
+                    (GLsizei) mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type),
+                    GL_UNSIGNED_BYTE, NULL);
+            } break;
             case FACCESSOR_UINT16:
             case FACCESSOR_UINT16_VEC3: {
-                glDrawElements(GL_TRIANGLES, mesh->indices.count * mesh->indices.component_count,
+                glDrawElements(mesh->type,
+                    (GLsizei) mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type),
                     GL_UNSIGNED_SHORT, NULL);
             } break;
             case FACCESSOR_UINT32:
             case FACCESSOR_UINT32_VEC3: {
-                glDrawElements(GL_TRIANGLES, mesh->indices.count * mesh->indices.component_count,
+                glDrawElements(mesh->type,
+                    (GLsizei) mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type),
                     GL_UNSIGNED_INT, NULL);
             } break;
             default: {
-                vxLog("Warning: Mesh 0x%lx has unknown index accessor type %d", mesh, mesh->indices.type);
+                vxLog("Warning: Mesh 0x%lx has unknown index accessor type %ju",
+                    mesh, mesh->gl_element_type);
             }
         }
     }
 }
 
 void RenderModel (Model* model) {
-    for (size_t i = 0; i < stbds_arrlenu(model->meshes); i++) {
+    for (size_t i = 0; i < model->meshCount; i++) {
         PushRenderState();
-        AddModelMatrix(model->transforms[i]);
+        AddModelMatrix(model->meshTransforms[i]);
         RenderMesh(&model->meshes[i]);
         PopRenderState();
     }
 }
 
-static bool S_FullscreenPass_Initialized = false;
-static Material S_FullscreenPass_Material = {0};
-static Mesh S_FullscreenPass_Mesh = {0};
-
 // Executes a full-screen pass using the current vertex and fragment shader.
 // NOTE: The vertex shader should be set to VSH_FULLSCREEN_PASS before running this pass.
 void RunFullscreenPass (int w, int h) {
-    if (!S_FullscreenPass_Initialized) {
-        InitMaterial(&S_FullscreenPass_Material);
-        S_FullscreenPass_Material.depth_test = false;
-        S_FullscreenPass_Initialized = true;
-        static float points[] = {
-            -1.0f, -1.0f,
-            -1.0f, +1.0f,
-            +1.0f, -1.0f,
-            +1.0f, +1.0f,
-        };
-        static uint16_t triangles[] = {
-            0, 2, 1,
-            1, 2, 3,
-        };
+    static vao = 0;
+    static ebo = 0;
+    static Material mat = {0};
+    static const float points[] = {
+        -1.0f, -1.0f,
+        -1.0f, +1.0f,
+        +1.0f, -1.0f,
+        +1.0f, +1.0f,
+    };
+    static const uint16_t triangles[] = {
+        0, 2, 1,
+        1, 2, 3,
+    };
+    if (!vao) {
+        InitMaterial(&mat);
+        mat.depth_test = false;
+        GLuint positions;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+        glGenBuffers(1, &ebo);
+        glGenBuffers(1, &positions);
+        glBindBuffer(GL_ARRAY_BUFFER, positions);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), NULL);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(triangles), triangles, GL_STATIC_DRAW);
+        #if 0
         FAccessorInit(&S_FullscreenPass_Mesh.positions, FACCESSOR_FLOAT32_VEC2, points, 0, 4, 0);
         FAccessorInit(&S_FullscreenPass_Mesh.indices, FACCESSOR_UINT16_VEC3, triangles, 0, 2, 0);
         UploadMeshToGPU(&S_FullscreenPass_Mesh);
+        #endif
     }
     if (S_RenderState.current_vsh != VSH_FULLSCREEN_PASS) {
         vxLog("Warning: RunFullscreenPass requires the VSH_FULLSCREEN_PASS vertex shader to be used");
     }
-    SetMaterial(&S_FullscreenPass_Material);
+    SetMaterial(&mat);
     glUniform2i(UNIF_IRESOLUTION, w, h);
-    glBindVertexArray(S_FullscreenPass_Mesh.gl_vertex_array);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, S_FullscreenPass_Mesh.indices.gl_object);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     vxglTextureBarrier(); // lets the shader both read & write to the same texture
-    glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_SHORT, NULL);
+    glDrawElements(GL_TRIANGLES, vxSize(triangles), GL_UNSIGNED_SHORT, NULL);
 }

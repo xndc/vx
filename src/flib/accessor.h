@@ -118,7 +118,6 @@ static inline FAccessorType FAccessorTypeFromGltf (const char* type, uint32_t co
 typedef struct {
     FAccessorType type;
     char* buffer;
-    size_t offset;
     size_t count;
     uint8_t stride;
     uint8_t component_count;
@@ -133,7 +132,7 @@ char* FBufferFromFile (const char* filename, size_t* out_size);
 void FBufferFree (char* buffer);
 
 // Initializes an accessor, given an in-memory buffer.
-void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset,
+void FAccessorInit (FAccessor* acc, FAccessorType t, void* buffer, size_t offset,
     size_t count, uint8_t stride);
 
 // Initializes an accessor, given a filename.
@@ -148,14 +147,10 @@ FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
 FAccessor* FAccessorFromFile (FAccessorType t, const char* filename, size_t offset,
     size_t count, uint8_t stride);
 
-// Retrieves a pointer to the data the accessor is actually pointing to.
-static inline char* FAccessorData (FAccessor* a) {
-    if (a == NULL) { return NULL; }
-    return a->buffer + a->offset;
-}
+// Retrieves a pointer to one of the values an accessor is pointing to.
 static inline char* FAccessorElement (FAccessor* a, size_t index, size_t component) {
     if (a == NULL) { return NULL; }
     if (index > a->count) { return NULL; }
     if (component > a->component_count) { return NULL; }
-    return a->buffer + a->offset + (index * a->stride) + (component * a->component_size);
+    return a->buffer + (index * a->stride) + (component * a->component_size);
 }

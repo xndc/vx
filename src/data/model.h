@@ -3,10 +3,13 @@
 #include "assets.h"
 #include "flib/accessor.h"
 
-typedef struct {
+typedef struct Material {
     bool blend;
     GLenum blend_srcf;
     GLenum blend_dstf;
+    bool stipple;
+    float stipple_soft_cutoff;
+    float stipple_hard_cutoff;
     bool cull;
     GLenum cull_face;
     bool depth_test;
@@ -31,8 +34,13 @@ typedef struct {
 
 void InitMaterial (Material* m);
 
-typedef struct {
+typedef struct Mesh {
+    GLenum type; // GL_TRIANGLES, etc.
     GLuint gl_vertex_array;
+    GLuint gl_element_array;
+    size_t gl_element_count;
+    size_t gl_element_type;
+    #if 0
     FAccessor positions;
     FAccessor normals;
     FAccessor tangents;
@@ -42,16 +50,18 @@ typedef struct {
     FAccessor joints;
     FAccessor weights;
     FAccessor indices;
+    #endif
     Material* material;
 } Mesh;
 
-typedef struct {
-    char** buffers;
-    size_t* bufsizes;
+typedef struct Model {
+    size_t textureCount;
     GLuint* textures;
+    size_t materialCount;
     Material* materials;
+    size_t meshCount;
+    mat4* meshTransforms;
     Mesh* meshes;
-    mat4* transforms;
 } Model;
 
 #define X(name, dir, file) extern Model name;

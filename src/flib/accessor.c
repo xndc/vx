@@ -57,11 +57,10 @@ void FBufferFree (char* buffer) {
     }
 }
 
-void FAccessorInit (FAccessor* acc, FAccessorType t, char* buffer, size_t offset,
+void FAccessorInit (FAccessor* acc, FAccessorType t, void* buffer, size_t offset,
     size_t count, uint8_t stride)
 {
-    acc->buffer = buffer;
-    acc->offset = offset;
+    acc->buffer = (char*) buffer + offset;
     acc->count = count;
     acc->type = t;
     acc->stride = stride ? stride : FAccessorStride(t);

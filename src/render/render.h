@@ -33,8 +33,8 @@ XM_ASSETS_SHADERS
 XM_ASSETS_SHADER_UNIFORMS
 #undef X
 
-#define X(name, location, glsl_name) extern GLint name;
-XM_ASSETS_SHADER_ATTRIBUTES
+#define X(name, location, glslname, gltfname) extern const GLint name;
+XM_ATTRIBUTE_LOCATIONS
 #undef X
 
 extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;

@@ -1,7 +1,6 @@
-#include "common.h"
 #include <signal.h>
 
-#if defined(_WIN32)
+#ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #define VC_EXTRALEAN
     #define NOMINMAX
@@ -15,15 +14,21 @@
     #include <malloc.h>
 #endif
 
-#define STB_SPRINTF_IMPLEMENTATION
-#include <stb_sprintf.h>
 #define STB_DS_IMPLEMENTATION
-#include <stb_ds.h>
+#define STB_SPRINTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
+#include "common.h"
 #include <stb_image.h>
-
 #include <glad/glad.c>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4232) // nonstandard extension: address of dllimport
+#endif
 #include <parson/parson.c>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 size_t vxFrameNumber = 0;
 bool vxLogBufEnabled;
@@ -72,7 +77,8 @@ static void vxLogBufPrint() {
             static char buf [256];
             int written = stbsp_snprintf(buf, 256, "Engine log for frame %ju:\n", vxFrameNumber);
             written += stbsp_snprintf(buf + written, 256 - written,
-                "================================================================================");
+                "============================================================"
+                "============================================================");
             buf[written] = 0;
             vxPutStrLn(buf);
         }
@@ -109,8 +115,10 @@ void vxLogPrint (const char* location, const char* fmt, ...) {
     va_start(va, fmt);
     if (vxLogBufEnabled) {
         // Log message to buffer:
-        vxLogBufUsed += (size_t) stbsp_snprintf (vxLogBuf + vxLogBufUsed, vxLogBufSize - vxLogBufUsed - 2, "[%s] ", location);
-        vxLogBufUsed += (size_t) stbsp_vsnprintf(vxLogBuf + vxLogBufUsed, vxLogBufSize - vxLogBufUsed - 2, fmt, va);
+        vxLogBufUsed += (size_t) stbsp_snprintf (vxLogBuf + vxLogBufUsed,
+            (int)(vxLogBufSize - vxLogBufUsed - 2), "[%s] ", location);
+        vxLogBufUsed += (size_t) stbsp_vsnprintf(vxLogBuf + vxLogBufUsed,
+            (int)(vxLogBufSize - vxLogBufUsed - 2), fmt, va);
         vxLogBuf[vxLogBufUsed++] = '\n';
         vxLogBuf[vxLogBufUsed] = 0; // no ++, we want the NUL to be overwritten by the next print
         // Compute hash:
@@ -147,12 +155,14 @@ VX_EXPORT void vxHandleSignal (int sig) {
         case SIGTERM: { puts("Signal SIGTERM received."); } break;
         default: { printf("Unknown signal %d received.", sig); }
     }
+    #if 0
     // Convenience feature: if we're running in console mode, keep the console open.
     #ifdef _WIN32
     if (!IsDebuggerPresent() && GetConsoleWindow()) {
         printf("Press any key to quit the program.\n");
         getchar();
     }
+    #endif
     #endif
     debug_break();
     abort(); // debug_break doesn't quit the apps without a debugger attached, on some platforms
@@ -193,6 +203,30 @@ char* vxReadFile (const char* filename, const char* mode, size_t* outLength) {
     return buf;
 }
 
+// Returns the last modification time for the given file or directory, or 0 if the given path does
+// not point to a valid filesystem object.
+uint64_t vxGetFileMtime (const char* path) {
+    uint64_t t = 0;
+    #if defined(_WIN32)
+        WIN32_FIND_DATAA fd;
+        HANDLE find = FindFirstFileA(path, &fd);
+        if (find != INVALID_HANDLE_VALUE) {
+            FILETIME ft = fd.ftLastWriteTime;
+            ULARGE_INTEGER fti;
+            fti.LowPart = ft.dwLowDateTime;
+            fti.HighPart = ft.dwHighDateTime;
+            t = (uint64_t) fti.QuadPart;
+        }
+    #else
+        struct stat statbuf;
+        if (stat(path, &statbuf) == 0) {
+            time_t mtime = statbuf.st_mtime;
+            t = (uint64_t) mtime;
+        }
+    #endif
+    return t;
+}
+
 // Generic aligned_alloc, malloc_size and free functions.
 static inline void* vxAlignedAlloc (size_t size, size_t alignment) {
     #if defined(_MSC_VER)
@@ -225,6 +259,7 @@ static inline void vxAlignedFree (void* block) {
 // Allocates (block=NULL), reallocates or frees (count*size = 0) a block of memory using the system
 // default aligned memory allocator. The given alignment should be a power of 2 and a multiple of
 // the system pointer size.
+// When freeing, the alignnment is not relevant on any of our supported platforms. Just pass 0.
 void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment) {
     void* p = NULL;
     size_t size = count * itemsize; // FIXME: check for overflow, somehow
