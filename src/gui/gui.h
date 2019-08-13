@@ -22,6 +22,8 @@ typedef struct GUI_Statistics {
     double msFrame;
     double msMainThread;
     double msRenderThread;
+    double msSwapBuffers;
+    double msPollEvents;
     size_t drawcalls;
     size_t vertices;
     size_t triangles;

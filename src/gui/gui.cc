@@ -182,6 +182,16 @@ VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
     ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsRenderThread);
     ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsRenderThread);
 
+    static double avgPoll = 0;
+    static double avgSwap = 0;
+    if (avgPoll == 0) { avgPoll = stats->msPollEvents;  }
+    if (avgSwap == 0) { avgSwap = stats->msSwapBuffers; }
+    avgPoll = (99.0 * avgPoll + stats->msPollEvents)  / 100.0;
+    avgSwap = (99.0 * avgSwap + stats->msSwapBuffers) / 100.0;
+
+    ImGui::Text("PollEvents: %.2lf ms", avgPoll);
+    ImGui::SameLine(150); ImGui::Text("SwapBuffers: %.2lf ms", avgSwap);
+
     ImGui::Text("Tris: %.01fk", ((float) stats->triangles) / 1000.0f);
     ImGui::SameLine(100); ImGui::Text("Verts: %.01fk", ((float) stats->vertices) / 1000.0f);
     ImGui::SameLine(200); ImGui::Text("Draws: %ju", stats->drawcalls);

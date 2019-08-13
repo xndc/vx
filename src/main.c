@@ -100,6 +100,8 @@ int main() {
         glfwSwapInterval(1);
     }
 
+    glfwSwapInterval(0);
+
     #if 1
     G_MainCamera.projection = CAMERA_PERSPECTIVE;
     G_MainCamera.fov  = 80.0f;
@@ -121,10 +123,13 @@ int main() {
         static double lastFrameFullTime;
         static double lastFrameMainTime;
         static double lastFrameRenderTime;
+        static double lastFrameSwapBuffersTime;
+        static double lastFramePollEventsTime;
         static double t; // frame start
         static double tFrameRenderStart;
         static double tFramePreSync;
         static double tFramePostSync;
+        static double tFramePostSwap;
         t = glfwGetTime();
 
         // Pause the game if it loses focus:
@@ -201,9 +206,11 @@ int main() {
         debugOverlayKeyState = glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT);
         if (showDebugOverlay) {
             static GUI_Statistics stats;
-            stats.msFrame        = lastFrameFullTime   * 1000.0f;
-            stats.msMainThread   = lastFrameMainTime   * 1000.0f;
-            stats.msRenderThread = lastFrameRenderTime * 1000.0f;
+            stats.msFrame        = lastFrameFullTime        * 1000.0f;
+            stats.msMainThread   = lastFrameMainTime        * 1000.0f;
+            stats.msRenderThread = lastFrameRenderTime      * 1000.0f;
+            stats.msSwapBuffers  = lastFrameSwapBuffersTime * 1000.0f;
+            stats.msPollEvents   = lastFramePollEventsTime  * 1000.0f;
             stats.drawcalls = 0;
             stats.triangles = 0;
             stats.vertices  = 0;
@@ -214,12 +221,15 @@ int main() {
 
         tFramePreSync = glfwGetTime();
         glfwSwapBuffers(window);
+        tFramePostSwap = glfwGetTime();
         glfwPollEvents();
         tFramePostSync = glfwGetTime();
 
         lastFrameFullTime = tFramePostSync - t;
         lastFrameMainTime = tFrameRenderStart - t;
         lastFrameRenderTime = tFramePreSync - tFrameRenderStart;
+        lastFrameSwapBuffersTime = tFramePostSwap - tFramePreSync;
+        lastFramePollEventsTime = tFramePostSync - tFramePostSwap;
     }
 
     return 0;
