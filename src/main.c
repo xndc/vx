@@ -142,7 +142,7 @@ int main() {
 
         const float dist = 3.0f;
         float angle_h = glfwGetTime() * 0.5f;
-        float angle_v = (M_PI * 0.5f) + cosf(glfwGetTime() * 0.5f) * 0.35f;
+        float angle_v = (M_PI * 0.5f) + cosf(t * 0.5f) * 0.35f;
         // NOTE: this is a standard spherical-to-cartesian coordinate mapping with
         //   radius/rho = dist, theta = angle_v, phi = angle_h, and the Y/Z axes swapped
         G_MainCamera.position[0] = dist * sinf(angle_v) * cosf(angle_h);
@@ -180,10 +180,10 @@ int main() {
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA, w, h, t, vxFrameNumber);
 
-        StartRenderPass("Dither Effect");
-        BindFramebuffer(FB_ONLY_COLOR_LDR);
-        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
-        RunFullscreenPass(w, h, t, vxFrameNumber);
+        // StartRenderPass("Dither Effect");
+        // BindFramebuffer(FB_ONLY_COLOR_LDR);
+        // SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
+        // RunFullscreenPass(w, h, t, vxFrameNumber);
 
         StartRenderPass("Final Pass");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
