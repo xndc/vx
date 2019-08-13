@@ -8,21 +8,12 @@ XM_ASSETS_RENDERTARGETS_SCREENSIZE
 XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #undef X
 
-#define VXGL_COLOR_ATTACHMENT0 (0x8CE0)
-#define VXGL_COLOR_ATTACHMENT1 (VXGL_COLOR_ATTACHMENT0 + 1)
-#define VXGL_COLOR_ATTACHMENT2 (VXGL_COLOR_ATTACHMENT0 + 2)
-#define VXGL_COLOR_ATTACHMENT3 (VXGL_COLOR_ATTACHMENT0 + 3)
-#define VXGL_COLOR_ATTACHMENT4 (VXGL_COLOR_ATTACHMENT0 + 4)
-#define VXGL_COLOR_ATTACHMENT5 (VXGL_COLOR_ATTACHMENT0 + 5)
-#define VXGL_COLOR_ATTACHMENT6 (VXGL_COLOR_ATTACHMENT0 + 6)
-#define VXGL_COLOR_ATTACHMENT7 (VXGL_COLOR_ATTACHMENT0 + 7)
-#define VXGL_COLOR_ATTACHMENT8 (VXGL_COLOR_ATTACHMENT0 + 8)
-
 #define BEGIN(name) \
     extern GLuint name; \
     static const GLenum name ## _BUFFERS [] = {
 #define DEPTH(point, name)
-#define COLOR(point, name) VX ## point ,
+// #define COLOR(point, name) VX ## point ,
+#define COLOR(point, name) point ,
 #define END(name) \
     0 }; \
     static const size_t name ## _BUFFER_COUNT = vxSize(name ## _BUFFERS) - 1;
@@ -31,6 +22,10 @@ XM_ASSETS_FRAMEBUFFERS
 #undef DEPTH
 #undef COLOR
 #undef END
+
+#define BindFramebuffer(name) \
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, name); \
+    glDrawBuffers(name ## _BUFFER_COUNT, name ## _BUFFERS);
 
 #define VXGL_SAMPLER_COUNT 32
 extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];

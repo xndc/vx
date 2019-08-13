@@ -372,7 +372,7 @@ void SetMaterial (Material* mat) {
     SetUniformTexSampler(UNIF_TEX_NORMAL,       mat->tex_normal,        mat->smp_normal);
 }
 
-void RenderMesh (Mesh* mesh, int w, int h) {
+void RenderMesh (Mesh* mesh, int w, int h, float t, uint32_t frame) {
     if (mesh->gl_vertex_array && mesh->material) {
         S_RenderState.next_texture_unit = 1;
         mat4 model;
@@ -381,6 +381,8 @@ void RenderMesh (Mesh* mesh, int w, int h) {
         glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, (float*) S_RenderState.mat_proj);
         glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, (float*) S_RenderState.mat_view);
         glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
+        glUniform1f(UNIF_ITIME, t);
+        glUniform1ui(UNIF_IFRAME, frame);
         SetMaterial(mesh->material);
         glBindVertexArray(mesh->gl_vertex_array);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->gl_element_array);
@@ -412,18 +414,18 @@ void RenderMesh (Mesh* mesh, int w, int h) {
     }
 }
 
-void RenderModel (Model* model, int w, int h) {
+void RenderModel (Model* model, int w, int h, float t, uint32_t frame) {
     for (size_t i = 0; i < model->meshCount; i++) {
         PushRenderState();
         AddModelMatrix(model->meshTransforms[i]);
-        RenderMesh(&model->meshes[i], w, h);
+        RenderMesh(&model->meshes[i], w, h, t, frame);
         PopRenderState();
     }
 }
 
 // Executes a full-screen pass using the current vertex and fragment shader.
 // NOTE: The vertex shader should be set to VSH_FULLSCREEN_PASS before running this pass.
-void RunFullscreenPass (int w, int h) {
+void RunFullscreenPass (int w, int h, float t, uint32_t frame) {
     static vao = 0;
     static ebo = 0;
     static Material mat = {0};
@@ -462,6 +464,8 @@ void RunFullscreenPass (int w, int h) {
     }
     SetMaterial(&mat);
     glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
+    glUniform1f(UNIF_ITIME, t);
+    glUniform1ui(UNIF_IFRAME, frame);
     glBindVertexArray(vao);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     vxglTextureBarrier(); // lets the shader both read & write to the same texture

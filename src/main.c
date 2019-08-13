@@ -66,7 +66,6 @@ int main() {
     } else {
         vxPanic("This program requires the GL_*_texture_barrier extension.");
     }
-    vxAssert(GL_COLOR_ATTACHMENT0 == VXGL_COLOR_ATTACHMENT0);
 
     // Reverse Z setup:
     glDepthRangef(-1.0f, 1.0f);
@@ -117,29 +116,24 @@ int main() {
     MDL_DUCK.materials[0].stipple = true;
     MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
     MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
-    MDL_DUCK.materials[0].const_diffuse[0] = 1.0f;
-    MDL_DUCK.materials[0].const_diffuse[1] = 1.0f;
-    MDL_DUCK.materials[0].const_diffuse[2] = 1.0f;
-    MDL_DUCK.materials[0].const_diffuse[3] = 0.5f;
 
     while (!glfwWindowShouldClose(window)) {
         static double lastFrameFullTime;
         static double lastFrameMainTime;
         static double lastFrameRenderTime;
-        static double tFrameStart;
+        static double t; // frame start
         static double tFrameRenderStart;
         static double tFramePreSync;
         static double tFramePostSync;
+        t = glfwGetTime();
 
         // Pause the game if it loses focus:
         if (!glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
-            double t = glfwGetTime();
             glfwWaitEvents();
             glfwSetTime(t);
             continue;
         }
 
-        tFrameStart = glfwGetTime();
         vxAdvanceFrame();
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
@@ -157,43 +151,45 @@ int main() {
         glm_vec3_add(G_MainCamera.position, G_MainCamera.target, G_MainCamera.position);
         UpdateCameraMatrices(&G_MainCamera, w, h);
 
+        MDL_DUCK.materials[0].const_diffuse[3] = (sin(3.0 * t) + 1.0) * 0.51;
+
         tFrameRenderStart = glfwGetTime();
 
-        StartRenderPass("Framebuffer clear");
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_MAIN);
-        glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
+        StartRenderPass("GBuffer clear");
+        BindFramebuffer(FB_GBUFFER);
         glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
         glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        StartRenderPass("Main Render");
+        StartRenderPass("GBuffer render");
+        BindFramebuffer(FB_GBUFFER);
         SetCameraMatrices(&G_MainCamera);
-        SetRenderProgram(VSH_DEFAULT, FSH_FWD_OPAQUE);
+        SetRenderProgram(VSH_DEFAULT, FSH_GBUF_MAIN);
 
         ResetModelMatrix();
         AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
-        RenderModel(&MDL_DUCK, w, h);
+        RenderModel(&MDL_DUCK, w, h, t, vxFrameNumber);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -1.0f, 0.0f});
         AddModelScale((vec3){1.2f, 1.2f, 1.2f});
-        RenderModel(&MDL_BOX_MR, w, h);
+        RenderModel(&MDL_BOX_MR, w, h, t, vxFrameNumber);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -4.0f, 0.0f});
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
-        RenderModel(&MDL_SPONZA, w, h);
+        RenderModel(&MDL_SPONZA, w, h, t, vxFrameNumber);
 
-        // StartRenderPass("Dither Effect");
-        // glDrawBuffers(FB_MAIN_BUFFER_COUNT, FB_MAIN_BUFFERS);
-        // SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
-        // RunFullscreenPass(w, h);
+        StartRenderPass("Dither Effect");
+        BindFramebuffer(FB_ONLY_COLOR_LDR);
+        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
+        RunFullscreenPass(w, h, t, vxFrameNumber);
 
         StartRenderPass("Final Pass");
-        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);
         glDrawBuffer(GL_BACK);
-        RunFullscreenPass(w, h);
+        RunFullscreenPass(w, h, t, vxFrameNumber);
 
         StartRenderPass("GUI");
         GUI_StartFrame();
@@ -221,8 +217,8 @@ int main() {
         glfwPollEvents();
         tFramePostSync = glfwGetTime();
 
-        lastFrameFullTime = tFramePostSync - tFrameStart;
-        lastFrameMainTime = tFrameRenderStart - tFrameStart;
+        lastFrameFullTime = tFramePostSync - t;
+        lastFrameMainTime = tFrameRenderStart - t;
         lastFrameRenderTime = tFramePreSync - tFrameRenderStart;
     }
 

@@ -70,7 +70,6 @@ void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler);
 void ResetShaderVariables();
 
 void SetMaterial (Material* mat);
-void RenderMesh (Mesh* mesh, int w, int h);
-void RenderModel (Model* model, int w, int h);
-
-void RunFullscreenPass (int w, int h);
+void RenderMesh  (Mesh* mesh,   int w, int h, float t, uint32_t frame);
+void RenderModel (Model* model, int w, int h, float t, uint32_t frame);
+void RunFullscreenPass         (int w, int h, float t, uint32_t frame);
