@@ -126,8 +126,9 @@ VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window) {
 }
 
 VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
-    RingBufferDeclareStatic(lastMsMainThread, float, 100);
-    RingBufferDeclareStatic(lastMsRenderThread, float, 100);
+    const int avgInterval = 60;
+    RingBufferDeclareStatic(lastMsMainThread,   float, avgInterval);
+    RingBufferDeclareStatic(lastMsRenderThread, float, avgInterval);
 
     ImGui::SetNextWindowSize(ImVec2(300, 0));
     ImGui::SetNextWindowPos(ImVec2(10, 10));
@@ -137,9 +138,13 @@ VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav);
     ImGui::PushFont(FONT_DEFAULT);
 
+    // NOTE: The point of keeping track of the frame number here is to avoid avgMs being computed
+    //   by averaging N zeroes and one valid frame number. Since avgMs is static, we need the frame
+    //   number to be static as well and can't rely on stats->frame.
+    static size_t frame = 0;
     static double avgMs = 0;
-    if (stats->frame < 100) { avgMs = stats->msFrame; }
-    avgMs = (99.0 * avgMs + stats->msFrame) / 100.0;
+    if (frame++ < avgInterval) { avgMs = stats->msFrame; }
+    avgMs = (float(avgInterval - 1) * avgMs + stats->msFrame) / avgInterval;
     double avgFps = 1000.0f / avgMs;
 
     ImGui::PushFont(FONT_DEFAULT_BOLD);
@@ -176,7 +181,7 @@ VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
     }
     avgMsRenderThread /= (float) RingBufferUsed(lastMsRenderThread);
 
-    ImGui::Text("Main thread:");
+    ImGui::Text("Main:");
     ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsMainThread);
     ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsMainThread);
 
@@ -188,12 +193,13 @@ VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
     ImGui::SameLine(100); ImGui::Text("Verts: %.01fk", ((float) stats->vertices) / 1000.0f);
     ImGui::SameLine(200); ImGui::Text("Draws: %ju", stats->drawcalls);
 
+    const int shortAvgInterval = 10;
     static double avgPoll = 0;
     static double avgSwap = 0;
-    if (stats->frame < 100) { avgPoll = stats->msPollEvents;  }
-    if (stats->frame < 100) { avgSwap = stats->msSwapBuffers; }
-    avgPoll = (99.0 * avgPoll + stats->msPollEvents)  / 100.0;
-    avgSwap = (99.0 * avgSwap + stats->msSwapBuffers) / 100.0;
+    if (stats->frame < shortAvgInterval) { avgPoll = stats->msPollEvents;  }
+    if (stats->frame < shortAvgInterval) { avgSwap = stats->msSwapBuffers; }
+    avgPoll = (float(shortAvgInterval - 1) * avgPoll + stats->msPollEvents)  / shortAvgInterval;
+    avgSwap = (float(shortAvgInterval - 1) * avgSwap + stats->msSwapBuffers) / shortAvgInterval;
 
     ImGui::Text("PollEvents: %.2lf ms", avgPoll);
     ImGui::SameLine(140); ImGui::Text("SwapBuffers: %.2lf ms", avgSwap);

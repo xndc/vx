@@ -218,15 +218,23 @@ int main() {
         SetCameraMatrices(&G_MainCamera);
         // Ambient lighting:
         float i = 0.5f;
-        glUniform3f(UNIF_AMBIENT_YP, 0.8f * i, 0.8f * i, 0.8f * i);
-        glUniform3f(UNIF_AMBIENT_YN, 0.3f * i, 0.3f * i, 0.3f * i);
-        glUniform3f(UNIF_AMBIENT_ZP, 0.6f * i, 0.6f * i, 0.6f * i);
-        glUniform3f(UNIF_AMBIENT_ZN, 0.4f * i, 0.4f * i, 0.4f * i);
-        glUniform3f(UNIF_AMBIENT_XP, 0.6f * i, 0.6f * i, 0.6f * i);
-        glUniform3f(UNIF_AMBIENT_XN, 0.4f * i, 0.4f * i, 0.4f * i);
+        glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
+            0.8f * i, 0.8f * i, 0.8f * i,  // Y+ (sky)
+            0.3f * i, 0.3f * i, 0.3f * i,  // Y- (ground)
+            0.6f * i, 0.6f * i, 0.6f * i,  // Z+ (north)
+            0.4f * i, 0.4f * i, 0.4f * i,  // Z- (south)
+            0.6f * i, 0.6f * i, 0.6f * i,  // X+ (east)
+            0.4f * i, 0.4f * i, 0.4f * i,  // X- (west)
+        });
+        // glUniform3f(UNIF_AMBIENT_YP, 0.8f * i, 0.8f * i, 0.8f * i);
+        // glUniform3f(UNIF_AMBIENT_YN, 0.3f * i, 0.3f * i, 0.3f * i);
+        // glUniform3f(UNIF_AMBIENT_ZP, 0.6f * i, 0.6f * i, 0.6f * i);
+        // glUniform3f(UNIF_AMBIENT_ZN, 0.4f * i, 0.4f * i, 0.4f * i);
+        // glUniform3f(UNIF_AMBIENT_XP, 0.6f * i, 0.6f * i, 0.6f * i);
+        // glUniform3f(UNIF_AMBIENT_XN, 0.4f * i, 0.4f * i, 0.4f * i);
         // Directional lighting:
         glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.0f, -1.0f);
-        glUniform3f(UNIF_SUN_COLOR, 1.5f, 1.5f, 1.5f);
+        glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 1.0f);
         RunFullscreenPass(w, h, t, vxFrameNumber);
 
         // StartRenderPass("Dither Effect");
@@ -276,6 +284,14 @@ int main() {
         lastFrameRenderTime = tFramePreSync - tFrameRenderStart;
         lastFrameSwapBuffersTime = tFramePostSwap - tFramePreSync;
         lastFramePollEventsTime = tFramePostSync - tFramePostSwap;
+
+        // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
+        // window is moving. Ignore the frame for timing purposes if this happens.
+        if (lastFramePollEventsTime > 0.1f) {
+            lastFramePollEventsTime = 0.1f;
+            lastFrameFullTime = tFramePostSwap - t;
+            glfwSetTime(tFramePostSwap);
+        }
     }
 
     return 0;

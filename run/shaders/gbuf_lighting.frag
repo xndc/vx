@@ -13,12 +13,13 @@ uniform mat4 uProjMatrix;
 uniform mat4 uInvViewMatrix;
 uniform mat4 uInvProjMatrix;
 
-uniform vec3 uAmbientZP;
-uniform vec3 uAmbientZN;
-uniform vec3 uAmbientYP;
-uniform vec3 uAmbientYN;
-uniform vec3 uAmbientXP;
-uniform vec3 uAmbientXN;
+uniform vec3 uAmbientCube[6];
+// uniform vec3 uAmbientZP;
+// uniform vec3 uAmbientZN;
+// uniform vec3 uAmbientYP;
+// uniform vec3 uAmbientYN;
+// uniform vec3 uAmbientXP;
+// uniform vec3 uAmbientXN;
 uniform vec3 uSunDirection;
 uniform vec3 uSunColor;
 
@@ -50,29 +51,20 @@ void main() {
     vec3 norm = normalize(normal);
     vec3 viewDir = normalize(view.xyz - world);
 
-    // Ambient lighting:
     vec3 lightf = vec3(0);
-    lightf += max(dot(norm, vec3(+0, +1, +0)), 0.0) * uAmbientYP;
-    lightf += max(dot(norm, vec3(-0, -1, -0)), 0.0) * uAmbientYN;
-    lightf += max(dot(norm, vec3(+0, +0, +1)), 0.0) * uAmbientZP;
-    lightf += max(dot(norm, vec3(-0, -0, -1)), 0.0) * uAmbientZN;
-    lightf += max(dot(norm, vec3(+1, +0, +0)), 0.0) * uAmbientZP;
-    lightf += max(dot(norm, vec3(-1, -0, -0)), 0.0) * uAmbientZN;
+
+    // Ambient lighting using HL2-style ambient cube:
+    // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
+    vec3 nsq = norm * norm;
+    ivec3 isNegative = ivec3(norm.x < 0.0, norm.y < 0.0, norm.z < 0.0);
+    lightf += nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
+            + nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
+            + nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
 
     // Directional lighting:
     vec3 lightDir = -uSunDirection;
     vec3 diffuse = max(dot(norm, lightDir), 0.0) * uSunColor;
     lightf += diffuse;
-
-    #if 0
-    vec3 lightDir = normalize((-uSunDirection) - world);
-    vec3 factorSunlight = max(dot(norm, lightDir), 0.0) * uSunColor;
-
-    // HACK: We don't support full ambient lighting, so just average our colours out:
-    vec3 factorAmbient = (uAmbientZP + uAmbientZN + uAmbientYP + uAmbientYN + uAmbientXP + uAmbientXN) / 6.0;
-
-    vec3 final = (factorSunlight + factorAmbient) * color;
-    #endif
 
     // There are certainly better ways to do this.
     if (texelFetch(gDepth, fc, 0).r == 0.0) {

@@ -54,6 +54,7 @@
     X(UNIF_STIPPLE_HARD_CUTOFF, "uStippleHardCutoff") \
     X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
 \
+    X(UNIF_AMBIENT_CUBE, "uAmbientCube") \
     X(UNIF_AMBIENT_ZP, "uAmbientZP") \
     X(UNIF_AMBIENT_ZN, "uAmbientZN") \
     X(UNIF_AMBIENT_YP, "uAmbientYP") \
