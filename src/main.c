@@ -100,7 +100,11 @@ int main() {
         glfwSwapInterval(1);
     }
 
-    glfwSwapInterval(0);
+    // Quick and dirty 30 FPS lock for the MacBook.
+    // Locking to 60FPS or not locking at all results in HEAVY stuttering.
+    #ifdef __APPLE__
+    glfwSwapInterval(2);
+    #endif
 
     #if 1
     G_MainCamera.projection = CAMERA_PERSPECTIVE;
