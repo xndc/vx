@@ -116,6 +116,7 @@ VX_EXPORT void vxEnableSignalHandlers();
 
 VX_EXPORT char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
 VX_EXPORT uint64_t vxGetFileMtime (const char* path);
+VX_EXPORT void vxCreateDirectory (const char* path);
 
 #if defined(_MSC_VER) && !defined(__clang__)
     #define vxAlignOf(t) __alignof(t)

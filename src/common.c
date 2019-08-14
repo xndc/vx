@@ -208,6 +208,16 @@ char* vxReadFile (const char* filename, const char* mode, size_t* outLength) {
     return buf;
 }
 
+// Creates a directory. Does not create intermediate directories.
+// TODO: Error handling, Mac/Linux implementation.
+void vxCreateDirectory (const char* path) {
+    #ifdef _WIN32
+        CreateDirectoryA(path, NULL);
+    #else
+        #error vxMakeDir not implemented
+    #endif
+}
+
 // Returns the last modification time for the given file or directory, or 0 if the given path does
 // not point to a valid filesystem object.
 uint64_t vxGetFileMtime (const char* path) {

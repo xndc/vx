@@ -218,7 +218,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
             #if 0
                 QueueTextureLoad(textures[iimg], filePath, needsMips);
             #else
-                textures[iimg] = LoadTextureFromDisk(uri, filePath);
+                textures[iimg] = LoadTextureFromDisk(uri, filePath, needsMips);
             #endif
         } else {
             // TODO: Support reading images from buffers.
@@ -309,7 +309,6 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
         // Extract cull mode:
         bool jdoublesided = json_object_get_boolean(jmat, "doubleSided");
         if (jdoublesided) { m->cull = false; }
-        vxLog("* Read material 0x%jx", m);
     }
 
     // Extract nodes and count meshes (GLTF primitives):
@@ -456,8 +455,8 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
                 XM_ATTRIBUTE_LOCATIONS
                 #undef X
                 mesh->gl_vertex_count = meshVertexCount;
-                vxLog("* Read mesh 0x%jx with %lu vertices, %lu indices, VAO %u, EBO %u", mesh,
-                    meshVertexCount, meshIndexCount, mesh->gl_vertex_array, mesh->gl_element_array);
+                // vxLog("* Read mesh 0x%jx with %lu vertices, %lu indices, VAO %u, EBO %u", mesh,
+                //     meshVertexCount, meshIndexCount, mesh->gl_vertex_array, mesh->gl_element_array);
                 imesh++;
             }
         }

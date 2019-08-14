@@ -181,14 +181,14 @@ try {
     # Switch to repository root:
     Push-Location $RepositoryRoot
 
-    # Log the build script's output to a file.
-    # NOTE: External commands must be piped into Out-Host to show up in the log.
-    $BuildLog     = "$BuildRoot/build.log"
-    $BuildLastLog = "$BuildRoot/build.prev.log"
-    if (Test-Path $BuildLog) {
-        Move-Item -Force $BuildLog $BuildLastLog
-    }
-    Start-Transcript $BuildLog | Out-Null
+    # # Log the build script's output to a file.
+    # # NOTE: External commands must be piped into Out-Host to show up in the log.
+    # $BuildLog     = "$BuildRoot/build.log"
+    # $BuildLastLog = "$BuildRoot/build.prev.log"
+    # if (Test-Path $BuildLog) {
+    #     Move-Item -Force $BuildLog $BuildLastLog
+    # }
+    # Start-Transcript $BuildLog | Out-Null
 
     # Machine information:
     $HostArch = "x86"
@@ -466,5 +466,5 @@ try {
 
 } finally {
     Pop-Location
-    Stop-Transcript -ErrorAction Ignore | Out-Null
+    # Stop-Transcript | Out-Null
 }

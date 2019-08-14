@@ -30,11 +30,8 @@ XM_ASSETS_FRAMEBUFFERS
 #define VXGL_SAMPLER_COUNT 32
 extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
-// Initializes the texture subsystem. Creates the following:
-// * the textures, render targets and framebuffers defined in assets.h (TEX_*, RT_*, FB_*)
-// * some sampler objects for the render system to use (VXGL_SAMPLER[i])
-// void InitTextureSystem();
-GLuint LoadTextureFromDisk (const char* name, const char* path);
+// Loads a texture from disk, returning an OpenGL handle to it.
+GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips);
 
 // Resizes all render targets and framebuffers.
 void UpdateFramebuffers (int width, int height, int shadowsize);

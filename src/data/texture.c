@@ -83,54 +83,109 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
     }
 }
 
-GLuint LoadTextureFromDisk (const char* name, const char* path) {
+GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
+    double tStart = glfwGetTime();
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
 
+    // Generate hash of texture filename and mtime:
+    uint64_t mtime = vxGetFileMtime(path);
+    vxCheckMsg(mtime != 0, "Failed to load %s from %s: file not found", name, path);
+    size_t hash = stbds_hash_string(path, VX_SEED);
+    hash ^= stbds_hash_bytes(&mtime, sizeof(mtime), VX_SEED);
+
+    // Look for cached texture:
+    static char cachedTexturePath [128];
+    stbsp_snprintf(cachedTexturePath, 128, "userdata/texturecache/%jx.dat", hash);
+    if (vxGetFileMtime(cachedTexturePath) != 0) {
+        size_t size;
+        char* data = vxReadFile(cachedTexturePath, "rb", &size);
+        uint32_t w = ((uint32_t*) data)[0];
+        uint32_t h = ((uint32_t*) data)[1];
+        uint32_t c = ((uint32_t*) data)[2]; // channels
+        uint32_t l = ((uint32_t*) data)[3]; // mip levels
+        size_t idata = 4 * sizeof(uint32_t);
+        GLenum internalformat, format;
+        switch (c) {
+            case 1: { internalformat = GL_R8;    format = GL_RED;  break; }
+            case 2: { internalformat = GL_RG8;   format = GL_RG;   break; }
+            case 3: { internalformat = GL_RGB8;  format = GL_RGB;  break; }
+            case 4: { internalformat = GL_RGBA8; format = GL_RGBA; break; }
+            default: { vxPanic("Unknown channel count %d for %s (%s)", c, path, cachedTexturePath); }
+        }
+        uint32_t levelw = w;
+        uint32_t levelh = h;
+        for (int ilevel = 0; ilevel < l; ilevel++) {
+            if ((size - idata) < levelw * levelh * c) {
+                vxPanic("%s has wrong size %ju for parameters %ux%ux%ux%u", size, w, h, c, l);
+            }
+            char* leveldata = data + idata;
+            idata += levelw * levelh * c;
+            glTexImage2D(GL_TEXTURE_2D, ilevel, internalformat, levelw, levelh, 0, format,
+                GL_UNSIGNED_BYTE, leveldata);
+            levelw /= 2;
+            levelh /= 2;
+        }
+        free(data);
+        double t = (glfwGetTime() - tStart) * 1000.0;
+        vxLog("Read from cache: %s (FBO %u, %ux%ux%ux%u, %.02lf ms)", path, texture, w, h, c, l, t);
+        return texture;
+    }
+
     // Read from disk:
     int w, h, c;
-    double tb_stbi_load = glfwGetTime();
     void* image = stbi_load(path, &w, &h, &c, 0);
     if (!image) {
         vxPanic("Failed to load %s from %s: %s", name, path, stbi_failure_reason());
     }
 
-    // Upload:
-    double tb_upload = glfwGetTime();
-    const char* type = "?";
-    switch (c) {
-        case 1: {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, image);
-            type = "R8";
-        } break;
-        case 2: {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, w, h, 0, GL_RG, GL_UNSIGNED_BYTE, image);
-            type = "RG8";
-        } break;
-        case 3: {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-            type = "RGB8";
-        } break;
-        case 4: {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-            type = "RGBA8";
-        } break;
-        default: {
-            vxLog("Warning: Unknown channel count %d for %s", c, name);
-        }
+    // Compute mip level count (no way to query it):
+    // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
+    uint32_t l = 1;
+    if (mips) {
+        l += (uint32_t) floor(log2(vxMax(vxMax(w, h), 2)));
     }
 
-    double tb_generate_mips = glfwGetTime();
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    double ta_end = glfwGetTime();
-    double tt_stbi_load_ms = (tb_upload - tb_stbi_load) * 1000.0;
-    double tt_upload_ms = (tb_generate_mips - tb_upload) * 1000.0;
-    double tt_generate_mips_ms = (ta_end - tb_generate_mips) * 1000;
-    vxLog("Done: %s (FBO %d, %s, %dx%d, l %.02f u %.02f, m %.02f ms)",
-        path, texture, type, w, h, tt_stbi_load_ms, tt_upload_ms, tt_generate_mips_ms);
-
+    // Upload:
+    GLenum internalformat, format;
+    switch (c) {
+        case 1: { internalformat = GL_R8;    format = GL_RED;  break; }
+        case 2: { internalformat = GL_RG8;   format = GL_RG;   break; }
+        case 3: { internalformat = GL_RGB8;  format = GL_RGB;  break; }
+        case 4: { internalformat = GL_RGBA8; format = GL_RGBA; break; }
+        default: { vxPanic("Unknown channel count %d for %s (%s)", c, path, cachedTexturePath); }
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, internalformat, w, h, 0, format, GL_UNSIGNED_BYTE, image);
+    if (mips) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
     free(image);
+
+    // Cache:
+    vxCreateDirectory("userdata");
+    vxCreateDirectory("userdata/texturecache");
+    FILE* cachedTextureFile = fopen(cachedTexturePath, "wb");
+    if (cachedTextureFile == 0) {
+        vxLog("Warning: can't open %s for writing: %s", cachedTexturePath, strerror(errno));
+    } else {
+        uint32_t info[] = {(uint32_t) w, (uint32_t) h, (uint32_t) c, l};
+        fwrite(info, sizeof(uint32_t), 4, cachedTextureFile);
+        for (int ilevel = 0; ilevel < l; ilevel++) {
+            // FIXME: the docs for glGetTexImage mention GL_PACK_ALIGNMENT - what's that?
+            uint32_t levelw, levelh;
+            glGetTexLevelParameteriv(GL_TEXTURE_2D, ilevel, GL_TEXTURE_WIDTH,  &levelw);
+            glGetTexLevelParameteriv(GL_TEXTURE_2D, ilevel, GL_TEXTURE_HEIGHT, &levelh);
+            void* pixels = malloc((levelw + 1) * (levelh + 1) * c);
+            glGetTexImage(GL_TEXTURE_2D, ilevel, format, GL_UNSIGNED_BYTE, pixels);
+            fwrite(pixels, 1, levelw * levelh * c, cachedTextureFile);
+            free(pixels);
+        }
+        fclose(cachedTextureFile);
+    }
+
+    double t = (glfwGetTime() - tStart) * 1000.0;
+    vxLog("Read from disk: %s (FBO %u, %dx%dx%dx%u, %.02lf ms)", path, texture, w, h, c, l, t);
+
     return texture;
 }
