@@ -1,10 +1,11 @@
 #include "model.h"
 #include "main.h"
+#include "texture.h"
+#include "render/render.h"
 #include <stb_sprintf.h>
 #include <parson/parson.h>
 #include <glad/glad.h>
-#include "texture.h"
-#include "render/render.h"
+#include <GLFW/glfw3.h>
 
 #define X(name, dir, file) Model name = {0};
 XM_ASSETS_MODELS_GLTF
@@ -81,6 +82,7 @@ typedef struct GLTFNode {
 } GLTFNode;
 
 void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirectory, const char* gltfFilename) {
+    double tStart = glfwGetTime();
     static char gltfPath [4096]; // path to GLTF file
     static char filePath [4096]; // buffer for storing other filenames
     stbsp_snprintf(gltfPath, vxSize(gltfPath), "%s/%s", gltfDirectory, gltfFilename);
@@ -185,13 +187,16 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
     }
 
     // Extract textures (i.e. GLTF images):
+    double tTexLoadStart = glfwGetTime();
     JSON_Array* jimages = json_object_get_array(root, "images");
     JSON_Array* jtextures = json_object_get_array(root, "textures");
     size_t textureCount = json_array_get_count(jimages);
     size_t gltfTextureCount = json_array_get_count(jtextures);
     GLuint* textures = vxAlloc(textureCount, GLuint);
+    #if 0
     // Create GL texture objects:
     glGenTextures(textureCount, textures);
+    #endif
     // Queue textures for read and upload:
     for (size_t iimg = 0; iimg < textureCount; iimg++) {
         JSON_Object* jimg = json_array_get_object(jimages, iimg);
@@ -226,6 +231,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
             vxLog("         Unable to load image %ju from model.", iimg);
         }
     }
+    double tTexLoadEnd = glfwGetTime();
 
     // Extract materials:
     JSON_Array* jmaterials = json_object_get_array(root, "materials");
@@ -483,6 +489,9 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
     model->meshCount = meshCount;
     model->meshTransforms = meshTransforms;
     model->meshes = meshes;
-    vxLog("Uploaded model with %ju buffers, %ju materials and %ju meshes",
-        bufferCount, materialCount, meshCount, gltfDirectory, gltfFilename);
+
+    double t1 = (glfwGetTime() - tStart) * 1000.0;
+    double t2 = t1 - ((tTexLoadEnd - tTexLoadStart) * 1000.0);
+    vxLog("Uploaded model with %ju buffers, %ju materials and %ju meshes (%.02lf ms total, %.02lf ms w/o textures)",
+        bufferCount, materialCount, meshCount, t1, t2);
 }
