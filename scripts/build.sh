@@ -116,6 +116,7 @@ fi
 # Returns either an empty string or one containing the reason CMake should be run.
 GetCMakeReason() {
     if $CMake; then echo "script -CMake flag set"; return; fi
+    if $Xcode; then echo "launching Xcode"; return; fi
     case $Generator in
         "Ninja")
             if ! [ -f "$BuildDir/build.ninja" ]; then

@@ -128,8 +128,9 @@ GLuint LoadTextureFromDisk (const char* name, const char* path) {
     double tt_stbi_load_ms = (tb_upload - tb_stbi_load) * 1000.0;
     double tt_upload_ms = (tb_generate_mips - tb_upload) * 1000.0;
     double tt_generate_mips_ms = (ta_end - tb_generate_mips) * 1000;
-    vxLog("Uploaded %s (object %d, %s, %dx%d) (load %.02f ms, upload %.02f ms, mips %.02f ms)",
+    vxLog("Done: %s (FBO %d, %s, %dx%d, l %.02f u %.02f, m %.02f ms)",
         path, texture, type, w, h, tt_stbi_load_ms, tt_upload_ms, tt_generate_mips_ms);
 
+    free(image);
     return texture;
 }
