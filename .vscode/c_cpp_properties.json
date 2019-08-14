@@ -4,7 +4,7 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/src",
-                "${workspaceFolder}/lib/cglm",
+                "${workspaceFolder}/lib/cglm/include",
                 "${workspaceFolder}/lib/etc",
                 "${workspaceFolder}/lib/glfw/include",
                 "${workspaceFolder}/lib/imgui",
