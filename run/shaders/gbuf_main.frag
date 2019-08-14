@@ -4,7 +4,7 @@ in vec2 texcoord1;
 in vec3 normal;
 
 layout(location = 0) out vec4 outColorLDR;
-layout(location = 1) out vec4 outNormal;
+layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec4 outAux1;
 layout(location = 3) out vec4 outAux2;
 
@@ -18,6 +18,7 @@ uniform float uMetallic;
 uniform float uRoughness;
 uniform float uOcclusion;
 uniform sampler2D texDiffuse;
+uniform sampler2D texNormal;
 uniform sampler2D texOccMetRgh;
 uniform sampler2D texOcclusion;
 uniform sampler2D texMetallic;
@@ -158,8 +159,9 @@ void main() {
     float occlusion = uOcclusion * texture(texOccMetRgh, texcoord0).r * texture(texOcclusion, texcoord0).r;
     float metallic  = uMetallic  * texture(texOccMetRgh, texcoord0).g * texture(texMetallic,  texcoord0).r;
     float roughness = uRoughness * texture(texOccMetRgh, texcoord0).b * texture(texRoughness, texcoord0).r;
+    vec3 normal = normal * texture(texNormal, texcoord0).rgb;
 
     outColorLDR = diffuse;
-    outNormal = vec4(normal, 0);
+    outNormal = normal;
     outAux1 = vec4(occlusion, metallic, roughness, 0);
 }

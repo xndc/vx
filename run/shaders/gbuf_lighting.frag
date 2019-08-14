@@ -51,11 +51,17 @@ void main() {
     vec3 viewDir = normalize(view.xyz - world);
 
     // Ambient lighting:
-    vec3 lightf = vec3(0.3);
+    vec3 lightf = vec3(0);
+    lightf += max(dot(norm, vec3(+0, +1, +0)), 0.0) * uAmbientYP;
+    lightf += max(dot(norm, vec3(-0, -1, -0)), 0.0) * uAmbientYN;
+    lightf += max(dot(norm, vec3(+0, +0, +1)), 0.0) * uAmbientZP;
+    lightf += max(dot(norm, vec3(-0, -0, -1)), 0.0) * uAmbientZN;
+    lightf += max(dot(norm, vec3(+1, +0, +0)), 0.0) * uAmbientZP;
+    lightf += max(dot(norm, vec3(-1, -0, -0)), 0.0) * uAmbientZN;
 
     // Directional lighting:
-    vec3 lightDir = normalize(vec3(100, 100, 100) - world);
-    vec3 diffuse = max(dot(norm, lightDir), 0.0) * color * vec3(3.0, 3.0, 3.0);
+    vec3 lightDir = -uSunDirection;
+    vec3 diffuse = max(dot(norm, lightDir), 0.0) * uSunColor;
     lightf += diffuse;
 
     #if 0

@@ -62,6 +62,8 @@ void InitMaterial (Material* m) {
     m->const_roughness = 1.0f;
     m->tex_diffuse = rTexWhite1x1;
     m->smp_diffuse = rSmpDefault;
+    m->tex_normal = rTexWhite1x1;
+    m->smp_normal = rTexWhite1x1;
     m->tex_occ_met_rgh = rTexWhite1x1;
     m->smp_occ_met_rgh = rSmpDefault;
     m->tex_occlusion = rTexWhite1x1;

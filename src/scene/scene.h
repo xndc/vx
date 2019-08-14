@@ -23,10 +23,10 @@ typedef struct GameObject {
 
         struct GameObject_Data_Probe {
             vec3 position;
-            union { vec3 color_zp; vec3 color_u; };
-            union { vec3 color_zn; vec3 color_d; };
-            union { vec3 color_yp; vec3 color_n; };
-            union { vec3 color_yn; vec3 color_s; };
+            union { vec3 color_yp; vec3 color_u; };
+            union { vec3 color_yn; vec3 color_d; };
+            union { vec3 color_zp; vec3 color_n; };
+            union { vec3 color_zn; vec3 color_s; };
             union { vec3 color_xp; vec3 color_e; };
             union { vec3 color_xn; vec3 color_w; };
         } probe;

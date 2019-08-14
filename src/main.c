@@ -217,16 +217,16 @@ int main() {
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
         SetCameraMatrices(&G_MainCamera);
         // Ambient lighting:
-        float i = 0.1f;
-        glUniform3f(UNIF_AMBIENT_ZP, 1.0f * i, 1.0f * i, 1.0f * i);
-        glUniform3f(UNIF_AMBIENT_ZN, 0.5f * i, 0.5f * i, 0.5f * i);
-        glUniform3f(UNIF_AMBIENT_YP, 0.8f * i, 0.8f * i, 1.0f * i);
-        glUniform3f(UNIF_AMBIENT_YN, 0.6f * i, 0.5f * i, 0.7f * i);
-        glUniform3f(UNIF_AMBIENT_XP, 0.8f * i, 0.7f * i, 0.9f * i);
-        glUniform3f(UNIF_AMBIENT_XN, 0.8f * i, 0.7f * i, 0.9f * i);
+        float i = 0.5f;
+        glUniform3f(UNIF_AMBIENT_YP, 0.8f * i, 0.8f * i, 0.8f * i);
+        glUniform3f(UNIF_AMBIENT_YN, 0.3f * i, 0.3f * i, 0.3f * i);
+        glUniform3f(UNIF_AMBIENT_ZP, 0.6f * i, 0.6f * i, 0.6f * i);
+        glUniform3f(UNIF_AMBIENT_ZN, 0.4f * i, 0.4f * i, 0.4f * i);
+        glUniform3f(UNIF_AMBIENT_XP, 0.6f * i, 0.6f * i, 0.6f * i);
+        glUniform3f(UNIF_AMBIENT_XN, 0.4f * i, 0.4f * i, 0.4f * i);
         // Directional lighting:
         glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.0f, -1.0f);
-        glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 1.0f);
+        glUniform3f(UNIF_SUN_COLOR, 1.5f, 1.5f, 1.5f);
         RunFullscreenPass(w, h, t, vxFrameNumber);
 
         // StartRenderPass("Dither Effect");
