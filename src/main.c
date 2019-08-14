@@ -70,6 +70,20 @@ int main() {
     // Reverse Z setup:
     glDepthRangef(-1.0f, 1.0f);
 
+    // Load default texture and sampler: (1x1 white square)
+    GLuint defaultTexture, defaultSampler;
+    glGenTextures(1, &defaultTexture);
+    glGenSamplers(1, &defaultSampler);
+    vxCheck(defaultTexture == 1);
+    vxCheck(defaultSampler == 1);
+    glSamplerParameteri(defaultSampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glSamplerParameteri(defaultSampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glSamplerParameteri(defaultSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(defaultSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, defaultTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+        (GLubyte[]){ 255, 255, 255, 255 });
+
     // Load assets and display loading screen:
     glfwSwapInterval(0);
     GUI_Init(window);

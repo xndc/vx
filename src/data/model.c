@@ -51,9 +51,21 @@ void InitMaterial (Material* m) {
     m->depth_test = true;
     m->depth_write = true;
     m->depth_func = GL_GREATER;
+    // NOTE: Tex/smp index 1 should be a 1x1 white square. If no texture is specified in the GLTF
+    //   file, the final diffuse/metallic/roughness values will be equal to the constant factors.
+    //   The GLTF spec doesn't explicitly say it, but this is what the Windows model viewer does,
+    //   so I assume at least some people think it's the correct thing to do.
     glm_vec4_one(m->const_diffuse);
     m->const_metallic  = 1.0f;
     m->const_roughness = 1.0f;
+    m->tex_diffuse = 1;
+    m->smp_diffuse = 1;
+    m->tex_occ_met_rgh = 1;
+    m->smp_occ_met_rgh = 1;
+    m->tex_metallic = 1;
+    m->smp_metallic = 1;
+    m->tex_roughness = 1;
+    m->smp_roughness = 1;
 }
 
 typedef struct GLTFNode {
