@@ -16,6 +16,7 @@ typedef struct Material {
     bool depth_write;
     GLenum depth_func;
     vec4 const_diffuse;
+    float const_occlusion;
     float const_metallic;
     float const_roughness;
     GLuint tex_diffuse;
@@ -40,6 +41,7 @@ typedef struct Mesh {
     GLuint gl_element_array;
     size_t gl_element_count;
     size_t gl_element_type;
+    size_t gl_vertex_count;
     #if 0
     FAccessor positions;
     FAccessor normals;

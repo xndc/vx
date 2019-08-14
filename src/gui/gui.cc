@@ -62,10 +62,10 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     GUI_StartFrame();
 
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::PushFont(FONT_ROBOTO_MEDIUM_32);
+    ImGui::PushFont(FONT_DEFAULT_LARGE);
     ImVec2 textsize1 = ImGui::CalcTextSize(text1);
     ImGui::PopFont();
-    ImGui::PushFont(FONT_ROBOTO_MEDIUM_16);
+    ImGui::PushFont(FONT_DEFAULT);
     ImVec2 textsize2 = ImGui::CalcTextSize(text2);
     ImGui::PopFont();
     float w1 = textsize1.x + 12.0f;
@@ -83,7 +83,7 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
         ImGuiWindowFlags_NoBackground);
-    ImGui::PushFont(FONT_ROBOTO_MEDIUM_32);
+    ImGui::PushFont(FONT_DEFAULT_LARGE);
     ImGui::TextColored(ImColor(fgr, fgg, fgb), text1);
     ImGui::PopFont();
     ImGui::End();
@@ -94,7 +94,7 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
         ImGuiWindowFlags_NoBackground);
-    ImGui::PushFont(FONT_ROBOTO_MEDIUM_16);
+    ImGui::PushFont(FONT_DEFAULT);
     ImGui::TextColored(ImColor(fgr, fgg, fgb), text2);
     ImGui::PopFont();
     ImGui::End();
@@ -107,7 +107,7 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
 VX_EXPORT void GUI_DrawLoadingText (const char* text, float r, float g, float b) {
     // NOTE: Modelled after ShowExampleAppSimpleOverlay in imgui_demo.cpp
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::PushFont(FONT_ROBOTO_MEDIUM_32);
+    ImGui::PushFont(FONT_DEFAULT_LARGE);
     ImVec2 text_size = ImGui::CalcTextSize(text);
     float x = (io.DisplaySize.x / 2.0f) - (text_size.x / 2.0f);
     float y = (io.DisplaySize.y / 2.0f) - (text_size.y / 2.0f);
@@ -129,22 +129,24 @@ VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
     RingBufferDeclareStatic(lastMsMainThread, float, 100);
     RingBufferDeclareStatic(lastMsRenderThread, float, 100);
 
+    ImGui::SetNextWindowSize(ImVec2(300, 0));
     ImGui::SetNextWindowPos(ImVec2(10, 10));
     ImGui::SetNextWindowBgAlpha(0.4f);
     ImGui::Begin("Statistics", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration |
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav);
-    ImGui::PushFont(FONT_ROBOTO_MEDIUM_16);
+    ImGui::PushFont(FONT_DEFAULT);
 
     static double avgMs = 0;
-    if (avgMs == 0) { avgMs = stats->msFrame; }
+    if (stats->frame < 100) { avgMs = stats->msFrame; }
     avgMs = (99.0 * avgMs + stats->msFrame) / 100.0;
     double avgFps = 1000.0f / avgMs;
 
-    ImGui::PushFont(FONT_ROBOTO_BOLD_16);
+    ImGui::PushFont(FONT_DEFAULT_BOLD);
     ImGui::Text("Graphics:");
     ImGui::PopFont();
-    ImGui::SameLine(180); ImGui::Text("%.0lf FPS (%.02lf ms)", avgFps, avgMs);
+    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 120);
+    ImGui::Text("%.0lf FPS (%.02lf ms)", avgFps, avgMs);
 
     if (RingBufferFull(lastMsMainThread)) {
         RingBufferPop(lastMsMainThread);
@@ -182,19 +184,19 @@ VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
     ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsRenderThread);
     ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsRenderThread);
 
+    ImGui::Text("Tris: %.01fk", ((float) stats->triangles) / 1000.0f);
+    ImGui::SameLine(100); ImGui::Text("Verts: %.01fk", ((float) stats->vertices) / 1000.0f);
+    ImGui::SameLine(200); ImGui::Text("Draws: %ju", stats->drawcalls);
+
     static double avgPoll = 0;
     static double avgSwap = 0;
-    if (avgPoll == 0) { avgPoll = stats->msPollEvents;  }
-    if (avgSwap == 0) { avgSwap = stats->msSwapBuffers; }
+    if (stats->frame < 100) { avgPoll = stats->msPollEvents;  }
+    if (stats->frame < 100) { avgSwap = stats->msSwapBuffers; }
     avgPoll = (99.0 * avgPoll + stats->msPollEvents)  / 100.0;
     avgSwap = (99.0 * avgSwap + stats->msSwapBuffers) / 100.0;
 
     ImGui::Text("PollEvents: %.2lf ms", avgPoll);
-    ImGui::SameLine(150); ImGui::Text("SwapBuffers: %.2lf ms", avgSwap);
-
-    ImGui::Text("Tris: %.01fk", ((float) stats->triangles) / 1000.0f);
-    ImGui::SameLine(100); ImGui::Text("Verts: %.01fk", ((float) stats->vertices) / 1000.0f);
-    ImGui::SameLine(200); ImGui::Text("Draws: %ju", stats->drawcalls);
+    ImGui::SameLine(140); ImGui::Text("SwapBuffers: %.2lf ms", avgSwap);
 
     #if 0
     ImGui::Text("Ringbuffer used: %ju", RingBufferUsed(lastMsMainThread));

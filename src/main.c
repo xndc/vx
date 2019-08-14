@@ -1,4 +1,4 @@
-#include "common.h"
+#include "main.h"
 #include "gui/gui.h"
 #include "flib/accessor.h"
 #include "data/camera.h"
@@ -6,6 +6,13 @@
 #include "scene/scene.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
+
+size_t pfFrameTriCount = 0;
+size_t pfFrameVertCount = 0;
+size_t pfFrameDrawCount = 0;
+
+GLuint rSmpDefault = 0;
+GLuint rTexWhite1x1 = 0;
 
 static void GlfwErrorCallback (int code, const char* error) {
     vxLog("GLFW error %d: %s", code, error);
@@ -51,6 +58,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
+    glfwWindowHint(GLFW_SRGB_CAPABLE, true);
     GLFWwindow* window = glfwCreateWindow(G_WindowConfig_W, G_WindowConfig_H, "VX", NULL, NULL);
     glfwMakeContextCurrent(window);
     gladLoadGL();
@@ -71,16 +79,13 @@ int main() {
     glDepthRangef(-1.0f, 1.0f);
 
     // Load default texture and sampler: (1x1 white square)
-    GLuint defaultTexture, defaultSampler;
-    glGenTextures(1, &defaultTexture);
-    glGenSamplers(1, &defaultSampler);
-    vxCheck(defaultTexture == 1);
-    vxCheck(defaultSampler == 1);
-    glSamplerParameteri(defaultSampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glSamplerParameteri(defaultSampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glSamplerParameteri(defaultSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glSamplerParameteri(defaultSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glBindTexture(GL_TEXTURE_2D, defaultTexture);
+    glGenTextures(1, &rTexWhite1x1);
+    glGenSamplers(1, &rSmpDefault);
+    glSamplerParameteri(rSmpDefault, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glSamplerParameteri(rSmpDefault, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glSamplerParameteri(rSmpDefault, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(rSmpDefault, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, rTexWhite1x1);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
         (GLubyte[]){ 255, 255, 255, 255 });
 
@@ -114,7 +119,7 @@ int main() {
         glfwSwapInterval(1);
     }
 
-    // Quick and dirty 30 FPS lock for the MacBook.
+    // HACK: Quick and dirty 30 FPS lock for the MacBook.
     // Locking to 60FPS or not locking at all results in HEAVY stuttering.
     #ifdef __APPLE__
     glfwSwapInterval(2);
@@ -133,9 +138,9 @@ int main() {
     #endif
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
-    MDL_DUCK.materials[0].stipple = true;
-    MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
-    MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
+    // MDL_DUCK.materials[0].stipple = true;
+    // MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
+    // MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
 
     while (!glfwWindowShouldClose(window)) {
         static double lastFrameFullTime;
@@ -158,6 +163,10 @@ int main() {
         }
 
         vxAdvanceFrame();
+        pfFrameTriCount = 0;
+        pfFrameVertCount = 0;
+        pfFrameDrawCount = 0;
+
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
@@ -180,7 +189,7 @@ int main() {
 
         StartRenderPass("GBuffer clear");
         BindFramebuffer(FB_GBUFFER);
-        glClearColor(0.3f, 0.4f, 0.5f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClearDepth(0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -203,6 +212,23 @@ int main() {
         AddModelScale((vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA, w, h, t, vxFrameNumber);
 
+        StartRenderPass("GBuffer lighting");
+        BindFramebuffer(FB_ONLY_COLOR_HDR);
+        SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
+        SetCameraMatrices(&G_MainCamera);
+        // Ambient lighting:
+        float i = 0.1f;
+        glUniform3f(UNIF_AMBIENT_ZP, 1.0f * i, 1.0f * i, 1.0f * i);
+        glUniform3f(UNIF_AMBIENT_ZN, 0.5f * i, 0.5f * i, 0.5f * i);
+        glUniform3f(UNIF_AMBIENT_YP, 0.8f * i, 0.8f * i, 1.0f * i);
+        glUniform3f(UNIF_AMBIENT_YN, 0.6f * i, 0.5f * i, 0.7f * i);
+        glUniform3f(UNIF_AMBIENT_XP, 0.8f * i, 0.7f * i, 0.9f * i);
+        glUniform3f(UNIF_AMBIENT_XN, 0.8f * i, 0.7f * i, 0.9f * i);
+        // Directional lighting:
+        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.0f, -1.0f);
+        glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 1.0f);
+        RunFullscreenPass(w, h, t, vxFrameNumber);
+
         // StartRenderPass("Dither Effect");
         // BindFramebuffer(FB_ONLY_COLOR_LDR);
         // SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FX_DITHER);
@@ -211,6 +237,7 @@ int main() {
         StartRenderPass("Final Pass");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);
+        SetCameraMatrices(&G_MainCamera);
         glDrawBuffer(GL_BACK);
         RunFullscreenPass(w, h, t, vxFrameNumber);
 
@@ -224,14 +251,15 @@ int main() {
         debugOverlayKeyState = glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT);
         if (showDebugOverlay) {
             static GUI_Statistics stats;
+            stats.frame = vxFrameNumber;
             stats.msFrame        = lastFrameFullTime        * 1000.0f;
             stats.msMainThread   = lastFrameMainTime        * 1000.0f;
             stats.msRenderThread = lastFrameRenderTime      * 1000.0f;
             stats.msSwapBuffers  = lastFrameSwapBuffersTime * 1000.0f;
             stats.msPollEvents   = lastFramePollEventsTime  * 1000.0f;
-            stats.drawcalls = 0;
-            stats.triangles = 0;
-            stats.vertices  = 0;
+            stats.drawcalls = pfFrameDrawCount;
+            stats.triangles = pfFrameTriCount;
+            stats.vertices  = pfFrameVertCount;
             GUI_DrawStatistics(&stats);
             GUI_DrawDebugOverlay(window);
         }

@@ -1,7 +1,7 @@
 #version 330 core
 in vec2 texcoord0;
 in vec2 texcoord1;
-in vec2 fragCoord;
+in vec3 normal;
 
 layout(location = 0) out vec4 outColorLDR;
 layout(location = 1) out vec4 outNormal;
@@ -16,8 +16,10 @@ uniform float uStippleSoftCutoff;
 uniform vec4 uDiffuse;
 uniform float uMetallic;
 uniform float uRoughness;
+uniform float uOcclusion;
 uniform sampler2D texDiffuse;
 uniform sampler2D texOccMetRgh;
+uniform sampler2D texOcclusion;
 uniform sampler2D texMetallic;
 uniform sampler2D texRoughness;
 
@@ -131,6 +133,7 @@ vec4 dither8x8(vec2 position, vec4 color) {
 
 void main() {
     vec4 diffuse = uDiffuse * texture(texDiffuse, texcoord0);
+
     if (uStipple != 0) {
         if (diffuse.a < uStippleHardCutoff) {
             discard;
@@ -152,9 +155,11 @@ void main() {
             // diffuse = vec4(treshold);
         }
     }
+    float occlusion = uOcclusion * texture(texOccMetRgh, texcoord0).r * texture(texOcclusion, texcoord0).r;
     float metallic  = uMetallic  * texture(texOccMetRgh, texcoord0).g * texture(texMetallic,  texcoord0).r;
     float roughness = uRoughness * texture(texOccMetRgh, texcoord0).b * texture(texRoughness, texcoord0).r;
 
     outColorLDR = diffuse;
-    outAux1 = vec4(0, metallic, roughness, 0);
+    outNormal = vec4(normal, 0);
+    outAux1 = vec4(occlusion, metallic, roughness, 0);
 }

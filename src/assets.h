@@ -4,6 +4,7 @@
     X(VSH_DEFAULT,          "shaders/default.vert") \
     X(VSH_FULLSCREEN_PASS,  "shaders/fullscreen.vert") \
     X(FSH_GBUF_MAIN,        "shaders/gbuf_main.frag") \
+    X(FSH_GBUF_LIGHTING,    "shaders/gbuf_lighting.frag") \
     X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
     X(FSH_FINAL,            "shaders/final.frag") \
 
@@ -35,16 +36,16 @@
 // NOTE: the UNIF_RT uniform variable names should match the render target names defined below
 
 #define XM_ASSETS_SHADER_UNIFORMS \
-    X(UNIF_RT_DEPTH,            "gDepth") \
-    X(UNIF_RT_COLOR_LDR,        "gColorLDR") \
-    X(UNIF_RT_COLOR_HDR,        "gColorHDR") \
-    X(UNIF_RT_NORMAL,           "gNormal") \
-    X(UNIF_RT_AUX_HDR11,        "gAuxHDR11") \
-    X(UNIF_RT_AUX_HDR16,        "gAuxHDR16") \
-    X(UNIF_RT_AUX1,             "gAux1") \
-    X(UNIF_RT_AUX2,             "gAux2") \
-    X(UNIF_RT_AUX_DEPTH,        "gAuxDepth") \
-    X(UNIF_RT_SHADOW_DEPTH,     "gShadow") \
+    X(UNIF_RT_DEPTH,        "gDepth") \
+    X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
+    X(UNIF_RT_COLOR_HDR,    "gColorHDR") \
+    X(UNIF_RT_NORMAL,       "gNormal") \
+    X(UNIF_RT_AUX_HDR11,    "gAuxHDR11") \
+    X(UNIF_RT_AUX_HDR16,    "gAuxHDR16") \
+    X(UNIF_RT_AUX1,         "gAux1") \
+    X(UNIF_RT_AUX2,         "gAux2") \
+    X(UNIF_RT_AUX_DEPTH,    "gAuxDepth") \
+    X(UNIF_RT_SHADOW_DEPTH, "gShadow") \
 \
     X(UNIF_IRESOLUTION,         "iResolution") \
     X(UNIF_ITIME,               "iTime") \
@@ -52,18 +53,33 @@
     X(UNIF_STIPPLE,             "uStipple") \
     X(UNIF_STIPPLE_HARD_CUTOFF, "uStippleHardCutoff") \
     X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
-    X(UNIF_MODEL_MATRIX,        "uModelMatrix") \
-    X(UNIF_VIEW_MATRIX,         "uViewMatrix") \
-    X(UNIF_PROJ_MATRIX,         "uProjMatrix") \
-    X(UNIF_CONST_DIFFUSE,       "uDiffuse") \
-    X(UNIF_CONST_METALLIC,      "uMetallic") \
-    X(UNIF_CONST_ROUGHNESS,     "uRoughness") \
-    X(UNIF_TEX_DIFFUSE,         "texDiffuse") \
-    X(UNIF_TEX_OCC_MET_RGH,     "texOccMetRgh") \
-    X(UNIF_TEX_OCCLUSION,       "texOcclusion") \
-    X(UNIF_TEX_METALLIC,        "texMetallic") \
-    X(UNIF_TEX_ROUGHNESS,       "texRoughness") \
-    X(UNIF_TEX_NORMAL,          "texNormal") \
+\
+    X(UNIF_AMBIENT_ZP, "uAmbientZP") \
+    X(UNIF_AMBIENT_ZN, "uAmbientZN") \
+    X(UNIF_AMBIENT_YP, "uAmbientYP") \
+    X(UNIF_AMBIENT_YN, "uAmbientYN") \
+    X(UNIF_AMBIENT_XP, "uAmbientXP") \
+    X(UNIF_AMBIENT_XN, "uAmbientXN") \
+\
+    X(UNIF_SUN_DIRECTION, "uSunDirection") \
+    X(UNIF_SUN_COLOR,     "uSunColor") \
+\
+    X(UNIF_MODEL_MATRIX,    "uModelMatrix") \
+    X(UNIF_VIEW_MATRIX,     "uViewMatrix") \
+    X(UNIF_PROJ_MATRIX,     "uProjMatrix") \
+    X(UNIF_INV_VIEW_MATRIX, "uInvViewMatrix") \
+    X(UNIF_INV_PROJ_MATRIX, "uInvProjMatrix") \
+\
+    X(UNIF_CONST_DIFFUSE,   "uDiffuse") \
+    X(UNIF_CONST_OCCLUSION, "uOcclusion") \
+    X(UNIF_CONST_METALLIC,  "uMetallic") \
+    X(UNIF_CONST_ROUGHNESS, "uRoughness") \
+    X(UNIF_TEX_DIFFUSE,     "texDiffuse") \
+    X(UNIF_TEX_OCC_MET_RGH, "texOccMetRgh") \
+    X(UNIF_TEX_OCCLUSION,   "texOcclusion") \
+    X(UNIF_TEX_METALLIC,    "texMetallic") \
+    X(UNIF_TEX_ROUGHNESS,   "texRoughness") \
+    X(UNIF_TEX_NORMAL,      "texNormal") \
 
 // Syntax for textures:
 // X(name, target (GL_TEXTURE_*), needs mipmaps, path)
@@ -93,9 +109,9 @@
 #define XM_ASSETS_MODELS_GLTF_IGNORED \
 
 #define XM_ASSETS_FONTS \
-    X(FONT_ROBOTO_MEDIUM_16, "fonts/Roboto-Medium.ttf", 16) \
-    X(FONT_ROBOTO_BOLD_16,   "fonts/Roboto-Black.ttf",  16) \
-    X(FONT_ROBOTO_MEDIUM_32, "fonts/Roboto-Medium.ttf", 32) \
+    X(FONT_DEFAULT,       "fonts/Roboto-Medium.ttf", 16) \
+    X(FONT_DEFAULT_BOLD,  "fonts/Roboto-Black.ttf",  16) \
+    X(FONT_DEFAULT_LARGE, "fonts/Roboto-Medium.ttf", 32) \
 
 // Syntax for render targets:
 // X(name, format)

@@ -53,6 +53,7 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
                 glm_ortho(zw/2.0f, zw/-2.0f, zh/-2.0f, zh/2.0f, n, f, camera->proj_matrix);
             } break;
         }
+        glm_mat4_inv(camera->proj_matrix, camera->inv_proj_matrix);
         camera->prev_aspect_hw = hw;
         camera->prev_fov  = camera->fov;
         camera->prev_near = camera->near;
@@ -63,6 +64,7 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         !glm_vec3_eqv(camera->target, camera->prev_target))
     {
         glm_lookat(camera->position, camera->target, (vec3){0.0f, 1.0f, 0.0f}, camera->view_matrix);
+        glm_mat4_inv(camera->view_matrix, camera->inv_view_matrix);
         glm_vec3_copy(camera->position, camera->prev_position);
         glm_vec3_copy(camera->target, camera->prev_target);
     }

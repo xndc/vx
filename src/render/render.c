@@ -1,4 +1,5 @@
 #include "render.h"
+#include "main.h"
 #include <glad/glad.h>
 #include <stb_sprintf.h>
 
@@ -30,6 +31,8 @@ typedef struct {
     GLuint program;
     mat4 mat_view;
     mat4 mat_proj;
+    mat4 inv_mat_view;
+    mat4 inv_mat_proj;
     mat4 mat_model;
     vec4 vec_model_rotation;
     vec3 vec_model_position;
@@ -258,8 +261,14 @@ void ResetShaderDefines() {
     stbds_arrfree(S_RenderState.defines);
 }
 
-void SetViewMatrix (mat4 vmat)  { glm_mat4_copy(vmat, S_RenderState.mat_view); }
-void SetProjMatrix (mat4 pmat)  { glm_mat4_copy(pmat, S_RenderState.mat_proj); }
+void SetViewMatrix (mat4 mat, mat4 inv) {
+    glm_mat4_copy(mat, S_RenderState.mat_view);
+    glm_mat4_copy(inv, S_RenderState.inv_mat_view);
+}
+void SetProjMatrix (mat4 mat, mat4 inv) {
+    glm_mat4_copy(mat, S_RenderState.mat_proj);
+    glm_mat4_copy(inv, S_RenderState.inv_mat_proj);
+}
 void SetModelMatrix (mat4 mmat) { glm_mat4_copy(mmat, S_RenderState.mat_model); }
 void GetModelMatrix (mat4 dest) { glm_mat4_copy(S_RenderState.mat_model, dest); }
 void AddModelMatrix (mat4 mmat) { glm_mat4_mul(S_RenderState.mat_model, mmat, S_RenderState.mat_model); }
@@ -275,8 +284,8 @@ void ResetMatrices() {
 }
 
 void SetCameraMatrices (Camera* cam) {
-    SetViewMatrix(cam->view_matrix);
-    SetProjMatrix(cam->proj_matrix);
+    SetViewMatrix(cam->view_matrix, cam->inv_view_matrix);
+    SetProjMatrix(cam->proj_matrix, cam->inv_proj_matrix);
 }
 
 GLuint BindTextureUnit (GLuint texture, GLuint sampler) {
@@ -362,8 +371,9 @@ void SetMaterial (Material* mat) {
     }
 
     glUniform4fv(UNIF_CONST_DIFFUSE, 1, (float*) mat->const_diffuse);
-    glUniform1f(UNIF_CONST_METALLIC,  mat->const_metallic);
-    glUniform1f(UNIF_CONST_ROUGHNESS, mat->const_roughness);
+    glUniform1f(UNIF_CONST_OCCLUSION,  mat->const_occlusion);
+    glUniform1f(UNIF_CONST_METALLIC,   mat->const_metallic);
+    glUniform1f(UNIF_CONST_ROUGHNESS,  mat->const_roughness);
     SetUniformTexSampler(UNIF_TEX_DIFFUSE,      mat->tex_diffuse,       mat->smp_diffuse);
     SetUniformTexSampler(UNIF_TEX_OCC_MET_RGH,  mat->tex_occ_met_rgh,   mat->smp_occ_met_rgh);
     SetUniformTexSampler(UNIF_TEX_OCCLUSION,    mat->tex_occlusion,     mat->smp_occlusion);
@@ -378,8 +388,10 @@ void RenderMesh (Mesh* mesh, int w, int h, float t, uint32_t frame) {
         mat4 model;
         GetModelMatrix(model);
         glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, (float*) model);
-        glUniformMatrix4fv(UNIF_PROJ_MATRIX,  1, false, (float*) S_RenderState.mat_proj);
-        glUniformMatrix4fv(UNIF_VIEW_MATRIX,  1, false, (float*) S_RenderState.mat_view);
+        glUniformMatrix4fv(UNIF_PROJ_MATRIX, 1, false, (float*) S_RenderState.mat_proj);
+        glUniformMatrix4fv(UNIF_VIEW_MATRIX, 1, false, (float*) S_RenderState.mat_view);
+        glUniformMatrix4fv(UNIF_INV_PROJ_MATRIX, 1, false, (float*) S_RenderState.inv_mat_proj);
+        glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX, 1, false, (float*) S_RenderState.inv_mat_view);
         glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
         glUniform1f(UNIF_ITIME, t);
         glUniform1ui(UNIF_IFRAME, frame);
@@ -411,6 +423,9 @@ void RenderMesh (Mesh* mesh, int w, int h, float t, uint32_t frame) {
                     mesh, mesh->gl_element_type);
             }
         }
+        pfFrameDrawCount += 1;
+        pfFrameTriCount  += mesh->gl_element_count;
+        pfFrameVertCount += mesh->gl_vertex_count;
     }
 }
 
@@ -463,6 +478,10 @@ void RunFullscreenPass (int w, int h, float t, uint32_t frame) {
         vxLog("Warning: RunFullscreenPass requires the VSH_FULLSCREEN_PASS vertex shader to be used");
     }
     SetMaterial(&mat);
+    glUniformMatrix4fv(UNIF_PROJ_MATRIX, 1, false, (float*) S_RenderState.mat_proj);
+    glUniformMatrix4fv(UNIF_VIEW_MATRIX, 1, false, (float*) S_RenderState.mat_view);
+    glUniformMatrix4fv(UNIF_INV_PROJ_MATRIX, 1, false, (float*) S_RenderState.inv_mat_proj);
+    glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX, 1, false, (float*) S_RenderState.inv_mat_view);
     glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
     glUniform1f(UNIF_ITIME, t);
     glUniform1ui(UNIF_IFRAME, frame);
@@ -470,4 +489,7 @@ void RunFullscreenPass (int w, int h, float t, uint32_t frame) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     vxglTextureBarrier(); // lets the shader both read & write to the same texture
     glDrawElements(GL_TRIANGLES, vxSize(triangles), GL_UNSIGNED_SHORT, NULL);
+    pfFrameDrawCount++;
+    pfFrameTriCount  += vxSize(triangles) / 3;
+    pfFrameVertCount += vxSize(points) / 2;
 }

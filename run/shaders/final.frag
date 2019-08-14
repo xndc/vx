@@ -17,5 +17,15 @@ uniform sampler2D gAuxDepth;
 uniform sampler2D gShadow;
 
 void main() {
-    outColor = texture(gAux1, fragCoord01);
+    #if 1
+    // Simple Reinhard tonemapping:
+    // https://learnopengl.com/Advanced-Lighting/HDR
+    const float gamma = 2.2;
+    vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb;
+    vec3 mapped = hdr / (hdr + vec3(1.0));
+    mapped = pow(mapped, vec3(1.0 / gamma));
+    outColor = vec4(mapped, 1.0);
+    #else
+    outColor = vec4(texelFetch(gNormal, ivec2(gl_FragCoord.xy), 0).rgb, 1.0);
+    #endif
 }

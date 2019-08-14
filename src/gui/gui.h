@@ -19,6 +19,7 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
 VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window);
 
 typedef struct GUI_Statistics {
+    size_t frame;
     double msFrame;
     double msMainThread;
     double msRenderThread;
