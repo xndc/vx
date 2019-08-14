@@ -217,7 +217,7 @@ int main() {
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
         SetCameraMatrices(&G_MainCamera);
         // Ambient lighting:
-        float i = 0.5f;
+        float i = 0.2f;
         glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
             0.8f * i, 0.8f * i, 0.8f * i,  // Y+ (sky)
             0.3f * i, 0.3f * i, 0.3f * i,  // Y- (ground)
@@ -226,15 +226,23 @@ int main() {
             0.6f * i, 0.6f * i, 0.6f * i,  // X+ (east)
             0.4f * i, 0.4f * i, 0.4f * i,  // X- (west)
         });
-        // glUniform3f(UNIF_AMBIENT_YP, 0.8f * i, 0.8f * i, 0.8f * i);
-        // glUniform3f(UNIF_AMBIENT_YN, 0.3f * i, 0.3f * i, 0.3f * i);
-        // glUniform3f(UNIF_AMBIENT_ZP, 0.6f * i, 0.6f * i, 0.6f * i);
-        // glUniform3f(UNIF_AMBIENT_ZN, 0.4f * i, 0.4f * i, 0.4f * i);
-        // glUniform3f(UNIF_AMBIENT_XP, 0.6f * i, 0.6f * i, 0.6f * i);
-        // glUniform3f(UNIF_AMBIENT_XN, 0.4f * i, 0.4f * i, 0.4f * i);
         // Directional lighting:
         glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.0f, -1.0f);
         glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 1.0f);
+        // Point lighting:
+        glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
+             2.9f,  2.0f,  2.2f,
+            -2.8f,  2.5f,  2.4f,
+            -2.2f,  2.3f, -2.6f,
+             2.1f,  2.9f, -2.5f,
+        });
+        glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
+            40.0f, 40.0f, 40.0f,
+            40.0f, 40.0f, 40.0f,
+            40.0f, 40.0f, 40.0f,
+            40.0f, 40.0f, 40.0f,
+        });
+        // Run pass:
         RunFullscreenPass(w, h, t, vxFrameNumber);
 
         // StartRenderPass("Dither Effect");

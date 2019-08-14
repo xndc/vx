@@ -64,6 +64,8 @@
 \
     X(UNIF_SUN_DIRECTION, "uSunDirection") \
     X(UNIF_SUN_COLOR,     "uSunColor") \
+    X(UNIF_POINTLIGHT_POSITIONS, "uPointLightPositions") \
+    X(UNIF_POINTLIGHT_COLORS,    "uPointLightColors") \
 \
     X(UNIF_MODEL_MATRIX,    "uModelMatrix") \
     X(UNIF_VIEW_MATRIX,     "uViewMatrix") \

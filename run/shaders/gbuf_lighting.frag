@@ -22,6 +22,8 @@ uniform vec3 uAmbientCube[6];
 // uniform vec3 uAmbientXN;
 uniform vec3 uSunDirection;
 uniform vec3 uSunColor;
+uniform vec3 uPointLightPositions[4];
+uniform vec3 uPointLightColors[4];
 
 uniform sampler2D gDepth;
 uniform sampler2D gColorLDR;
@@ -34,6 +36,104 @@ uniform sampler2D gAux2;
 uniform sampler2D gAuxDepth;
 uniform sampler2D gShadow;
 
+#define PI 3.14159265358979323846
+
+vec3 SurfaceF0 (vec3 diffuse, float metallic) {
+    return mix(vec3(0.04), diffuse, metallic);
+}
+
+vec3 FresnelSchlick (float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float DistributionGGX (vec3 N, vec3 H, float roughness) {
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+
+    float num   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return num / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float num   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return num / denom;
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+void main() {
+    ivec2 fc = ivec2(gl_FragCoord.xy);
+    vec3 diffuse = texelFetch(gColorLDR, fc, 0).rgb;
+    vec3 normal  = texelFetch(gNormal,   fc, 0).rgb;
+    vec3 aux1    = texelFetch(gAux1,     fc, 0).rgb;
+    float metal = aux1.g;
+    float rough = aux1.b;
+
+    float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
+    vec4 clipPos = vec4(fragCoordClip, z, 1.0);
+    vec4 viewPos = uInvProjMatrix * clipPos;
+    viewPos /= viewPos.w;
+    vec3 worldPos = (uInvViewMatrix * viewPos).xyz;
+
+    vec3 N = normalize(normal);
+    vec3 V = normalize(viewPos.xyz - worldPos);
+
+    vec3 Lo = vec3(0.0);
+    for (int i = 0; i < 4; i++) {
+        vec3 L = normalize(uPointLightPositions[i] - worldPos);
+        vec3 H = normalize(V + L);
+        float distance = length(uPointLightPositions[i] - worldPos);
+        float attenuation = 1.0 / (distance * distance);
+        vec3 radiance = uPointLightColors[i] * attenuation;
+        vec3 F = FresnelSchlick(max(dot(H, V), 0.0), SurfaceF0(diffuse, metal));
+        float NDF = DistributionGGX(N, H, rough);
+        float G = GeometrySmith(N, V, L, rough);
+        vec3 num = NDF * G * F;
+        float denom = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+        vec3 specular = num / max(denom, 0.001);
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - metal;
+        float NdotL = max(dot(N, L), 0.0);
+        Lo += (kD * diffuse / PI + specular) * radiance * NdotL;
+    }
+
+    // Ambient lighting using HL2-style ambient cube:
+    // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
+    vec3 Nsq = N * N;
+    ivec3 isNegative = ivec3(N.x < 0.0, N.y < 0.0, N.z < 0.0);
+    Lo += diffuse * Nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
+        + diffuse * Nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
+        + diffuse * Nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
+
+    // There are certainly better ways to do this.
+    if (texelFetch(gDepth, fc, 0).r == 0.0) {
+        outColorHDR = vec4(0.8f, 1.1f, 1.8f, 1.0f);
+    } else {
+        outColorHDR = vec4(Lo, 1.0);
+    }
+}
+
+/*
 void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
     vec3 color  = texelFetch(gColorLDR, fc, 0).rgb;
@@ -73,3 +173,4 @@ void main() {
         outColorHDR = vec4(lightf * color, 1.0);
     }
 }
+*/
