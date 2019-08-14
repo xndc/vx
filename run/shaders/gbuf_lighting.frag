@@ -51,11 +51,11 @@ void main() {
     vec3 viewDir = normalize(view.xyz - world);
 
     // Ambient lighting:
-    vec3 lightf = vec3(0.1);
+    vec3 lightf = vec3(0.3);
 
     // Directional lighting:
     vec3 lightDir = normalize(vec3(100, 100, 100) - world);
-    vec3 diffuse = max(dot(norm, lightDir), 0.0) * color * vec3(2.0, 2.0, 2.0);
+    vec3 diffuse = max(dot(norm, lightDir), 0.0) * color * vec3(3.0, 3.0, 3.0);
     lightf += diffuse;
 
     #if 0

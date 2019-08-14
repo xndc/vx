@@ -52,8 +52,8 @@ void SetRenderProgram (Shader* vsh, Shader* fsh);
 void AddShaderDefine (const char* name, const char* text);
 void ResetShaderDefines();
 
-void SetViewMatrix (mat4 vmat);
-void SetProjMatrix (mat4 pmat);
+void SetViewMatrix (mat4 mat, mat4 inv);
+void SetProjMatrix (mat4 mat, mat4 inv);
 void SetModelMatrix (mat4 mmat);
 void GetModelMatrix (mat4 dest);
 void AddModelMatrix (mat4 mmat);
