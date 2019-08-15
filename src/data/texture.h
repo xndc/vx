@@ -30,12 +30,9 @@ XM_ASSETS_FRAMEBUFFERS
 #define VXGL_SAMPLER_COUNT 32
 extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
-// Loads a texture from disk, returning an OpenGL handle to it.
-GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips);
-
 // Resizes all render targets and framebuffers.
 void UpdateFramebuffers (int width, int height, int shadowsize);
 
 // Loads a texture from disk and uploads it to the GPU. Returns its OpenGL ID.
 // The name doesn't matter, it's only displayed in this function's debug output.
-GLuint LoadTextureFromDisk (const char* name, const char* path);
+GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips);

@@ -214,7 +214,7 @@ void vxCreateDirectory (const char* path) {
     #ifdef _WIN32
         CreateDirectoryA(path, NULL);
     #else
-        #error vxMakeDir not implemented
+        mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     #endif
 }
 
