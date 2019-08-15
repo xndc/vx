@@ -8,7 +8,9 @@ layout (location = 5) in vec3 aColor;
 layout (location = 6) in vec3 aJoints;
 layout (location = 7) in vec3 aWeights;
 
-out vec3 FragPosClip;
+uniform vec4 uDiffuse;
+
+out vec4 VertexColor;
 out vec2 TexCoord0;
 out vec2 TexCoord1;
 out mat3 TBN;
@@ -21,9 +23,14 @@ uniform mat4 uProjMatrix;
 void main() {
     vec4 Clip = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
     gl_Position = Clip;
-    FragPosClip = Clip.xyz;
     TexCoord0 = aTexcoord0;
     TexCoord1 = aTexcoord1;
+    // TODO: set aColor to (1,1,1) by default, apparently OpenGL has this function
+    if (aColor != vec3(0)) {
+        VertexColor = uDiffuse * vec4(aColor, 1.0);
+    } else {
+        VertexColor = uDiffuse;
+    }
     #if 0
     mat4 worldToObject = inverse(uModelMatrix);
     mat4 objectToWorld = uModelMatrix;

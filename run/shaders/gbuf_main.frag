@@ -1,5 +1,5 @@
 #version 330 core
-in vec3 FragPosClip;
+in vec4 VertexColor;
 in vec2 TexCoord0;
 in vec2 TexCoord1;
 in mat3 TBN;
@@ -15,7 +15,6 @@ uniform int uStipple;
 uniform float uStippleHardCutoff;
 uniform float uStippleSoftCutoff;
 
-uniform vec4 uDiffuse;
 uniform float uMetallic;
 uniform float uRoughness;
 uniform float uOcclusion;
@@ -135,7 +134,7 @@ vec4 dither8x8(vec2 position, vec4 color) {
 // Main shader:
 
 void main() {
-    vec4 diffuse = uDiffuse * texture(texDiffuse, TexCoord0);
+    vec4 diffuse = VertexColor * texture(texDiffuse, TexCoord0);
 
     if (uStipple != 0) {
         if (diffuse.a < uStippleHardCutoff) {

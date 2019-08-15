@@ -88,7 +88,6 @@ vec3 DirectionalLight (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float 
     vec3 Specular = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.001);
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - Met);
-    // return vec3(F);
     return (kD * Diffuse / PI + Specular) * Lcolor * NdotL;
 }
 
@@ -111,6 +110,7 @@ void main() {
     vec3 V = normalize(CameraPosition - FragPosWorld);
 
     vec3 Lo = vec3(0.0);
+    #if 1
     // Ambient lighting using HL2-style ambient cube:
     // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
     vec3 Nsq = N * N;
@@ -118,6 +118,7 @@ void main() {
     Lo += diffuse * Nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
         + diffuse * Nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
         + diffuse * Nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
+    #endif
 
     // Directional lighting:
     // NOTE: uSunDirection is supposed to be the vector coming FROM the light, but for some reason
@@ -165,6 +166,7 @@ void main() {
 
     // outColorHDR = texelFetch(gAux2, fc, 0);
     // outColorHDR = vec4(N, 1);
+    // outColorHDR = vec4(CameraPosition, 1);
 }
 
 /*

@@ -138,9 +138,9 @@ int main() {
     #endif
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
-    // MDL_DUCK.materials[0].stipple = true;
-    // MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
-    // MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
+    MDL_DUCK.materials[0].stipple = true;
+    MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
+    MDL_DUCK.materials[0].stipple_soft_cutoff = 0.9f;
 
     while (!glfwWindowShouldClose(window)) {
         static double lastFrameFullTime;
@@ -183,7 +183,7 @@ int main() {
         glm_vec3_add(G_MainCamera.position, G_MainCamera.target, G_MainCamera.position);
         UpdateCameraMatrices(&G_MainCamera, w, h);
 
-        MDL_DUCK.materials[0].const_diffuse[3] = (sin(3.0 * t) + 1.0) * 0.51;
+        // MDL_DUCK.materials[0].const_diffuse[3] = (sin(3.0 * t) + 1.0) * 0.51;
 
         tFrameRenderStart = glfwGetTime();
 
@@ -217,18 +217,18 @@ int main() {
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
         SetCameraMatrices(&G_MainCamera);
         // Ambient lighting:
-        float i = 0.15f;
+        float i = 0.4f;
         glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
-            0.8f * i, 0.8f * i, 0.8f * i,  // Y+ (sky)
-            0.3f * i, 0.3f * i, 0.3f * i,  // Y- (ground)
-            0.6f * i, 0.6f * i, 0.6f * i,  // Z+ (north)
-            0.4f * i, 0.4f * i, 0.4f * i,  // Z- (south)
-            0.6f * i, 0.6f * i, 0.6f * i,  // X+ (east)
-            0.4f * i, 0.4f * i, 0.4f * i,  // X- (west)
+            3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
+            0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
+            1.05f * i, 1.1f * i, 1.0f * i,  // Z+ (north)
+            1.05f * i, 1.1f * i, 1.0f * i,  // Z- (south)
+            1.05f * i, 1.1f * i, 1.0f * i,  // X+ (east)
+            1.05f * i, 1.1f * i, 1.0f * i,  // X- (west)
         });
         // Directional lighting:
-        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -0.5f, -1.0f);
-        glUniform3f(UNIF_SUN_COLOR, 40.0f, 40.0f, 40.0f);
+        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
+        glUniform3f(UNIF_SUN_COLOR, 4.0f, 4.0f, 3.9f);
         // Point lighting:
         glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
              2.9f,  2.0f,  2.2f,
