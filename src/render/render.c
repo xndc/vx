@@ -267,7 +267,7 @@ void ResetShaderDefines() {
 void SetViewMatrix (mat4 mat, mat4 inv, mat4 last) {
     glm_mat4_copy(mat, S_RenderState.mat_view);
     glm_mat4_copy(inv, S_RenderState.inv_mat_view);
-    glm_mat4_copy(mat, S_RenderState.last_mat_view);
+    glm_mat4_copy(last, S_RenderState.last_mat_view);
 }
 void SetProjMatrix (mat4 mat, mat4 inv, mat4 last) {
     glm_mat4_copy(mat, S_RenderState.mat_proj);
@@ -296,6 +296,7 @@ void AddModelScale (vec3 scale, vec3 last) {
 }
 void ResetModelMatrix() {
     glm_mat4_identity(S_RenderState.mat_model);
+    glm_mat4_identity(S_RenderState.last_mat_model);
 }
 
 void ResetMatrices() {
@@ -308,7 +309,7 @@ void ResetMatrices() {
 
 void SetCameraMatrices (Camera* cam) {
     SetViewMatrix(cam->view_matrix, cam->inv_view_matrix, cam->last_view_matrix);
-    SetProjMatrix(cam->proj_matrix, cam->inv_proj_matrix, cam->last_view_matrix);
+    SetProjMatrix(cam->proj_matrix, cam->inv_proj_matrix, cam->last_proj_matrix);
 }
 
 GLuint BindTextureUnit (GLuint texture, GLuint sampler) {

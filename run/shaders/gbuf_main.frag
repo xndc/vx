@@ -1,6 +1,6 @@
 #version 330 core
-out vec3 FragPos;
-out vec3 LastFragPos;
+in vec4 FragPos;
+in vec4 LastFragPos;
 in vec4 VertexColor;
 in vec2 TexCoord0;
 in vec2 TexCoord1;
@@ -181,7 +181,10 @@ void main() {
         outNormal = normalize(TBN * normalize(Ntexture * 2.0 - 1.0));
     }
 
-    vec2 Velocity = (FragPos - LastFragPos).xy * 0.5 + 0.5;
+    // https://john-chapman-graphics.blogspot.com/2013/01/per-object-motion-blur.html
+    vec2 PclipThis = (FragPos.xy / FragPos.w) * 0.5 + 0.5;
+    vec2 PclipLast = (LastFragPos.xy / LastFragPos.w) * 0.5 + 0.5;
+    vec2 Velocity = PclipThis - PclipLast;
 
     outColorLDR = diffuse;
     outAux1 = vec4(occlusion, metallic, roughness, 0);

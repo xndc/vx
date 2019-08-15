@@ -10,8 +10,8 @@ layout (location = 7) in vec3 aWeights;
 
 uniform vec4 uDiffuse;
 
-out vec3 FragPos;
-out vec3 LastFragPos;
+out vec4 FragPos;
+out vec4 LastFragPos;
 out vec4 VertexColor;
 out vec2 TexCoord0;
 out vec2 TexCoord1;
@@ -28,8 +28,8 @@ void main() {
     vec4 PclipThis = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
     vec4 PclipLast = uLastProjMatrix * uLastViewMatrix * uLastModelMatrix * vec4(aPosition, 1.0);
     gl_Position = PclipThis;
-    FragPos     = PclipThis.xyz / PclipThis.w;
-    LastFragPos = PclipLast.xyz / PclipLast.w;
+    FragPos     = PclipThis;
+    LastFragPos = PclipLast;
     TexCoord0 = aTexcoord0;
     TexCoord1 = aTexcoord1;
     // TODO: set aColor to (1,1,1) by default, apparently OpenGL has this function

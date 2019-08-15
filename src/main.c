@@ -173,8 +173,9 @@ int main() {
         glViewport(0, 0, w, h);
 
         const float dist = 3.0f;
-        float angle_h = t * 0.5f;
-        float angle_v = (M_PI * 0.5f) + cosf(t * 0.5f) * 0.35f;
+        double rt = glfwGetTime() * 1.0f;
+        float angle_h = rt * 0.5f;
+        float angle_v = (M_PI * 0.5f) + cosf(rt * 0.5f) * 0.35f;
         // NOTE: this is a standard spherical-to-cartesian coordinate mapping with
         //   radius/rho = dist, theta = angle_v, phi = angle_h, and the Y/Z axes swapped
         G_MainCamera.position[0] = dist * sinf(angle_v) * cosf(angle_h);
