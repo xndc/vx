@@ -217,7 +217,7 @@ int main() {
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
         SetCameraMatrices(&G_MainCamera);
         // Ambient lighting:
-        float i = 0.2f;
+        float i = 0.15f;
         glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
             0.8f * i, 0.8f * i, 0.8f * i,  // Y+ (sky)
             0.3f * i, 0.3f * i, 0.3f * i,  // Y- (ground)
@@ -227,8 +227,8 @@ int main() {
             0.4f * i, 0.4f * i, 0.4f * i,  // X- (west)
         });
         // Directional lighting:
-        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.0f, -1.0f);
-        glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 1.0f);
+        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -0.5f, -1.0f);
+        glUniform3f(UNIF_SUN_COLOR, 40.0f, 40.0f, 40.0f);
         // Point lighting:
         glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
              2.9f,  2.0f,  2.2f,

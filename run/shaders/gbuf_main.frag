@@ -1,7 +1,9 @@
 #version 330 core
-in vec2 texcoord0;
-in vec2 texcoord1;
-in vec3 normal;
+in vec3 FragPosClip;
+in vec2 TexCoord0;
+in vec2 TexCoord1;
+in mat3 TBN;
+in float TangentW;
 
 layout(location = 0) out vec4 outColorLDR;
 layout(location = 1) out vec3 outNormal;
@@ -133,7 +135,7 @@ vec4 dither8x8(vec2 position, vec4 color) {
 // Main shader:
 
 void main() {
-    vec4 diffuse = uDiffuse * texture(texDiffuse, texcoord0);
+    vec4 diffuse = uDiffuse * texture(texDiffuse, TexCoord0);
 
     if (uStipple != 0) {
         if (diffuse.a < uStippleHardCutoff) {
@@ -156,12 +158,23 @@ void main() {
             // diffuse = vec4(treshold);
         }
     }
-    float occlusion = uOcclusion * texture(texOccMetRgh, texcoord0).r * texture(texOcclusion, texcoord0).r;
-    float metallic  = uMetallic  * texture(texOccMetRgh, texcoord0).g * texture(texMetallic,  texcoord0).r;
-    float roughness = uRoughness * texture(texOccMetRgh, texcoord0).b * texture(texRoughness, texcoord0).r;
-    vec3 normal = normal * texture(texNormal, texcoord0).rgb;
+    float occlusion = uOcclusion * texture(texOccMetRgh, TexCoord0).r * texture(texOcclusion, TexCoord0).r;
+    float metallic  = uMetallic  * texture(texOccMetRgh, TexCoord0).g * texture(texMetallic,  TexCoord0).r;
+    float roughness = uRoughness * texture(texOccMetRgh, TexCoord0).b * texture(texRoughness, TexCoord0).r;
+
+    vec3 Nvertex = TBN[2];
+    vec3 Ntexture = texture(texNormal, TexCoord0).rgb;
+    // NOTE: For models with no normal texture, we end up reading from a 1x1 white texture. If this
+    //   is the case here, just use the vertex normal we generate in default.vert -- which is a
+    //   world-space normal and not a tangent-space one -- instead of going through the whole
+    //   tangent-space-normal to world-space-normal translation process.
+    if (Ntexture == vec3(1)) {
+        outNormal = Nvertex;
+    } else {
+        outNormal = normalize(TBN * normalize(Ntexture * 2.0 - 1.0));
+    }
 
     outColorLDR = diffuse;
-    outNormal = normal;
     outAux1 = vec4(occlusion, metallic, roughness, 0);
+    // outAux2 = vec4(TangentW);
 }

@@ -3,6 +3,7 @@ in vec2 fragCoordClip;
 in vec2 fragCoord01;
 
 layout(location = 0) out vec4 outColorHDR;
+layout(location = 1) out vec4 outAux2;
 
 uniform vec2 iResolution;
 uniform float iTime;
@@ -70,14 +71,25 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     return num / denom;
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
-{
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-
+float GeometrySmith(float NdotV, float NdotL, float Rgh) {
+    float ggx1 = GeometrySchlickGGX(NdotL, Rgh);
+    float ggx2 = GeometrySchlickGGX(NdotV, Rgh);
     return ggx1 * ggx2;
+}
+
+vec3 DirectionalLight (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
+    vec3 H = normalize(V + L);
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotV = max(dot(N, V), 0.0);
+    float HdotV = max(dot(H, V), 0.0);
+    vec3 F = FresnelSchlick(HdotV, SurfaceF0(Diffuse, Met));
+    float NDF = DistributionGGX(N, H, Rgh);
+    float G = GeometrySmith(NdotV, NdotL, Rgh);
+    vec3 Specular = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.001);
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - Met);
+    // return vec3(F);
+    return (kD * Diffuse / PI + Specular) * Lcolor * NdotL;
 }
 
 void main() {
@@ -88,16 +100,42 @@ void main() {
     float metal = aux1.g;
     float rough = aux1.b;
 
+    // NOTE: I have no idea why we need to do this. I guess OpenGL screws our Z up somehow?
     float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
-    vec4 clipPos = vec4(fragCoordClip, z, 1.0);
-    vec4 viewPos = uInvProjMatrix * clipPos;
-    viewPos /= viewPos.w;
-    vec3 worldPos = (uInvViewMatrix * viewPos).xyz;
-
-    vec3 N = normalize(normal);
-    vec3 V = normalize(viewPos.xyz - worldPos);
+    vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
+    vec4 FragPosClip = vec4(fragCoordClip, z, 1.0);
+    vec4 FragPosView = uInvProjMatrix * FragPosClip;
+    FragPosView /= FragPosView.w;
+    vec3 FragPosWorld = (uInvViewMatrix * FragPosView).xyz;
+    vec3 N = normal; // normals output by the gbuf_main pass should already be normalized
+    vec3 V = normalize(CameraPosition - FragPosWorld);
 
     vec3 Lo = vec3(0.0);
+    // Ambient lighting using HL2-style ambient cube:
+    // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
+    vec3 Nsq = N * N;
+    ivec3 isNegative = ivec3(N.x < 0.0, N.y < 0.0, N.z < 0.0);
+    Lo += diffuse * Nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
+        + diffuse * Nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
+        + diffuse * Nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
+
+    // Directional lighting:
+    // NOTE: uSunDirection is supposed to be the vector coming FROM the light, but for some reason
+    //   our DirectionalLight function is treating it as the sun's POSITION vector. I have no clue
+    //   what we're doing wrong.
+    // NOTE: Also, every vector we pass here needs to be normalized. The Fresnel term gets blown
+    //   up when you look at the sun otherwise.
+    #if 1
+    Lo += DirectionalLight(N, V, normalize(-uSunDirection), uSunColor, diffuse, metal, rough);
+    #else
+    // Treat the point lights we're passing as directional ones, for testing.
+    for (int i = 0; i < 4; i++) {
+        Lo += DirectionalLight(N, V, normalize(uPointLightPositions[i]), 0.08 * uPointLightColors[i],
+            diffuse, metal, rough);
+    }
+    #endif
+
+    #if 0
     for (int i = 0; i < 4; i++) {
         vec3 L = normalize(uPointLightPositions[i] - worldPos);
         vec3 H = normalize(V + L);
@@ -116,14 +154,7 @@ void main() {
         float NdotL = max(dot(N, L), 0.0);
         Lo += (kD * diffuse / PI + specular) * radiance * NdotL;
     }
-
-    // Ambient lighting using HL2-style ambient cube:
-    // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
-    vec3 Nsq = N * N;
-    ivec3 isNegative = ivec3(N.x < 0.0, N.y < 0.0, N.z < 0.0);
-    Lo += diffuse * Nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
-        + diffuse * Nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
-        + diffuse * Nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
+    #endif
 
     // There are certainly better ways to do this.
     if (texelFetch(gDepth, fc, 0).r == 0.0) {
@@ -131,6 +162,9 @@ void main() {
     } else {
         outColorHDR = vec4(Lo, 1.0);
     }
+
+    // outColorHDR = texelFetch(gAux2, fc, 0);
+    // outColorHDR = vec4(N, 1);
 }
 
 /*

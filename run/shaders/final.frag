@@ -26,6 +26,6 @@ void main() {
     mapped = pow(mapped, vec3(1.0 / gamma));
     outColor = vec4(mapped, 1.0);
     #else
-    outColor = vec4(texelFetch(gNormal, ivec2(gl_FragCoord.xy), 0).rgb, 1.0);
+    outColor = vec4(texelFetch(gAux2, ivec2(gl_FragCoord.xy), 0).rgb, 1.0);
     #endif
 }
