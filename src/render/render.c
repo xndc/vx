@@ -33,7 +33,10 @@ typedef struct {
     mat4 mat_proj;
     mat4 inv_mat_view;
     mat4 inv_mat_proj;
+    mat4 last_mat_view;
+    mat4 last_mat_proj;
     mat4 mat_model;
+    mat4 last_mat_model;
     vec4 vec_model_rotation;
     vec3 vec_model_position;
     vec3 vec_model_scale;
@@ -261,31 +264,51 @@ void ResetShaderDefines() {
     stbds_arrfree(S_RenderState.defines);
 }
 
-void SetViewMatrix (mat4 mat, mat4 inv) {
+void SetViewMatrix (mat4 mat, mat4 inv, mat4 last) {
     glm_mat4_copy(mat, S_RenderState.mat_view);
     glm_mat4_copy(inv, S_RenderState.inv_mat_view);
+    glm_mat4_copy(mat, S_RenderState.last_mat_view);
 }
-void SetProjMatrix (mat4 mat, mat4 inv) {
+void SetProjMatrix (mat4 mat, mat4 inv, mat4 last) {
     glm_mat4_copy(mat, S_RenderState.mat_proj);
     glm_mat4_copy(inv, S_RenderState.inv_mat_proj);
+    glm_mat4_copy(last, S_RenderState.last_mat_proj);
 }
-void SetModelMatrix (mat4 mmat) { glm_mat4_copy(mmat, S_RenderState.mat_model); }
-void GetModelMatrix (mat4 dest) { glm_mat4_copy(S_RenderState.mat_model, dest); }
-void AddModelMatrix (mat4 mmat) { glm_mat4_mul(S_RenderState.mat_model, mmat, S_RenderState.mat_model); }
-void AddModelPosition (vec3 position) { glm_translate(S_RenderState.mat_model, position); }
-void AddModelRotation (vec4 rotation) { glm_quat_rotate(S_RenderState.mat_model, rotation, S_RenderState.mat_model); }
-void AddModelScale (vec3 scale) { glm_scale(S_RenderState.mat_model, scale); }
-void ResetModelMatrix() { glm_mat4_identity(S_RenderState.mat_model); }
+void SetModelMatrix (mat4 mmat, mat4 last) {
+    glm_mat4_copy(mmat, S_RenderState.mat_model);
+    glm_mat4_copy(last, S_RenderState.last_mat_model);
+}
+void AddModelMatrix (mat4 mmat, mat4 last) {
+    glm_mat4_mul(S_RenderState.mat_model, mmat, S_RenderState.mat_model);
+    glm_mat4_mul(S_RenderState.last_mat_model, last, S_RenderState.last_mat_model);
+}
+void AddModelPosition (vec3 position, vec3 last) {
+    glm_translate(S_RenderState.mat_model, position);
+    glm_translate(S_RenderState.last_mat_model, last);
+}
+void AddModelRotation (vec4 rotation, vec4 last) {
+    glm_quat_rotate(S_RenderState.mat_model, rotation, S_RenderState.mat_model);
+    glm_quat_rotate(S_RenderState.last_mat_model, last, S_RenderState.last_mat_model);
+}
+void AddModelScale (vec3 scale, vec3 last) {
+    glm_scale(S_RenderState.mat_model, scale);
+    glm_scale(S_RenderState.last_mat_model, last);
+}
+void ResetModelMatrix() {
+    glm_mat4_identity(S_RenderState.mat_model);
+}
 
 void ResetMatrices() {
     glm_mat4_identity(S_RenderState.mat_view);
     glm_mat4_identity(S_RenderState.mat_proj);
+    glm_mat4_identity(S_RenderState.last_mat_view);
+    glm_mat4_identity(S_RenderState.last_mat_proj);
     ResetModelMatrix();
 }
 
 void SetCameraMatrices (Camera* cam) {
-    SetViewMatrix(cam->view_matrix, cam->inv_view_matrix);
-    SetProjMatrix(cam->proj_matrix, cam->inv_proj_matrix);
+    SetViewMatrix(cam->view_matrix, cam->inv_view_matrix, cam->last_view_matrix);
+    SetProjMatrix(cam->proj_matrix, cam->inv_proj_matrix, cam->last_view_matrix);
 }
 
 GLuint BindTextureUnit (GLuint texture, GLuint sampler) {
@@ -385,13 +408,14 @@ void SetMaterial (Material* mat) {
 void RenderMesh (Mesh* mesh, int w, int h, float t, uint32_t frame) {
     if (mesh->gl_vertex_array && mesh->material) {
         S_RenderState.next_texture_unit = 1;
-        mat4 model;
-        GetModelMatrix(model);
-        glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, (float*) model);
+        glUniformMatrix4fv(UNIF_MODEL_MATRIX, 1, false, (float*) S_RenderState.mat_model);
         glUniformMatrix4fv(UNIF_PROJ_MATRIX, 1, false, (float*) S_RenderState.mat_proj);
         glUniformMatrix4fv(UNIF_VIEW_MATRIX, 1, false, (float*) S_RenderState.mat_view);
         glUniformMatrix4fv(UNIF_INV_PROJ_MATRIX, 1, false, (float*) S_RenderState.inv_mat_proj);
         glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX, 1, false, (float*) S_RenderState.inv_mat_view);
+        glUniformMatrix4fv(UNIF_LAST_MODEL_MATRIX, 1, false, (float*) S_RenderState.last_mat_model);
+        glUniformMatrix4fv(UNIF_LAST_PROJ_MATRIX,  1, false, (float*) S_RenderState.last_mat_proj);
+        glUniformMatrix4fv(UNIF_LAST_VIEW_MATRIX,  1, false, (float*) S_RenderState.last_mat_view);
         glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
         glUniform1f(UNIF_ITIME, t);
         glUniform1ui(UNIF_IFRAME, frame);
@@ -432,7 +456,7 @@ void RenderMesh (Mesh* mesh, int w, int h, float t, uint32_t frame) {
 void RenderModel (Model* model, int w, int h, float t, uint32_t frame) {
     for (size_t i = 0; i < model->meshCount; i++) {
         PushRenderState();
-        AddModelMatrix(model->meshTransforms[i]);
+        AddModelMatrix(model->meshTransforms[i], model->meshTransforms[i]);
         RenderMesh(&model->meshes[i], w, h, t, frame);
         PopRenderState();
     }
@@ -482,6 +506,8 @@ void RunFullscreenPass (int w, int h, float t, uint32_t frame) {
     glUniformMatrix4fv(UNIF_VIEW_MATRIX, 1, false, (float*) S_RenderState.mat_view);
     glUniformMatrix4fv(UNIF_INV_PROJ_MATRIX, 1, false, (float*) S_RenderState.inv_mat_proj);
     glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX, 1, false, (float*) S_RenderState.inv_mat_view);
+    glUniformMatrix4fv(UNIF_LAST_PROJ_MATRIX, 1, false, (float*) S_RenderState.last_mat_proj);
+    glUniformMatrix4fv(UNIF_LAST_VIEW_MATRIX, 1, false, (float*) S_RenderState.last_mat_view);
     glUniform2f(UNIF_IRESOLUTION, (float) w, (float) h);
     glUniform1f(UNIF_ITIME, t);
     glUniform1ui(UNIF_IFRAME, frame);

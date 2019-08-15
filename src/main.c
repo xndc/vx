@@ -173,7 +173,7 @@ int main() {
         glViewport(0, 0, w, h);
 
         const float dist = 3.0f;
-        float angle_h = glfwGetTime() * 0.5f;
+        float angle_h = t * 0.5f;
         float angle_v = (M_PI * 0.5f) + cosf(t * 0.5f) * 0.35f;
         // NOTE: this is a standard spherical-to-cartesian coordinate mapping with
         //   radius/rho = dist, theta = angle_v, phi = angle_h, and the Y/Z axes swapped
@@ -199,17 +199,17 @@ int main() {
         SetRenderProgram(VSH_DEFAULT, FSH_GBUF_MAIN);
 
         ResetModelMatrix();
-        AddModelPosition((vec3){-0.1f, -0.5f, 0.0f});
+        AddModelPosition((vec3){-0.1f, -0.5f, 0.0f}, (vec3){-0.1f, -0.5f, 0.0f});
         RenderModel(&MDL_DUCK, w, h, t, vxFrameNumber);
 
         ResetModelMatrix();
-        AddModelPosition((vec3){0.0f, -1.0f, 0.0f});
-        AddModelScale((vec3){1.2f, 1.2f, 1.2f});
+        AddModelPosition((vec3){0.0f, -1.0f, 0.0f}, (vec3){0.0f, -1.0f, 0.0f});
+        AddModelScale((vec3){1.2f, 1.2f, 1.2f}, (vec3){1.2f, 1.2f, 1.2f});
         RenderModel(&MDL_BOX_MR, w, h, t, vxFrameNumber);
 
         ResetModelMatrix();
-        AddModelPosition((vec3){0.0f, -4.0f, 0.0f});
-        AddModelScale((vec3){2.5f, 2.5f, 2.5f});
+        AddModelPosition((vec3){0.0f, -4.0f, 0.0f}, (vec3){0.0f, -4.0f, 0.0f});
+        AddModelScale((vec3){2.5f, 2.5f, 2.5f}, (vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&MDL_SPONZA, w, h, t, vxFrameNumber);
 
         StartRenderPass("GBuffer lighting");

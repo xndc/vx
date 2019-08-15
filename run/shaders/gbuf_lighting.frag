@@ -13,6 +13,8 @@ uniform mat4 uViewMatrix;
 uniform mat4 uProjMatrix;
 uniform mat4 uInvViewMatrix;
 uniform mat4 uInvProjMatrix;
+uniform mat4 uLastViewMatrix;
+uniform mat4 uLastProjMatrix;
 
 uniform vec3 uAmbientCube[6];
 // uniform vec3 uAmbientZP;

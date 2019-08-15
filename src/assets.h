@@ -55,12 +55,6 @@
     X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
 \
     X(UNIF_AMBIENT_CUBE, "uAmbientCube") \
-    X(UNIF_AMBIENT_ZP, "uAmbientZP") \
-    X(UNIF_AMBIENT_ZN, "uAmbientZN") \
-    X(UNIF_AMBIENT_YP, "uAmbientYP") \
-    X(UNIF_AMBIENT_YN, "uAmbientYN") \
-    X(UNIF_AMBIENT_XP, "uAmbientXP") \
-    X(UNIF_AMBIENT_XN, "uAmbientXN") \
 \
     X(UNIF_SUN_DIRECTION, "uSunDirection") \
     X(UNIF_SUN_COLOR,     "uSunColor") \
@@ -72,6 +66,9 @@
     X(UNIF_PROJ_MATRIX,     "uProjMatrix") \
     X(UNIF_INV_VIEW_MATRIX, "uInvViewMatrix") \
     X(UNIF_INV_PROJ_MATRIX, "uInvProjMatrix") \
+    X(UNIF_LAST_MODEL_MATRIX, "uLastModelMatrix") \
+    X(UNIF_LAST_VIEW_MATRIX,  "uLastViewMatrix") \
+    X(UNIF_LAST_PROJ_MATRIX,  "uLastProjMatrix") \
 \
     X(UNIF_CONST_DIFFUSE,   "uDiffuse") \
     X(UNIF_CONST_OCCLUSION, "uOcclusion") \
@@ -157,6 +154,7 @@
         COLOR(GL_COLOR_ATTACHMENT1, RT_NORMAL) \
         COLOR(GL_COLOR_ATTACHMENT2, RT_AUX1) \
         COLOR(GL_COLOR_ATTACHMENT3, RT_AUX2) \
+        COLOR(GL_COLOR_ATTACHMENT4, RT_AUX_HDR16) \
     END(FB_GBUFFER) \
 \
     BEGIN(FB_ONLY_COLOR_HDR) \

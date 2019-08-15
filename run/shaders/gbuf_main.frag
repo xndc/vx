@@ -1,19 +1,27 @@
 #version 330 core
+out vec3 FragPos;
+out vec3 LastFragPos;
 in vec4 VertexColor;
 in vec2 TexCoord0;
 in vec2 TexCoord1;
 in mat3 TBN;
-in float TangentW;
 
 layout(location = 0) out vec4 outColorLDR;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec4 outAux1;
 layout(location = 3) out vec4 outAux2;
+layout(location = 4) out vec3 outAuxHDR16;
 
 uniform vec2 iResolution;
 uniform int uStipple;
 uniform float uStippleHardCutoff;
 uniform float uStippleSoftCutoff;
+
+uniform mat4 uInvViewMatrix;
+uniform mat4 uInvProjMatrix;
+uniform mat4 uLastModelMatrix;
+uniform mat4 uLastViewMatrix;
+uniform mat4 uLastProjMatrix;
 
 uniform float uMetallic;
 uniform float uRoughness;
@@ -173,7 +181,9 @@ void main() {
         outNormal = normalize(TBN * normalize(Ntexture * 2.0 - 1.0));
     }
 
+    vec2 Velocity = (FragPos - LastFragPos).xy * 0.5 + 0.5;
+
     outColorLDR = diffuse;
     outAux1 = vec4(occlusion, metallic, roughness, 0);
-    // outAux2 = vec4(TangentW);
+    outAuxHDR16 = vec3(Velocity, 0);
 }

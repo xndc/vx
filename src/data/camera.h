@@ -6,6 +6,10 @@ typedef struct {
     mat4 view_matrix;
     mat4 inv_proj_matrix;
     mat4 inv_view_matrix;
+    mat4 last_proj_matrix;
+    mat4 last_view_matrix;
+    bool has_proj_matrix;
+    bool has_view_matrix;
 
     enum CameraProjection {
         CAMERA_ORTHOGRAPHIC,

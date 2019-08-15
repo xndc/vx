@@ -10,19 +10,26 @@ layout (location = 7) in vec3 aWeights;
 
 uniform vec4 uDiffuse;
 
+out vec3 FragPos;
+out vec3 LastFragPos;
 out vec4 VertexColor;
 out vec2 TexCoord0;
 out vec2 TexCoord1;
 out mat3 TBN;
-// out float TangentW;
 
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjMatrix;
+uniform mat4 uLastModelMatrix;
+uniform mat4 uLastViewMatrix;
+uniform mat4 uLastProjMatrix;
 
 void main() {
-    vec4 Clip = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
-    gl_Position = Clip;
+    vec4 PclipThis = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+    vec4 PclipLast = uLastProjMatrix * uLastViewMatrix * uLastModelMatrix * vec4(aPosition, 1.0);
+    gl_Position = PclipThis;
+    FragPos     = PclipThis.xyz / PclipThis.w;
+    LastFragPos = PclipLast.xyz / PclipLast.w;
     TexCoord0 = aTexcoord0;
     TexCoord1 = aTexcoord1;
     // TODO: set aColor to (1,1,1) by default, apparently OpenGL has this function

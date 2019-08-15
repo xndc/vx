@@ -8,6 +8,9 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         camera->far  != camera->prev_far  ||
         camera->projection != camera->prev_projection)
     {
+        if (camera->has_proj_matrix) {
+            glm_mat4_copy(camera->proj_matrix, camera->last_proj_matrix);
+        }
         switch (camera->projection) {
             case CAMERA_PERSPECTIVE: {
                 // Convert HFOV to VFOV:
@@ -59,13 +62,24 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         camera->prev_near = camera->near;
         camera->prev_far  = camera->far;
         camera->prev_projection = camera->projection;
+        if (!camera->has_proj_matrix) {
+            glm_mat4_copy(camera->proj_matrix, camera->last_proj_matrix);
+            camera->has_proj_matrix = true;
+        }
     }
     if (!glm_vec3_eqv(camera->position, camera->prev_position) ||
         !glm_vec3_eqv(camera->target, camera->prev_target))
     {
+        if (camera->has_view_matrix) {
+            glm_mat4_copy(camera->view_matrix, camera->last_view_matrix);
+        }
         glm_lookat(camera->position, camera->target, (vec3){0.0f, 1.0f, 0.0f}, camera->view_matrix);
         glm_mat4_inv(camera->view_matrix, camera->inv_view_matrix);
         glm_vec3_copy(camera->position, camera->prev_position);
         glm_vec3_copy(camera->target, camera->prev_target);
+        if (!camera->has_view_matrix) {
+            glm_mat4_copy(camera->view_matrix, camera->last_view_matrix);
+            camera->has_view_matrix = true;
+        }
     }
 }
