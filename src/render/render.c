@@ -423,34 +423,25 @@ void RenderMesh (Mesh* mesh, int w, int h, float t, uint32_t frame) {
         SetMaterial(mesh->material);
         glBindVertexArray(mesh->gl_vertex_array);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->gl_element_array);
-        // TODO: Make this more generic (somehow...)
+
+        GLsizei elementCount = mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type);
+        GLenum componentType = 0;
+        size_t triangleCount = 0;
         switch (mesh->gl_element_type) {
-            case FACCESSOR_UINT8:
-            case FACCESSOR_UINT8_VEC3: {
-                glDrawElements(mesh->type,
-                    (GLsizei) mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type),
-                    GL_UNSIGNED_BYTE, NULL);
-            } break;
-            case FACCESSOR_UINT16:
-            case FACCESSOR_UINT16_VEC3: {
-                glDrawElements(mesh->type,
-                    (GLsizei) mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type),
-                    GL_UNSIGNED_SHORT, NULL);
-            } break;
-            case FACCESSOR_UINT32:
-            case FACCESSOR_UINT32_VEC3: {
-                glDrawElements(mesh->type,
-                    (GLsizei) mesh->gl_element_count * FAccessorComponentCount(mesh->gl_element_type),
-                    GL_UNSIGNED_INT, NULL);
-            } break;
-            default: {
-                vxLog("Warning: Mesh 0x%lx has unknown index accessor type %ju",
-                    mesh, mesh->gl_element_type);
-            }
+            case FACCESSOR_UINT8:       { componentType = GL_UNSIGNED_BYTE;  triangleCount = elementCount / 3; break; }
+            case FACCESSOR_UINT8_VEC3:  { componentType = GL_UNSIGNED_BYTE;  triangleCount = elementCount;     break; }
+            case FACCESSOR_UINT16:      { componentType = GL_UNSIGNED_SHORT; triangleCount = elementCount / 3; break; }
+            case FACCESSOR_UINT16_VEC3: { componentType = GL_UNSIGNED_SHORT; triangleCount = elementCount;     break; }
+            case FACCESSOR_UINT32:      { componentType = GL_UNSIGNED_INT;   triangleCount = elementCount / 3; break; }
+            case FACCESSOR_UINT32_VEC3: { componentType = GL_UNSIGNED_INT;   triangleCount = elementCount;     break; }
+            default: { vxLog("Warning: Mesh 0x%lx has unknown index accessor type %ju", mesh, mesh->gl_element_type); }
         }
-        pfFrameDrawCount += 1;
-        pfFrameTriCount  += mesh->gl_element_count;
-        pfFrameVertCount += mesh->gl_vertex_count;
+        if (componentType != 0) {
+            glDrawElements(mesh->type, elementCount, componentType, NULL);
+            pfFrameDrawCount += 1;
+            pfFrameTriCount  += triangleCount;
+            pfFrameVertCount += mesh->gl_vertex_count;
+        }
     }
 }
 

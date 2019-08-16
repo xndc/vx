@@ -21,8 +21,7 @@ void main() {
     // Simple Reinhard tonemapping:
     // https://learnopengl.com/Advanced-Lighting/HDR
     const float gamma = 2.2;
-    // vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb;
-    vec3 hdr = texelFetch(gAuxHDR16, ivec2(gl_FragCoord.xy), 0).rgb;
+    vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb;
     vec3 mapped = hdr / (hdr + vec3(1.0));
     mapped = pow(mapped, vec3(1.0 / gamma));
     outColor = vec4(mapped, 1.0);
