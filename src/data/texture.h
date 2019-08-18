@@ -30,6 +30,8 @@ XM_ASSETS_FRAMEBUFFERS
 #define VXGL_SAMPLER_COUNT 32
 extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
+void InitTextures();
+
 // Resizes all render targets and framebuffers.
 void UpdateFramebuffers (int width, int height, int shadowsize);
 

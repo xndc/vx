@@ -2,6 +2,7 @@
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <stb_image.h>
+#include "render/render.h"
 
 #define X(name, _) GLuint name = 0;
 XM_ASSETS_TEXTURES
@@ -20,6 +21,93 @@ XM_ASSETS_FRAMEBUFFERS
 #undef END
 
 GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
+
+GLuint ENVMAP_BASE = 0;
+GLuint ENVMAP_CUBE = 0;
+
+void InitTextures() {
+    // Regular textures:
+    #define X(name, path) name = LoadTextureFromDisk(#name, path);
+    XM_ASSETS_TEXTURES
+    #undef X
+
+    // IBL environment map:
+    // https://learnopengl.com/PBR/IBL/Diffuse-irradiance
+    stbi_set_flip_vertically_on_load(true);
+    int w, h, c;
+    float *pixels = stbi_loadf("textures/skybox0/GCanyon_C_YumaPoint_3k.hdr", &w, &h, &c, 0);
+    vxCheck(pixels);
+    glGenTextures(1, &ENVMAP_BASE);
+    glBindTexture(GL_TEXTURE_2D, ENVMAP_BASE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Preallocate texture for cubemap:
+    glGenTextures(1, &ENVMAP_CUBE);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ENVMAP_CUBE);
+    for (int i = 0; i < 6; i++) {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, 0);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Generate cubemap:
+    GLuint fbo = 0;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GEN_CUBEMAP);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, ENVMAP_BASE);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ENVMAP_CUBE);
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, ENVMAP_CUBE, 0);
+        mat4 m;
+        glm_rotate_make(m, 0, (vec3){0, 1, 0});
+        glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
+        RunFullscreenPass(512, 512, 0, 0);
+    }
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, ENVMAP_CUBE, 0);
+        mat4 m;
+        glm_rotate_make(m, vxRadians(180), (vec3){0, 1, 0});
+        glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
+        RunFullscreenPass(512, 512, 0, 0);
+    }
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, ENVMAP_CUBE, 0);
+        mat4 m;
+        glm_rotate_make(m, vxRadians(-90), (vec3){0, 0, 1});
+        glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
+        RunFullscreenPass(512, 512, 0, 0);
+    }
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, ENVMAP_CUBE, 0);
+        mat4 m;
+        glm_rotate_make(m, vxRadians(90), (vec3){0, 0, 1});
+        glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
+        RunFullscreenPass(512, 512, 0, 0);
+    }
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, ENVMAP_CUBE, 0);
+        mat4 m;
+        glm_rotate_make(m, vxRadians(90), (vec3){0, 1, 0});
+        glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
+        RunFullscreenPass(512, 512, 0, 0);
+    }
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, ENVMAP_CUBE, 0);
+        mat4 m;
+        glm_rotate_make(m, vxRadians(-90), (vec3){0, 1, 0});
+        glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
+        RunFullscreenPass(512, 512, 0, 0);
+    }
+}
 
 void UpdateFramebuffers (int width, int height, int shadowsize) {
     static int last_width = 0;

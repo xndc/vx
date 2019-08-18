@@ -7,6 +7,7 @@
     X(FSH_GBUF_LIGHTING,    "shaders/gbuf_lighting.frag") \
     X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
     X(FSH_FINAL,            "shaders/final.frag") \
+    X(FSH_GEN_CUBEMAP,      "shaders/gen_cubemap.frag") \
 
 // TODO: Switch to loading programs by names defined here, so we can load them before the models.
 #if 0
@@ -54,10 +55,9 @@
     X(UNIF_STIPPLE_HARD_CUTOFF, "uStippleHardCutoff") \
     X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
 \
-    X(UNIF_AMBIENT_CUBE, "uAmbientCube") \
-\
-    X(UNIF_SUN_DIRECTION, "uSunDirection") \
-    X(UNIF_SUN_COLOR,     "uSunColor") \
+    X(UNIF_AMBIENT_CUBE,         "uAmbientCube") \
+    X(UNIF_SUN_DIRECTION,        "uSunDirection") \
+    X(UNIF_SUN_COLOR,            "uSunColor") \
     X(UNIF_POINTLIGHT_POSITIONS, "uPointLightPositions") \
     X(UNIF_POINTLIGHT_COLORS,    "uPointLightColors") \
 \
@@ -80,6 +80,9 @@
     X(UNIF_TEX_METALLIC,    "texMetallic") \
     X(UNIF_TEX_ROUGHNESS,   "texRoughness") \
     X(UNIF_TEX_NORMAL,      "texNormal") \
+\
+    X(UNIF_TEX_ENVMAP, "texEnvmap") \
+    X(UNIF_ENVMAP_DIRECTION, "uEnvmapDirection") \
 
 // Syntax for textures:
 // X(name, target (GL_TEXTURE_*), needs mipmaps, path)

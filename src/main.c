@@ -92,9 +92,7 @@ int main() {
     // Load assets and display loading screen:
     glfwSwapInterval(0);
     GUI_Init(window);
-    #define LOADING_BG 0.2f, 0.3f, 0.4f
-    #define LOADING_FG 1.0f, 1.0f, 1.0f
-    GUI_RenderLoadingFrame(window, "Loading assets...", "", LOADING_BG, LOADING_FG);
+    GUI_RenderLoadingFrame(window, "Loading...", "", 0.2f, 0.3f, 0.4f, 1.0f, 1.0f, 1.0f);
     // Shaders:
     #define X(name, path) name = LoadShaderFromDisk(#name, path);
     XM_ASSETS_SHADERS
@@ -104,21 +102,17 @@ int main() {
     XM_ASSETS_MODELS_GLTF
     #undef X
     // Textures:
-    #define X(name, path) name = LoadTextureFromDisk(#name, path);
-    XM_ASSETS_TEXTURES
-    #undef X
+    InitTextures();
     // Samplers:
     glGenSamplers(VXGL_SAMPLER_COUNT, VXGL_SAMPLER);
-    #undef LOADING_BG
-    #undef LOADING_FG
 
+    // Window configuration:
     if (glfwExtensionSupported("WGL_EXT_swap_control_tear") ||
         glfwExtensionSupported("GLX_EXT_swap_control_tear")) {
         glfwSwapInterval(-1);
     } else {
         glfwSwapInterval(1);
     }
-
     if (glfwRawMouseMotionSupported()) {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
