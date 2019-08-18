@@ -62,6 +62,7 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         camera->prev_far  = camera->far;
         camera->prev_projection = camera->projection;
     }
+    #if 0
     if (!glm_vec3_eqv(camera->position, camera->prev_position) ||
         !glm_vec3_eqv(camera->target, camera->prev_target))
     {
@@ -70,4 +71,5 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         glm_vec3_copy(camera->position, camera->prev_position);
         glm_vec3_copy(camera->target, camera->prev_target);
     }
+    #endif
 }

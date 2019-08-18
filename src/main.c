@@ -119,6 +119,10 @@ int main() {
         glfwSwapInterval(1);
     }
 
+    if (glfwRawMouseMotionSupported()) {
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+
     // HACK: Quick and dirty 30 FPS lock for the MacBook.
     // Locking to 60FPS or not locking at all results in HEAVY stuttering.
     #ifdef __APPLE__
@@ -172,6 +176,7 @@ int main() {
         UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
         glViewport(0, 0, w, h);
 
+        #if 0
         const float dist = 3.0f;
         double rt = glfwGetTime() * 1.0f;
         float angle_h = rt * 0.5f;
@@ -183,8 +188,68 @@ int main() {
         G_MainCamera.position[2] = dist * sinf(angle_v) * sinf(angle_h);
         glm_vec3_add(G_MainCamera.position, G_MainCamera.target, G_MainCamera.position);
         UpdateCameraMatrices(&G_MainCamera, w, h);
+        #endif
 
-        // MDL_DUCK.materials[0].const_diffuse[3] = (sin(3.0 * t) + 1.0) * 0.51;
+        #if 0
+        MDL_DUCK.materials[0].const_diffuse[3] = (sin(3.0 * t) + 1.0) * 0.51;
+        #endif
+
+        bool cursorLocked = (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED);
+        if (!cursorLocked && (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            cursorLocked = true;
+        }
+        if (cursorLocked && glfwGetKey(window, GLFW_KEY_ESCAPE)) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            cursorLocked = false;
+        }
+
+        static float ry = 0;
+        static float rx = 0;
+        double mx, my;
+        static float lmx = 0;
+        static float lmy = 0;
+        glfwGetCursorPos(window, &mx, &my);
+        float dmx = lmx - (float) mx;
+        float dmy = lmy - (float) my;
+        if (cursorLocked) {
+            const float sx = -0.002f;
+            const float sy = -0.002f;
+            ry += dmx * sx;
+            rx += dmy * sy;
+            rx = vxClamp(rx, vxRadians(-90.0f), vxRadians(90.0f));
+            if (ry < vxRadians(-360)) ry += vxRadians(360);
+            if (ry > vxRadians(+360)) ry -= vxRadians(360);
+        }
+        lmx = (float) mx;
+        lmy = (float) my;
+
+        vec4 q  = GLM_QUAT_IDENTITY_INIT;
+        vec4 qy = GLM_QUAT_IDENTITY_INIT;
+        vec4 qx = GLM_QUAT_IDENTITY_INIT;
+        glm_quat(qy, ry, 0, 1, 0);
+        glm_quat(qx, rx, 1, 0, 0);
+        glm_quat_mul(qx, qy, q);
+
+        static vec3 pos = {-2, -2, -2};
+        const vec3 spd = {-0.14f, -0.18f, -0.14f};
+        vec3 dpos = GLM_VEC3_ZERO_INIT;
+        if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) { pos[1] -= spd[1]; }
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { dpos[2] = -1; }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { dpos[2] = +1; }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { dpos[0] = -1; }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { dpos[0] = +1; }
+        glm_vec3_mul(dpos, spd, dpos);
+        glm_vec3_rotate(pos, ry, (vec3){0, 1, 0});
+        glm_vec3_add(pos, dpos, pos);
+        glm_vec3_rotate(pos, -ry, (vec3){0, 1, 0});
+        // glm_vec3_mul(dpos, spd, dpos);
+        // glm_vec3_add(pos, dpos, pos);
+
+        glm_quat_mat4(q, G_MainCamera.view_matrix);
+        glm_translate(G_MainCamera.view_matrix, pos);
+        UpdateCameraMatrices(&G_MainCamera, w, h);
 
         tFrameRenderStart = glfwGetTime();
 
