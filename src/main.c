@@ -2,6 +2,7 @@
 #include "gui/gui.h"
 #include "flib/accessor.h"
 #include "data/camera.h"
+#include "data/texture.h"
 #include "render/render.h"
 #include "scene/scene.h"
 #include <glad/glad.h>
@@ -304,6 +305,18 @@ int main() {
         });
         // Run pass:
         RunFullscreenPass(w, h, t, vxFrameNumber);
+
+        StartRenderPass("Skybox");
+        BindFramebuffer(FB_ONLY_COLOR_HDR);
+        SetRenderProgram(VSH_SKYBOX, FSH_SKYBOX);
+        SetUniformCubemap(UNIF_TEX_ENVMAP, ENVMAP_CUBE, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE);
+        SetCameraMatrices(&G_MainCamera);
+        vec3 viewPos;
+        glm_vec3_copy(G_MainCamera.view_matrix[3], viewPos); // extract translation
+        ResetModelMatrix();
+        AddModelPosition(viewPos, viewPos);
+        AddModelScale((vec3){1000,1000,1000}, (vec3){1000,1000,1000});
+        RenderModel(&MDL_BOX_MR, w, h,t, vxFrameNumber);
 
         // StartRenderPass("Dither Effect");
         // BindFramebuffer(FB_ONLY_COLOR_LDR);

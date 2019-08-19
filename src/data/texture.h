@@ -8,6 +8,9 @@ XM_ASSETS_RENDERTARGETS_SCREENSIZE
 XM_ASSETS_RENDERTARGETS_SHADOWSIZE
 #undef X
 
+extern GLuint ENVMAP_BASE;
+extern GLuint ENVMAP_CUBE;
+
 #define BEGIN(name) \
     extern GLuint name; \
     static const GLenum name ## _BUFFERS [] = {

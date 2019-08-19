@@ -8,6 +8,8 @@
     X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
     X(FSH_FINAL,            "shaders/final.frag") \
     X(FSH_GEN_CUBEMAP,      "shaders/gen_cubemap.frag") \
+    X(VSH_SKYBOX,           "shaders/skybox.vert") \
+    X(FSH_SKYBOX,           "shaders/skybox.frag") \
 
 // TODO: Switch to loading programs by names defined here, so we can load them before the models.
 #if 0

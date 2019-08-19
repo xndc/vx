@@ -354,6 +354,22 @@ void SetUniformTexture (GLint uniform, GLuint texture, GLuint min, GLuint mag, G
     }
 }
 
+void SetUniformCubemap (GLint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap) {
+    if (uniform != -1 && texture != 0) {
+        GLuint tu = S_RenderState.next_texture_unit;
+        GLuint sampler = VXGL_SAMPLER[tu];
+        glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, min);
+        glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, mag);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, wrap);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, wrap);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, wrap);
+        glActiveTexture(GL_TEXTURE0 + tu);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+        glBindSampler(tu, sampler);
+        glUniform1i(uniform, tu);
+    }
+}
+
 void ResetShaderVariables() {
     S_RenderState.next_texture_unit = 1;
     #define X(name, glsl_name) name = -1;

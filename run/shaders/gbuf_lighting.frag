@@ -160,9 +160,7 @@ void main() {
     #endif
 
     // There are certainly better ways to do this.
-    if (texelFetch(gDepth, fc, 0).r == 0.0) {
-        outColorHDR = vec4(0.8f, 1.1f, 1.8f, 1.0f);
-    } else {
+    if (texelFetch(gDepth, fc, 0).r != 0.0) {
         outColorHDR = vec4(Lo, 1.0);
     }
 

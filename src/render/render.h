@@ -66,6 +66,7 @@ void SetCameraMatrices (Camera* cam);
 
 GLuint BindTextureUnit (GLuint texture, GLuint sampler);
 void SetUniformTexture (GLint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap);
+void SetUniformCubemap (GLint uniform, GLuint texture, GLuint min, GLuint mag, GLuint wrap);
 void SetUniformTexSampler (GLint uniform, GLuint texture, GLuint sampler);
 void ResetShaderVariables();
 
