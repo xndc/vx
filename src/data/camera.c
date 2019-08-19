@@ -71,5 +71,7 @@ void UpdateCameraMatrices (Camera* camera, int w, int h) {
         glm_vec3_copy(camera->position, camera->prev_position);
         glm_vec3_copy(camera->target, camera->prev_target);
     }
+    #else
+    glm_mat4_inv(camera->view_matrix, camera->inv_view_matrix);    
     #endif
 }

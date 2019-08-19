@@ -166,8 +166,8 @@ void main() {
         }
     }
     float occlusion = uOcclusion * texture(texOccMetRgh, TexCoord0).r * texture(texOcclusion, TexCoord0).r;
-    float metallic  = uMetallic  * texture(texOccMetRgh, TexCoord0).g * texture(texMetallic,  TexCoord0).r;
-    float roughness = uRoughness * texture(texOccMetRgh, TexCoord0).b * texture(texRoughness, TexCoord0).r;
+    float roughness = uRoughness * texture(texOccMetRgh, TexCoord0).g * texture(texRoughness, TexCoord0).r;
+    float metallic  = uMetallic  * texture(texOccMetRgh, TexCoord0).b * texture(texMetallic,  TexCoord0).r;
 
     vec3 Nvertex = TBN[2];
     vec3 Ntexture = texture(texNormal, TexCoord0).rgb;
@@ -187,6 +187,6 @@ void main() {
     vec2 Velocity = PclipThis - PclipLast;
 
     outColorLDR = diffuse;
-    outAux1 = vec4(occlusion, metallic, roughness, 0);
+    outAux1 = vec4(occlusion, roughness, metallic, 0);
     outAuxHDR16 = vec3(Velocity, 0);
 }

@@ -93,13 +93,51 @@ vec3 DirectionalLight (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float 
     return (kD * Diffuse / PI + Specular) * Lcolor * NdotL;
 }
 
+vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
+    #if 0
+    for (int i = 0; i < 4; i++) {
+        vec3 L = normalize(uPointLightPositions[i] - worldPos);
+        vec3 H = normalize(V + L);
+        float distance = length(uPointLightPositions[i] - worldPos);
+        float attenuation = 1.0 / (distance * distance);
+        vec3 radiance = uPointLightColors[i] * attenuation;
+        vec3 F = FresnelSchlick(max(dot(H, V), 0.0), SurfaceF0(diffuse, metal));
+        float NDF = DistributionGGX(N, H, rough);
+        float G = GeometrySmith(N, V, L, rough);
+        vec3 num = NDF * G * F;
+        float denom = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+        vec3 specular = num / max(denom, 0.001);
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - metal;
+        float NdotL = max(dot(N, L), 0.0);
+        Lo += (kD * diffuse / PI + specular) * radiance * NdotL;
+    }
+    #endif
+    vec3 Lnorm = normalize(L);
+    vec3 H = normalize(V + Lnorm);
+    float Distance = length(L);
+    float Attenuation = 1.0 / (Distance * Distance);
+    vec3 Radiance = Lcolor * Attenuation;
+    float NdotL = max(dot(N, Lnorm), 0.0);
+    float NdotV = max(dot(N, V), 0.0);
+    float HdotV = max(dot(H, V), 0.0);
+    vec3 F = FresnelSchlick(HdotV, SurfaceF0(Diffuse, Met));
+    float NDF = DistributionGGX(N, H, Rgh);
+    float G = GeometrySmith(NdotV, NdotL, Rgh);
+    vec3 Specular = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.001);
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - Met);
+    return (kD * Diffuse / PI + Specular) * Radiance * NdotL;
+}
+
 void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
     vec3 diffuse = texelFetch(gColorLDR, fc, 0).rgb;
     vec3 normal  = texelFetch(gNormal,   fc, 0).rgb;
     vec3 aux1    = texelFetch(gAux1,     fc, 0).rgb;
-    float metal = aux1.g;
-    float rough = aux1.b;
+    float rough = max(aux1.g, 0.05); // lighting looks wrong around 0
+    float metal = aux1.b;
 
     // NOTE: I have no idea why we need to do this. I guess OpenGL screws our Z up somehow?
     float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
@@ -130,32 +168,12 @@ void main() {
     //   up when you look at the sun otherwise.
     #if 1
     Lo += DirectionalLight(N, V, normalize(-uSunDirection), uSunColor, diffuse, metal, rough);
-    #else
-    // Treat the point lights we're passing as directional ones, for testing.
-    for (int i = 0; i < 4; i++) {
-        Lo += DirectionalLight(N, V, normalize(uPointLightPositions[i]), 0.08 * uPointLightColors[i],
-            diffuse, metal, rough);
-    }
     #endif
 
-    #if 0
+    #if 1
     for (int i = 0; i < 4; i++) {
-        vec3 L = normalize(uPointLightPositions[i] - worldPos);
-        vec3 H = normalize(V + L);
-        float distance = length(uPointLightPositions[i] - worldPos);
-        float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = uPointLightColors[i] * attenuation;
-        vec3 F = FresnelSchlick(max(dot(H, V), 0.0), SurfaceF0(diffuse, metal));
-        float NDF = DistributionGGX(N, H, rough);
-        float G = GeometrySmith(N, V, L, rough);
-        vec3 num = NDF * G * F;
-        float denom = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-        vec3 specular = num / max(denom, 0.001);
-        vec3 kS = F;
-        vec3 kD = vec3(1.0) - kS;
-        kD *= 1.0 - metal;
-        float NdotL = max(dot(N, L), 0.0);
-        Lo += (kD * diffuse / PI + specular) * radiance * NdotL;
+        vec3 L = uPointLightPositions[i] - FragPosWorld;
+        Lo += PointLightLo(N, V, L, uPointLightColors[i], diffuse, metal, rough);
     }
     #endif
 
@@ -163,10 +181,6 @@ void main() {
     if (texelFetch(gDepth, fc, 0).r != 0.0) {
         outColorHDR = vec4(Lo, 1.0);
     }
-
-    // outColorHDR = texelFetch(gAux2, fc, 0);
-    // outColorHDR = vec4(N, 1);
-    // outColorHDR = vec4(CameraPosition, 1);
 }
 
 /*

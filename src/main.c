@@ -260,13 +260,17 @@ int main() {
         SetRenderProgram(VSH_DEFAULT, FSH_GBUF_MAIN);
 
         ResetModelMatrix();
-        AddModelPosition((vec3){-0.1f, -0.5f, 0.0f}, (vec3){-0.1f, -0.5f, 0.0f});
-        RenderModel(&MDL_DUCK, w, h, t, vxFrameNumber);
+        AddModelScale((vec3){0.5f, 0.5f, 0.5f}, (vec3){0.5f, 0.5f, 0.5f});
+        RenderModel(&MDL_SPHERES, w, h, t, vxFrameNumber);
 
-        ResetModelMatrix();
-        AddModelPosition((vec3){0.0f, -1.0f, 0.0f}, (vec3){0.0f, -1.0f, 0.0f});
-        AddModelScale((vec3){1.2f, 1.2f, 1.2f}, (vec3){1.2f, 1.2f, 1.2f});
-        RenderModel(&MDL_BOX_MR, w, h, t, vxFrameNumber);
+        // ResetModelMatrix();
+        // AddModelPosition((vec3){-0.1f, -0.5f, 0.0f}, (vec3){-0.1f, -0.5f, 0.0f});
+        // RenderModel(&MDL_DUCK, w, h, t, vxFrameNumber);
+
+        // ResetModelMatrix();
+        // AddModelPosition((vec3){0.0f, -1.0f, 0.0f}, (vec3){0.0f, -1.0f, 0.0f});
+        // AddModelScale((vec3){1.2f, 1.2f, 1.2f}, (vec3){1.2f, 1.2f, 1.2f});
+        // RenderModel(&MDL_BOX_MR, w, h, t, vxFrameNumber);
 
         ResetModelMatrix();
         AddModelPosition((vec3){0.0f, -4.0f, 0.0f}, (vec3){0.0f, -4.0f, 0.0f});
@@ -278,7 +282,7 @@ int main() {
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
         SetCameraMatrices(&G_MainCamera);
         // Ambient lighting:
-        float i = 0.4f;
+        float i = 0.05f;
         glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
             3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
             0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
@@ -289,19 +293,19 @@ int main() {
         });
         // Directional lighting:
         glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
-        glUniform3f(UNIF_SUN_COLOR, 4.0f, 4.0f, 3.9f);
+        glUniform3f(UNIF_SUN_COLOR, 2.5f, 2.5f, 2.1f);
         // Point lighting:
         glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
-             2.9f,  2.0f,  2.2f,
-            -2.8f,  2.5f,  2.4f,
-            -2.2f,  2.3f, -2.6f,
-             2.1f,  2.9f, -2.5f,
+             4.9f,  2.0f,  4.2f,
+            -4.8f,  2.5f,  4.4f,
+            -4.2f,  2.3f, -4.6f,
+             4.1f,  2.9f, -4.5f,
         });
         glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
-            40.0f, 40.0f, 40.0f,
-            40.0f, 40.0f, 40.0f,
-            40.0f, 40.0f, 40.0f,
-            40.0f, 40.0f, 40.0f,
+            20.0f, 20.0f, 20.0f,
+            20.0f, 20.0f, 20.0f,
+            20.0f, 20.0f, 20.0f,
+            20.0f, 20.0f, 20.0f,
         });
         // Run pass:
         RunFullscreenPass(w, h, t, vxFrameNumber);
