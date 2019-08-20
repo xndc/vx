@@ -101,7 +101,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
     JSON_Array* jbuffers = json_object_get_array(root, "buffers");
     size_t bufferCount   = json_array_get_count(jbuffers);
     size_t* bufferSizes  = vxAlloc(bufferCount, size_t);
-    char** buffers       = vxAlloc(bufferCount, size_t);
+    char** buffers       = vxAlloc(bufferCount, char*);
     for (size_t ibuf = 0; ibuf < bufferCount; ibuf++) {
         JSON_Object* jbuf = json_array_get_object(jbuffers, ibuf);
         buffers[ibuf] = NULL;

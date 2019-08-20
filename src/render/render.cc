@@ -80,7 +80,7 @@ static bool DefineArraysEqual (ShaderDefine* a, ShaderDefine* b) {
 }
 
 Shader* LoadShaderFromDisk (const char* name, const char* path) {
-    Shader* shader = calloc(1, sizeof(Shader));
+    Shader* shader = vxAlloc(1, Shader);
     shader->name = name;
     char* code = vxReadFile(path, "r", NULL);
     shader->full = code;
@@ -88,7 +88,7 @@ Shader* LoadShaderFromDisk (const char* name, const char* path) {
         char* newline = strchr(code, '\n');
         shader->body = newline + 1;
         size_t linesize = (size_t)(newline - code + 1);
-        shader->version = calloc(linesize + 1, sizeof(char));
+        shader->version = vxAlloc(linesize + 1, char);
         strncpy(shader->version, code, linesize);
         shader->version[linesize] = '\0';
     } else {
@@ -143,7 +143,7 @@ static GLuint CompileShader (const char* name, GLenum type, size_t nsources, con
     glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
     glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &logsize);
     if (logsize > 0) {
-        char* log = calloc(logsize, sizeof(char));
+        char* log = vxAlloc(logsize, char);
         glGetShaderInfoLog(sh, logsize, NULL, log);
         vxLog("Compilation log for shader %s:\n%s", name, log);
         free(log);
@@ -165,7 +165,7 @@ static GLuint LinkProgram (const char* vsh_name, GLuint vsh, const char* fsh_nam
     glGetProgramiv(program, GL_LINK_STATUS, &ok);
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logsize);
     if (logsize > 0) {
-        char* log = calloc(logsize, sizeof(char));
+        char* log = vxAlloc(logsize, char);
         glGetProgramInfoLog(program, logsize, NULL, log);
         vxLog("Link log for program (%s, %s):\n%s", vsh_name, fsh_name, log);
         free(log);
@@ -473,8 +473,8 @@ void RenderModel (Model* model, int w, int h, float t, uint32_t frame) {
 // Executes a full-screen pass using the current vertex and fragment shader.
 // NOTE: The vertex shader should be set to VSH_FULLSCREEN_PASS before running this pass.
 void RunFullscreenPass (int w, int h, float t, uint32_t frame) {
-    static vao = 0;
-    static ebo = 0;
+    static GLuint vao = 0;
+    static GLuint ebo = 0;
     static Material mat = {0};
     static const float points[] = {
         -1.0f, -1.0f,

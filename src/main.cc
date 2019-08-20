@@ -4,7 +4,6 @@
 #include "data/camera.h"
 #include "data/texture.h"
 #include "render/render.h"
-#include "scene/scene.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -227,7 +226,7 @@ int main() {
         glm_quat_mul(qx, qy, q);
 
         static vec3 pos = {-2, -2, -2};
-        const vec3 spd = {-0.14f, -0.18f, -0.14f};
+        vec3 spd = {-0.14f, -0.18f, -0.14f};
         vec3 dpos = GLM_VEC3_ZERO_INIT;
         if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) { pos[1] -= spd[1]; }
@@ -239,8 +238,6 @@ int main() {
         glm_vec3_rotate(pos, ry, (vec3){0, 1, 0});
         glm_vec3_add(pos, dpos, pos);
         glm_vec3_rotate(pos, -ry, (vec3){0, 1, 0});
-        // glm_vec3_mul(dpos, spd, dpos);
-        // glm_vec3_add(pos, dpos, pos);
 
         glm_quat_mat4(q, G_MainCamera.view_matrix);
         glm_translate(G_MainCamera.view_matrix, pos);

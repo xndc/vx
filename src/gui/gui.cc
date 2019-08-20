@@ -9,11 +9,11 @@
 static bool UI_ShowDebugOverlay = false;
 static int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
 
-#define X(name, path, size) VX_EXPORT ImFont* name;
+#define X(name, path, size) ImFont* name;
 XM_ASSETS_FONTS
 #undef X
 
-VX_EXPORT void GUI_Init (GLFWwindow* window) {
+void GUI_Init (GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -37,18 +37,18 @@ VX_EXPORT void GUI_Init (GLFWwindow* window) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 }
 
-VX_EXPORT void GUI_StartFrame() {
+void GUI_StartFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-VX_EXPORT void GUI_Render() {
+void GUI_Render() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
+void GUI_RenderLoadingFrame (GLFWwindow* window,
     const char* text1, const char* text2,
     float bgr, float bgg, float bgb,
     float fgr, float fgg, float fgb)
@@ -104,7 +104,7 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     glfwPollEvents();
 }
 
-VX_EXPORT void GUI_DrawLoadingText (const char* text, float r, float g, float b) {
+void GUI_DrawLoadingText (const char* text, float r, float g, float b) {
     // NOTE: Modelled after ShowExampleAppSimpleOverlay in imgui_demo.cpp
     ImGuiIO& io = ImGui::GetIO();
     ImGui::PushFont(FONT_DEFAULT_LARGE);
@@ -121,11 +121,11 @@ VX_EXPORT void GUI_DrawLoadingText (const char* text, float r, float g, float b)
     ImGui::PopFont();
 }
 
-VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window) {
+void GUI_DrawDebugOverlay (GLFWwindow* window) {
     ImGui::ShowDemoWindow();
 }
 
-VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
+void GUI_DrawStatistics (GUI_Statistics* stats) {
     const int avgInterval = 60;
     RingBufferDeclareStatic(lastMsMainThread,   float, avgInterval);
     RingBufferDeclareStatic(lastMsRenderThread, float, avgInterval);

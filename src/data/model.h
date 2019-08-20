@@ -40,7 +40,7 @@ typedef struct Mesh {
     GLuint gl_vertex_array;
     GLuint gl_element_array;
     size_t gl_element_count;
-    size_t gl_element_type; // FACCESSOR_UINT8, etc.
+    FAccessorType gl_element_type;
     size_t gl_vertex_count;
     #if 0
     FAccessor positions;

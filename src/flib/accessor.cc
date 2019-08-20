@@ -86,7 +86,7 @@ FAccessor* FAccessorFromMemory (FAccessorType t, char* buffer, size_t offset,
     if (i >= 0) {
         cached = S_AccessorCache[i].value;
     } else {
-        cached = calloc(1, sizeof(FAccessor));
+        cached = vxAlloc(1, FAccessor);
         memcpy(cached, &acc, sizeof(FAccessor));
         stbds_hmput(S_AccessorCache, acc, cached);
     }

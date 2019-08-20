@@ -180,7 +180,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
     // Generate hash of texture filename and mtime:
     uint64_t mtime = vxGetFileMtime(path);
     vxCheckMsg(mtime != 0, "Failed to load %s from %s: file not found", name, path);
-    size_t hash = stbds_hash_string(path, VX_SEED);
+    size_t hash = stbds_hash_string((char*) path, VX_SEED);
     hash ^= stbds_hash_bytes(&mtime, sizeof(mtime), VX_SEED);
 
     // Look for cached texture:
@@ -261,7 +261,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
         fwrite(info, sizeof(uint32_t), 4, cachedTextureFile);
         for (int ilevel = 0; ilevel < l; ilevel++) {
             // FIXME: the docs for glGetTexImage mention GL_PACK_ALIGNMENT - what's that?
-            uint32_t levelw, levelh;
+            GLint levelw, levelh;
             glGetTexLevelParameteriv(GL_TEXTURE_2D, ilevel, GL_TEXTURE_WIDTH,  &levelw);
             glGetTexLevelParameteriv(GL_TEXTURE_2D, ilevel, GL_TEXTURE_HEIGHT, &levelh);
             void* pixels = malloc((levelw + 1) * (levelh + 1) * c);
