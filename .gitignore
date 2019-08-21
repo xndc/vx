@@ -52,12 +52,14 @@ Temporary Items
 # Sublime Text
 *.sublime-workspace
 
-# JetBrains
+# JetBrains CLion
+# https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+.idea/**/contentModel.xml
 .idea/**/dataSources/
 .idea/**/dataSources.ids
 .idea/**/dataSources.local.xml
@@ -65,6 +67,16 @@ Temporary Items
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
+.idea/**/gradle.xml
+.idea/**/libraries
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+*.iml
+*.ipr
+cmake-build-*/
+*.iws
+.idea/httpRequests
 
 # Microsoft Office and LibreOffice
 ~$*.doc*

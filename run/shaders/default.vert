@@ -50,7 +50,6 @@ void main() {
     // FIXME: aTangent.w is a "sign value (-1 or +1) indicating handedness of the tangent basis"
     //   for GLTF models. I'm not sure whether multiplication or division is appropriate, or if I
     //   even have to do something here in the first place.
-    // TangentW = aTangent.w;
     vec3 T = normalize((uModelMatrix * vec4(aTangent.xyz, 0.0) / aTangent.w).xyz);
     vec3 N = normalize((uModelMatrix * vec4(aNormal, 0.0)).xyz);
     T = normalize(T - dot(T, N) * N);

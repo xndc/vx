@@ -170,7 +170,7 @@ VX_EXPORT void vxHandleSignal (int sig) {
     #endif
     #endif
     debug_break();
-    abort(); // debug_break doesn't quit the apps without a debugger attached, on some platforms
+    abort(); // debug_break doesn't quit the app without a debugger attached, on some platforms
 }
 
 // Register signal handlers.

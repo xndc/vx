@@ -90,7 +90,6 @@ int main() {
         (GLubyte[]){ 255, 255, 255, 255 });
 
     // Load assets and display loading screen:
-    glfwSwapInterval(0);
     GUI_Init(window);
     GUI_RenderLoadingFrame(window, "Loading...", "", 0.2f, 0.3f, 0.4f, 1.0f, 1.0f, 1.0f);
     // Shaders:
@@ -123,17 +122,10 @@ int main() {
     glfwSwapInterval(2);
     #endif
 
-    #if 1
     G_MainCamera.projection = CAMERA_PERSPECTIVE;
     G_MainCamera.fov  = 80.0f;
     G_MainCamera.near = 0.1f;
     G_MainCamera.far  = 0.0f;
-    #else
-    G_MainCamera.projection = CAMERA_ORTHOGRAPHIC;
-    G_MainCamera.near = -100.0f;
-    G_MainCamera.far  = +100.0f;
-    G_MainCamera.zoom = 40.0f;
-    #endif
     glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
 
     MDL_DUCK.materials[0].stipple = true;
