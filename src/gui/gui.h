@@ -9,14 +9,14 @@ typedef struct ImFont ImFont;
 XM_ASSETS_FONTS
 #undef X
 
-void GUI_Init (GLFWwindow* window);
-void GUI_StartFrame();
-void GUI_Render();
-void GUI_RenderLoadingFrame (GLFWwindow* window,
+VX_EXPORT void GUI_Init (GLFWwindow* window);
+VX_EXPORT void GUI_StartFrame();
+VX_EXPORT void GUI_Render();
+VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     const char* text1, const char* text2,
     float bgr, float bgg, float bgb,
     float fgr, float fgg, float fgb);
-void GUI_DrawDebugOverlay (GLFWwindow* window);
+VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window);
 
 typedef struct GUI_Statistics {
     size_t frame;
@@ -30,4 +30,4 @@ typedef struct GUI_Statistics {
     size_t triangles;
 } GUI_Statistics;
 
-void GUI_DrawStatistics (GUI_Statistics* stats);
+VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats);

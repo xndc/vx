@@ -1,11 +1,6 @@
 #pragma once
 #include "common.h"
 
-enum CameraProjection {
-    CAMERA_ORTHOGRAPHIC,
-    CAMERA_PERSPECTIVE,
-};
-
 typedef struct {
     mat4 proj_matrix;
     mat4 view_matrix;
@@ -16,7 +11,10 @@ typedef struct {
     bool has_proj_matrix;
     bool has_view_matrix;
 
-    CameraProjection projection;
+    enum CameraProjection {
+        CAMERA_ORTHOGRAPHIC,
+        CAMERA_PERSPECTIVE,
+    } projection;
 
     float near;
     float far;      // set lower than near for infinite perspective projection

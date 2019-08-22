@@ -13,7 +13,7 @@ static int UI_DebugOverlayKey = GLFW_KEY_GRAVE_ACCENT;
 XM_ASSETS_FONTS
 #undef X
 
-void GUI_Init (GLFWwindow* window) {
+VX_EXPORT void GUI_Init (GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -37,13 +37,13 @@ void GUI_Init (GLFWwindow* window) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 }
 
-void GUI_StartFrame() {
+VX_EXPORT void GUI_StartFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-void GUI_Render() {
+VX_EXPORT void GUI_Render() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -104,28 +104,11 @@ void GUI_RenderLoadingFrame (GLFWwindow* window,
     glfwPollEvents();
 }
 
-void GUI_DrawLoadingText (const char* text, float r, float g, float b) {
-    // NOTE: Modelled after ShowExampleAppSimpleOverlay in imgui_demo.cpp
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::PushFont(FONT_DEFAULT_LARGE);
-    ImVec2 text_size = ImGui::CalcTextSize(text);
-    float x = (io.DisplaySize.x / 2.0f) - (text_size.x / 2.0f);
-    float y = (io.DisplaySize.y / 2.0f) - (text_size.y / 2.0f);
-    ImGui::SetNextWindowPos(ImVec2(x, y));
-    ImGui::Begin("Loading", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration |
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-        ImGuiWindowFlags_NoBackground);
-    ImGui::TextColored(ImColor(r, g, b), text);
-    ImGui::End();
-    ImGui::PopFont();
-}
-
-void GUI_DrawDebugOverlay (GLFWwindow* window) {
+VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window) {
     ImGui::ShowDemoWindow();
 }
 
-void GUI_DrawStatistics (GUI_Statistics* stats) {
+VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats) {
     const int avgInterval = 60;
     RingBufferDeclareStatic(lastMsMainThread,   float, avgInterval);
     RingBufferDeclareStatic(lastMsRenderThread, float, avgInterval);

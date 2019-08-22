@@ -6,23 +6,43 @@
         {
             "label": "VX: Build",
             "type": "shell",
-            "command": "bash ${workspaceRoot}/scripts/build.sh",
+            "command": "${workspaceRoot}/scripts/build.sh",
             "group": "build",
-            "problemMatcher": "$gcc",
+            "problemMatcher": [
+                "$gcc",
+                {"base": "$msCompile", "fileLocation": ["relative", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+            ],
+            "windows": {
+                "command": "${workspaceRoot}/scripts/build.ps1",
+            },
         },
         {
             "label": "VX: Build & Run",
             "type": "shell",
-            "command": "bash ${workspaceRoot}/scripts/build.sh -run",
+            "command": "${workspaceRoot}/scripts/build.sh",
+            "args": ["-run"],            
             "group": "build",
-            "problemMatcher": "$gcc",
+            "problemMatcher": [
+                "$gcc",
+                {"base": "$msCompile", "fileLocation": ["relative", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+            ],
+            "windows": {
+                "command": "${workspaceRoot}/scripts/build.ps1",
+            },
         },
         {
             "label": "VX: Rebuild",
             "type": "shell",
-            "command": "bash ${workspaceRoot}/scripts/build.sh -clean",
+            "command": "${workspaceRoot}/scripts/build.sh",
+            "args": ["-clean"],
             "group": "build",
-            "problemMatcher": "$gcc",
+            "problemMatcher": [
+                "$gcc",
+                {"base": "$msCompile", "fileLocation": ["relative", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+            ],
+            "windows": {
+                "command": "${workspaceRoot}/scripts/build.ps1",                
+            },
         },
     ]
 }
