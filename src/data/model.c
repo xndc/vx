@@ -61,18 +61,18 @@ void InitMaterial (Material* m) {
     m->const_occlusion = 0.0f; // not in GLTF spec
     m->const_metallic  = 1.0f;
     m->const_roughness = 1.0f;
-    m->tex_diffuse = rTexWhite1x1;
-    m->smp_diffuse = rSmpDefault;
-    m->tex_normal = rTexWhite1x1;
-    m->smp_normal = rTexWhite1x1;
-    m->tex_occ_met_rgh = rTexWhite1x1;
-    m->smp_occ_met_rgh = rSmpDefault;
-    m->tex_occlusion = rTexWhite1x1;
-    m->smp_occlusion = rSmpDefault;
-    m->tex_metallic = rTexWhite1x1;
-    m->smp_metallic = rSmpDefault;
-    m->tex_roughness = rTexWhite1x1;
-    m->smp_roughness = rSmpDefault;
+    m->tex_diffuse = TEX_WHITE_1x1;
+    m->smp_diffuse = SMP_NEAREST;
+    m->tex_normal = TEX_WHITE_1x1;
+    m->smp_normal = TEX_WHITE_1x1;
+    m->tex_occ_met_rgh = TEX_WHITE_1x1;
+    m->smp_occ_met_rgh = SMP_NEAREST;
+    m->tex_occlusion = TEX_WHITE_1x1;
+    m->smp_occlusion = SMP_NEAREST;
+    m->tex_metallic = TEX_WHITE_1x1;
+    m->smp_metallic = SMP_NEAREST;
+    m->tex_roughness = TEX_WHITE_1x1;
+    m->smp_roughness = SMP_NEAREST;
 }
 
 typedef struct GLTFNode {
@@ -80,6 +80,12 @@ typedef struct GLTFNode {
     mat4 scene; // scene-space transform
     struct GLTFNode* parent; // optional - may be a root node
 } GLTFNode;
+
+void LoadModels() {
+    #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
+    XM_ASSETS_MODELS_GLTF
+    #undef X
+}
 
 void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirectory, const char* gltfFilename) {
     double tStart = glfwGetTime();
@@ -223,7 +229,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
             #if 0
                 QueueTextureLoad(textures[iimg], filePath, needsMips);
             #else
-                textures[iimg] = LoadTextureFromDisk(uri, filePath, needsMips);
+                textures[iimg] = LoadTextureFromDisk(filePath, needsMips);
             #endif
         } else {
             // TODO: Support reading images from buffers.
@@ -400,6 +406,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
     // Extract meshes (GLTF primitives) from the node structure:
     Mesh* meshes = vxAlloc(meshCount, Mesh);
     mat4* meshTransforms = vxAlloc(meshCount, mat4);
+    Material** meshMaterials = vxAlloc(meshCount, Material*);
     size_t imesh = 0;
     for (size_t inode = 0; inode < nodeCount; inode++) {
         GLTFNode* node = &nodes[inode];
@@ -426,7 +433,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
                 // Read material:
                 if (json_object_has_value(jprim, "material")) {
                     int imat = (int) json_object_get_number(jprim, "material");
-                    mesh->material = &materials[imat];
+                    meshMaterials[imesh] = &materials[imat];
                 }
                 // Read and upload indices:
                 if (json_object_has_value(jprim, "indices")) {
@@ -443,9 +450,9 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
                 // Read and upload attributes:
                 // FIXME: allow uploading something other than GL_FLOATs
                 glBindVertexArray(mesh->gl_vertex_array);
-                #define X(name, location, glslname, gltfname) { \
-                    if (json_object_has_value(jattr, gltfname)) { \
-                        int iacc = (int) json_object_get_number(jattr, gltfname); \
+                #define X(name, location, glslName, gltfName) { \
+                    if (json_object_has_value(jattr, gltfName)) { \
+                        int iacc = (int) json_object_get_number(jattr, gltfName); \
                         FAccessor* acc = &accessors[iacc]; \
                         GLuint vbo; \
                         glGenBuffers(1, &vbo); \
@@ -458,7 +465,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
                         if (location == 0) { meshVertexCount += acc->count; } \
                     } \
                 }
-                XM_ATTRIBUTE_LOCATIONS
+                XM_PROGRAM_ATTRIBUTES
                 #undef X
                 mesh->gl_vertex_count = meshVertexCount;
                 // vxLog("* Read mesh 0x%jx with %lu vertices, %lu indices, VAO %u, EBO %u", mesh,
@@ -488,6 +495,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
     model->materials = materials;
     model->meshCount = meshCount;
     model->meshTransforms = meshTransforms;
+    model->meshMaterials = meshMaterials;
     model->meshes = meshes;
 
     double t1 = (glfwGetTime() - tStart) * 1000.0;

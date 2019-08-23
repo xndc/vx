@@ -42,18 +42,6 @@ typedef struct Mesh {
     size_t gl_element_count;
     FAccessorType gl_element_type;
     size_t gl_vertex_count;
-    #if 0
-    FAccessor positions;
-    FAccessor normals;
-    FAccessor tangents;
-    FAccessor texcoords0;
-    FAccessor texcoords1;
-    FAccessor colors;
-    FAccessor joints;
-    FAccessor weights;
-    FAccessor indices;
-    #endif
-    Material* material;
 } Mesh;
 
 typedef struct Model {
@@ -63,6 +51,7 @@ typedef struct Model {
     Material* materials;
     size_t meshCount;
     mat4* meshTransforms;
+    Material** meshMaterials;
     Mesh* meshes;
 } Model;
 
@@ -70,8 +59,5 @@ typedef struct Model {
 XM_ASSETS_MODELS_GLTF
 #undef X
 
-// Reads a model from disk.
+void LoadModels();
 void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file);
-
-// Uploads or reuploads a mesh to the GPU.
-void UploadMeshToGPU (Mesh* mesh);

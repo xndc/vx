@@ -4,6 +4,7 @@
 #include "data/camera.h"
 #include "data/texture.h"
 #include "render/render.h"
+#include "render/program.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -14,12 +15,12 @@ size_t pfFrameDrawCount = 0;
 GLuint rSmpDefault = 0;
 GLuint rTexWhite1x1 = 0;
 
-static void GlfwErrorCallback (int code, const char* error) {
+static void sGlfwErrorCallback (int code, const char* error) {
     vxLog("GLFW error %d: %s", code, error);
 }
 
 #ifdef GLAD_DEBUG
-static void GladPostCallback (const char *name, void *funcptr, int len_args, ...) {
+static void sGladPostCallback (const char *name, void *funcptr, int len_args, ...) {
     GLenum error;
     // NOTE: glGetError seems to crash the Nvidia Windows driver for some reason, under some
     //   circumstances that I can't figure out. If you get weird crashes in an nvoglv64 worker
@@ -42,7 +43,7 @@ static void GladPostCallback (const char *name, void *funcptr, int len_args, ...
 }
 #endif
 
-static void vxConfig_Init (vxConfig* c) {
+void vxConfig_Init (vxConfig* c) {
     c->displayW = 1280;
     c->displayH = 1024;
     c->shadowSize = 2048;
@@ -64,12 +65,289 @@ static void vxConfig_Init (vxConfig* c) {
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -1.0f, -0.0f}, VX_UP, c->camEnvYn.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){+0.0f, +0.0f, +1.0f}, VX_UP, c->camEnvZp.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -0.0f, -1.0f}, VX_UP, c->camEnvZn.view_matrix);
+    c->pauseOnFocusLoss = true;
+}
+
+// Initializes the game. Should only be run once, at the start of its execution.
+void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
+    vxEnableSignalHandlers();
+    vxConfigureLogging();
+    vxConfig_Init(conf);
+
+    // Initialize GLFW:
+    glfwSetErrorCallback(sGlfwErrorCallback);
+    vxCheck(glfwInit());
+
+    // Initialize the game window and OpenGL context:
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
+    glfwWindowHint(GLFW_SRGB_CAPABLE, true);
+    GLFWwindow* window = glfwCreateWindow(conf->displayW, conf->displayH, "VX", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    gladLoadGL();
+    #ifdef GLAD_DEBUG
+    glad_set_post_callback(sGladPostCallback);
+    #endif
+
+    // Initialize game subsystems:
+    InitTextureSystem();
+    InitProgramSystem();
+    InitRenderSystem();
+    GUI_Init(window);
+
+    // Reverse Z setup:
+    if (glfwExtensionSupported("GL_ARB_clip_control")) {
+        glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+    } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
+        glDepthRangedNV(-1.0f, 1.0f);
+    } else {
+        vxPanic("This machine's graphics driver doesn't support reverse-Z mapping.");
+        // The renderer will technically work without the correct [0,1] depth mapping, but we would need to apply
+        //   z = z * 2.0 - 1.0
+        // in every fragment shader. Once we have a system for passing #defines to them, this might be a good idea.
+        // glDepthRangef may technically be equivalent to glDepthRangedNV on some machines, but it seems like most
+        // OpenGL implementations (including Nvidia's) clamp the near and far values, which is not what we want.
+    }
+
+    // VSync setup:
+    if (glfwExtensionSupported("WGL_EXT_swap_control_tear") ||
+        glfwExtensionSupported("GLX_EXT_swap_control_tear")) {
+        glfwSwapInterval(-1);
+    } else {
+        glfwSwapInterval(1);
+    }
+
+    // Window configuration:
+    if (glfwRawMouseMotionSupported()) {
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+
+    // HACK: 30 FPS lock for the MacBook
+    // Locking to 60FPS or not at all results in heavy stuttering. It seems like the macOS compositor expects one frame
+    // per VSync interval and just drops everything else. TODO: Try out triple buffering as an alternative solution.
+    #ifdef __APPLE__
+    glfwSwapInterval(2);
+    #endif
+
+    *pwindow = window;
+}
+
+// Reloads the game's assets. Can be run multiple times.
+void GameReload (vxConfig* conf, GLFWwindow* window) {
+    GUI_RenderLoadingFrame(window, "Loading...", "", 0.2f, 0.3f, 0.4f, 0.9f, 0.9f, 0.9f);
+    LoadTextures();
+    LoadModels();
+}
+
+// Tick function for the game. Generates a single frame.
+void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* lastFrame) {
+    frame->t = glfwGetTime();
+    frame->dt = frame->t - lastFrame->t;
+
+    // Pause the game if it loses focus:
+    if (conf->pauseOnFocusLoss && !glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+        glfwWaitEvents();
+        glfwSetTime(frame->t);
+        return;
+    }
+    vxAdvanceFrame();
+
+    // *****************************************************************************************************************
+    // Update:
+
+    // Retrieve new framebuffer size and update framebuffers if required:
+    int w, h;
+    glfwGetFramebufferSize(window, &w, &h);
+    conf->displayW = w;
+    conf->displayH = h;
+    uint8_t updatedTargets = UpdateRenderTargets(conf);
+    glViewport(0, 0, w, h);
+    
+    // Run subsystem tick functions:
+    UpdatePrograms();
+
+    // Manage cursor lock status:
+    // TODO: don't lock when clicking on ImGui elements
+    // TODO: don't affect ImGui elements when locked
+    bool cursorLocked = (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED);
+    if (!cursorLocked && (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        cursorLocked = true;
+    }
+    if (cursorLocked && glfwGetKey(window, GLFW_KEY_ESCAPE)) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        cursorLocked = false;
+    }
+
+    // FPS-style camera movement & mouse-look:
+    double mx, my, dmx, dmy;
+    {
+        static float lmx = 0;
+        static float lmy = 0;
+        static float ry = 0;
+        static float rx = 0;
+        glfwGetCursorPos(window, &mx, &my);
+        dmx = lmx - (float) mx;
+        dmy = lmy - (float) my;
+        if (cursorLocked) {
+            const float sx = -0.002f;
+            const float sy = -0.002f;
+            ry += dmx * sx;
+            rx += dmy * sy;
+            rx = vxClamp(rx, vxRadians(-90.0f), vxRadians(90.0f));
+            if (ry < vxRadians(-360)) ry += vxRadians(360);
+            if (ry > vxRadians(+360)) ry -= vxRadians(360);
+        }
+        lmx = (float) mx;
+        lmy = (float) my;
+
+        vec4 q  = GLM_QUAT_IDENTITY_INIT;
+        vec4 qy = GLM_QUAT_IDENTITY_INIT;
+        vec4 qx = GLM_QUAT_IDENTITY_INIT;
+        glm_quat(qy, ry, 0, 1, 0);
+        glm_quat(qx, rx, 1, 0, 0);
+        glm_quat_mul(qx, qy, q);
+
+        static vec3 pos = {-2, -2, -2};
+        // FIXME: I have no idea why these have to be negative.
+        vec3 spd = {-7.0f * frame->dt, -7.0f * frame->dt, -7.0f * frame->dt};
+        vec3 dpos = GLM_VEC3_ZERO_INIT;
+        if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) { pos[1] -= spd[1]; }
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { dpos[2] = -1; }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { dpos[2] = +1; }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { dpos[0] = -1; }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { dpos[0] = +1; }
+        glm_vec3_mul(dpos, spd, dpos);
+        glm_vec3_rotate(pos, ry, (vec3){0, 1, 0});
+        glm_vec3_add(pos, dpos, pos);
+        glm_vec3_rotate(pos, -ry, (vec3){0, 1, 0});
+
+        mat4 vmat;
+        glm_quat_mat4(q, vmat);
+        glm_translate(vmat, pos);
+        Camera_Update(&conf->camMain, w, h, vmat);
+    }
+    frame->mouseX = (float) mx;
+    frame->mouseY = (float) my;
+    frame->mouseDx = (float) dmx;
+    frame->mouseDy = (float) dmy;
+    
+    // *****************************************************************************************************************
+    // Render:
+
+    double tRenderStart = glfwGetTime();
+    static RenderState rs;
+    glViewport(0, 0, conf->displayW, conf->displayH);
+
+    if (updatedTargets & UPDATED_ENVMAP_TARGETS) {
+        // TODO: generate environment maps
+    }
+    
+    if (conf->clearColorBuffers) {
+        StartRenderPass(&rs, "GBuffer clear (color+depth)");
+        BindFramebuffer(FB_GBUFFER);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClearDepth(0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    } else {
+        StartRenderPass(&rs, "GBuffer clear (depth-only)");
+        BindFramebuffer(FB_GBUFFER);
+        glClearDepth(0.0f);
+        glClear(GL_DEPTH_BUFFER_BIT);
+    }
+
+    StartRenderPass(&rs, "GBuffer main (opaque objects)");
+    BindFramebuffer(FB_GBUFFER);
+    SetRenderProgram(&rs, &PROG_GBUF_MAIN);
+    SetCamera(&rs, &conf->camMain);
+    {
+        RenderState rsModel = rs;
+        MulModelScale(&rsModel, (vec3){0.5f, 0.5f, 0.5f}, (vec3){0.5f, 0.5f, 0.5f});
+        RenderModel(&rsModel, conf, frame, &MDL_SPHERES);
+    }
+    {
+        RenderState rsModel = rs;
+        MulModelPosition(&rsModel, (vec3){0.0f, -4.0f, 0.0f}, (vec3){0.0f, -4.0f, 0.0f});
+        MulModelScale(&rsModel, (vec3){2.5f, 2.5f, 2.5f}, (vec3){2.5f, 2.5f, 2.5f});
+        RenderModel(&rsModel, conf, frame, &MDL_SPONZA);
+    }
+
+    StartRenderPass(&rs, "GBuffer lighting");
+    BindFramebuffer(FB_ONLY_COLOR_HDR);
+    SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
+    SetCamera(&rs, &conf->camMain);
+    // Ambient lighting:
+    float i = 0.05f;
+    glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
+        3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
+        0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
+        1.05f * i, 1.1f * i, 1.0f * i,  // Z+ (north)
+        1.05f * i, 1.1f * i, 1.0f * i,  // Z- (south)
+        1.05f * i, 1.1f * i, 1.0f * i,  // X+ (east)
+        1.05f * i, 1.1f * i, 1.0f * i,  // X- (west)
+    });
+    // Directional lighting:
+    glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
+    glUniform3f(UNIF_SUN_COLOR, 2.5f, 2.5f, 2.1f);
+    // Point lighting:
+    glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
+        4.9f,  2.0f,  4.2f,
+        -4.8f,  2.5f,  4.4f,
+        -4.2f,  2.3f, -4.6f,
+        4.1f,  2.9f, -4.5f,
+    });
+    glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
+        20.0f, 20.0f, 20.0f,
+        20.0f, 20.0f, 20.0f,
+        20.0f, 20.0f, 20.0f,
+        20.0f, 20.0f, 20.0f,
+    });
+    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+
+    StartRenderPass(&rs, "Final output");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawBuffer(GL_BACK);
+    SetRenderProgram(&rs, &PROG_FINAL);
+    SetCamera(&rs, &conf->camMain);
+    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+
+    // *****************************************************************************************************************
+    // Swap & poll:
+
+    double tSwapStart = glfwGetTime();
+    glfwSwapBuffers(window);
+
+    double tPollStart = glfwGetTime();
+    glfwPollEvents();
+
+    frame->tMain   = tRenderStart - frame->t;
+    frame->tRender = tSwapStart - tRenderStart;
+    frame->tSwap   = tPollStart - tSwapStart;
+    frame->tPoll   = glfwGetTime() - tPollStart;
+    frame->n++;
 }
 
 int main() {
+    vxConfig conf = {0};
+    GLFWwindow* window = NULL;
+    GameLoad(&conf, &window);
+    GameReload(&conf, window);
+    vxFrame frame = {0};
+    vxFrame lastFrame = {0};
+    while (!glfwWindowShouldClose(window)) {
+        GameTick(&conf, window, &frame, &lastFrame);
+        lastFrame = frame;
+    }
+}
+
+#if 0
+int main() {
     vxEnableSignalHandlers();
     vxConfigureLogging();
-    glfwSetErrorCallback(GlfwErrorCallback);
+    glfwSetErrorCallback(sGlfwErrorCallback);
     vxCheck(glfwInit());
 
     static vxConfig conf;
@@ -84,7 +362,7 @@ int main() {
     glfwMakeContextCurrent(window);
     gladLoadGL();
     #ifdef GLAD_DEBUG
-    glad_set_post_callback(GladPostCallback);
+    glad_set_post_callback(sGladPostCallback);
     #endif
 
     // Retrieve the correct glTextureBarrier (regular or NV) function for this system
@@ -388,3 +666,4 @@ int main() {
 
     return 0;
 }
+#endif

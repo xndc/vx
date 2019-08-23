@@ -24,6 +24,22 @@ typedef struct vxConfig {
     Camera camEnvYn;
     Camera camEnvZp;
     Camera camEnvZn;
+    bool pauseOnFocusLoss;
+    bool clearColorBuffers;
 } vxConfig;
 
-static void vxConfig_Init (vxConfig* c);
+void vxConfig_Init (vxConfig* c);
+
+typedef struct vxFrame {
+    uint64_t n; // frame number
+    float t;   // time at frame start
+    float dt;  // delta between current frame start and last frame start
+    float tMain;   // time taken by the main processing loop
+    float tRender; // time taken by the rendering loop
+    float tSwap;   // time taken by OpenGL (glfwSwapBuffers)
+    float tPoll;   // time taken by the operating system (glfwPollEvents)
+    float mouseX;
+    float mouseY;
+    float mouseDx;
+    float mouseDy;
+} vxFrame;

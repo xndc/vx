@@ -1,8 +1,10 @@
 #include "texture.h"
+#include "main.h"
+#include "render/render.h"
+
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <stb_image.h>
-#include "render/render.h"
 
 #define X(name, _) GLuint name = 0;
 XM_ASSETS_TEXTURES
@@ -15,7 +17,7 @@ XM_RENDERTARGETS_ENVMAP
 #define DEPTH(point, name)
 #define COLOR(point, name)
 #define END(name)
-XM_ASSETS_FRAMEBUFFERS
+XM_FRAMEBUFFERS
 #undef BEGIN
 #undef DEPTH
 #undef COLOR
@@ -23,15 +25,41 @@ XM_ASSETS_FRAMEBUFFERS
 
 GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
-GLuint ENVMAP_BASE = 0;
-GLuint ENVMAP_CUBE = 0;
+// GLuint ENVMAP_BASE = 0;
+// GLuint ENVMAP_CUBE = 0;
 
-void InitTextures() {
+GLuint TEX_WHITE_1x1;
+GLuint SMP_NEAREST;
+GLuint SMP_LINEAR;
+
+// Initializes the texture system. Should only be run once.
+void InitTextureSystem() {
+    glGenTextures(1, &TEX_WHITE_1x1);
+    glBindTexture(GL_TEXTURE_2D, TEX_WHITE_1x1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLubyte[]){ 255, 255, 255, 255 });
+    glGenSamplers(1, &SMP_NEAREST);
+    glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glGenSamplers(1, &SMP_LINEAR);
+    glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenSamplers(VXGL_SAMPLER_COUNT, VXGL_SAMPLER);
+}
+
+// Loads all textures from disk. Can be run multiple times.
+void LoadTextures() {
     // Regular textures:
-    #define X(name, path) name = LoadTextureFromDisk(#name, path);
+    #define X(name, path) name = LoadTextureFromDisk(path, true);
     XM_ASSETS_TEXTURES
     #undef X
 
+#if 0
     // IBL environment map:
     // https://learnopengl.com/PBR/IBL/Diffuse-irradiance
     stbi_set_flip_vertically_on_load(true);
@@ -41,10 +69,10 @@ void InitTextures() {
     glGenTextures(1, &ENVMAP_BASE);
     glBindTexture(GL_TEXTURE_2D, ENVMAP_BASE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // Preallocate texture for cubemap:
     glGenTextures(1, &ENVMAP_CUBE);
@@ -52,11 +80,11 @@ void InitTextures() {
     for (int i = 0; i < 6; i++) {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, 0);
     }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // Generate cubemap:
     GLuint fbo = 0;
@@ -108,8 +136,85 @@ void InitTextures() {
         glUniformMatrix4fv(UNIF_ENVMAP_DIRECTION, 1, false, (float*) m);
         RunFullscreenPass(512, 512, 0, 0);
     }
+#endif
 }
 
+static void sUpdateRenderTarget (const char* name, const char* fmtname, GLuint* t, GLenum format, int w, int h) {
+    vxLog("Rebuilding render target %s (%dx%d, %s)", name, w, h, fmtname);
+    if (*t != 0) {
+        glDeleteTextures(1, t);
+    }
+    glGenTextures(1, t);
+    glBindTexture(GL_TEXTURE_2D, *t);
+    glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+// Updates all render targets and framebuffers, if required.
+// Returns a bitfield containing one UPDATED_*_TARGETS flag for each type of render target that was updated.
+uint8_t UpdateRenderTargets (vxConfig* conf) {
+    static int lastScreenW = 0;
+    static int lastScreenH = 0;
+    static int lastShadowSize = 0;
+    static int lastEnvmapSize = 0;
+    int screenW = conf->displayW;
+    int screenH = conf->displayH;
+    int shadowSize = conf->shadowSize;
+    int envmapSize = conf->envmapSize;
+    uint8_t updated = 0;
+
+    if (screenW != lastScreenW || screenH != lastScreenH) {
+        updated |= UPDATED_SCREEN_TARGETS;
+        #define X(name, format) sUpdateRenderTarget(#name, #format, &name, format, screenW, screenH);
+        XM_RENDERTARGETS_SCREEN
+        #undef X
+    }
+
+    if (shadowSize != lastShadowSize) {
+        updated |= UPDATED_SHADOW_TARGETS;
+        #define X(name, format) sUpdateRenderTarget(#name, #format, &name, format, shadowSize, shadowSize);
+        XM_RENDERTARGETS_SHADOW
+        #undef X
+    }
+
+    if (envmapSize != lastEnvmapSize) {
+        updated |= UPDATED_ENVMAP_TARGETS;
+        #define X(name, format) sUpdateRenderTarget(#name, #format, &name, format, envmapSize, envmapSize);
+        XM_RENDERTARGETS_ENVMAP
+        #undef X
+    }
+
+    if (updated) {
+        GLenum status;
+        #define BEGIN(name) \
+            if (name != 0) { glDeleteFramebuffers(1, &name); } \
+            glGenFramebuffers(1, &name); \
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, name);
+        #define DEPTH(point, name) \
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, point, GL_TEXTURE_2D, name, 0);
+        #define COLOR(point, name) \
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, point, GL_TEXTURE_2D, name, 0);
+        #define END(name) \
+            status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER); \
+            if (status != GL_FRAMEBUFFER_COMPLETE) { \
+                vxPanic("Couldn't create framebuffer " #name ": error %d", status); \
+            }
+        XM_FRAMEBUFFERS
+        #undef BEGIN
+        #undef DEPTH
+        #undef COLOR
+        #undef END
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    }
+
+    lastScreenW = screenW;
+    lastScreenH = screenH;
+    lastShadowSize = shadowSize;
+    lastEnvmapSize = envmapSize;
+    return updated;
+}
+
+#if 0
 int UpdateFramebuffers (int width, int height, int shadowsize, int envmapsize, int skyboxsize) {
     static int last_width = 0;
     static int last_height = 0;
@@ -191,8 +296,10 @@ int UpdateFramebuffers (int width, int height, int shadowsize, int envmapsize, i
 
     return updated_flags;
 }
+#endif
 
-GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
+// Loads a texture from disk and uploads it to the GPU. Returns its OpenGL ID.
+GLuint LoadTextureFromDisk (const char* path, bool mips) {
     double tStart = glfwGetTime();
     GLuint texture;
     glGenTextures(1, &texture);
@@ -200,7 +307,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
 
     // Generate hash of texture filename and mtime:
     uint64_t mtime = vxGetFileMtime(path);
-    vxCheckMsg(mtime != 0, "Failed to load %s from %s: file not found", name, path);
+    vxCheckMsg(mtime != 0, "Failed to load %s: file not found", path);
     size_t hash = stbds_hash_string((char*) path, VX_SEED);
     hash ^= stbds_hash_bytes(&mtime, sizeof(mtime), VX_SEED);
 
@@ -223,8 +330,8 @@ GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
             case 4: { internalformat = GL_RGBA8; format = GL_RGBA; break; }
             default: { vxPanic("Unknown channel count %d for %s (%s)", c, path, cachedTexturePath); }
         }
-        uint32_t levelw = w;
-        uint32_t levelh = h;
+        int levelw = w;
+        int levelh = h;
         for (int ilevel = 0; ilevel < l; ilevel++) {
             if ((size - idata) < levelw * levelh * c) {
                 vxPanic("%s has wrong size %ju for parameters %ux%ux%ux%u", size, w, h, c, l);
@@ -246,7 +353,7 @@ GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {
     int w, h, c;
     void* image = stbi_load(path, &w, &h, &c, 0);
     if (!image) {
-        vxPanic("Failed to load %s from %s: %s", name, path, stbi_failure_reason());
+        vxPanic("Failed to load %s: %s", path, stbi_failure_reason());
     }
 
     // Compute mip level count (no way to query it):

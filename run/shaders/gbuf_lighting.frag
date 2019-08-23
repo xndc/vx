@@ -133,14 +133,24 @@ vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met,
 
 void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
+
+    // Don't do lighting calculations for missing fragments (e.g. sky):
+    float zRaw = texelFetch(gDepth, fc, 0).r;
+    if (zRaw == 0) {
+        outColorHDR = vec4(0.0);
+        return;
+    }
+
+    // NOTE: The lighting algorithms presumably assume that depth is in [-1, 1].
+    // float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
+    float z = zRaw;
+
     vec3 diffuse = texelFetch(gColorLDR, fc, 0).rgb;
     vec3 normal  = texelFetch(gNormal,   fc, 0).rgb;
     vec3 aux1    = texelFetch(gAux1,     fc, 0).rgb;
     float rough = max(aux1.g, 0.05); // lighting looks wrong around 0
     float metal = aux1.b;
 
-    // NOTE: I have no idea why we need to do this. I guess OpenGL screws our Z up somehow?
-    float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
     vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
     vec4 FragPosClip = vec4(fragCoordClip, z, 1.0);
     vec4 FragPosView = uInvProjMatrix * FragPosClip;
@@ -177,10 +187,8 @@ void main() {
     }
     #endif
 
-    // There are certainly better ways to do this.
-    if (texelFetch(gDepth, fc, 0).r != 0.0) {
-        outColorHDR = vec4(Lo, 1.0);
-    }
+    outColorHDR = vec4(Lo, 1.0);
+    // outColorHDR = vec4(z);
 }
 
 /*

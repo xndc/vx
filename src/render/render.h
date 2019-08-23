@@ -1,45 +1,72 @@
 #pragma once
 #include "common.h"
-#include "assets.h"
+#include "main.h"
 #include "data/texture.h"
 #include "data/model.h"
 #include "data/camera.h"
+#include "render/program.h"
 
+extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
+extern int vxglMaxTextureUnits;
+
+extern Material MAT_FULLSCREEN_QUAD;
+extern Mesh MESH_QUAD;
+extern Mesh MESH_CUBE;
+
+void InitRenderSystem();
+
+typedef struct RenderState {
+    GLuint program;
+    Material* material;
+    mat4 matView;
+    mat4 matViewInv;
+    mat4 matViewLast;
+    mat4 matProj;
+    mat4 matProjInv;
+    mat4 matProjLast;
+    mat4 matModel;
+    mat4 matModelLast;
+    int nextFreeTextureUnit;
+} RenderState;
+
+void StartRenderPass (RenderState* rs, const char* passName);
+void CopyRenderState (RenderState* src, RenderState* dst);
+
+void SetViewMatrix (RenderState* rs, mat4 view, mat4 viewInv, mat4 viewLast);
+void SetProjMatrix (RenderState* rs, mat4 proj, mat4 projInv, mat4 projLast);
+void SetCamera (RenderState* rs, Camera* cam);
+
+void ResetModelMatrix (RenderState* rs);
+void SetModelMatrix (RenderState* rs, mat4 model, mat4 modelLast);
+void MulModelMatrix (RenderState* rs, mat4 model, mat4 modelLast);
+void MulModelPosition (RenderState* rs, vec3 pos, vec3 posLast);
+void MulModelRotation (RenderState* rs, versor rot, versor rotLast);
+void MulModelScale (RenderState* rs, vec3 scl, vec3 sclLast);
+
+int BindTexture (RenderState* rs, GLuint texture, GLuint sampler);
+void SetUniformTextureSampler2D (RenderState* rs, GLint unif, GLuint tex, GLuint sampler);
+void SetUniformTexture2D (RenderState* rs, GLint unif, GLuint tex, GLenum min, GLenum mag, GLenum wrap);
+void SetUniformTextureSamplerCube (RenderState* rs, GLint unif, GLuint tex, GLuint sampler);
+void SetUniformTextureCube (RenderState* rs, GLint unif, GLuint tex, GLenum min, GLenum mag, GLenum wrap);
+
+void SetRenderProgram (RenderState* rs, Program* p);
+void SetRenderMaterial (RenderState* rs, Material* mat);
+
+void RenderMesh  (RenderState* rs, vxConfig* conf, vxFrame* frame, Mesh* mesh, Material* material);
+void RenderModel (RenderState* rs, vxConfig* conf, vxFrame* frame, Model* model);
+
+#if 0
 // The process of rendering something in VX looks something like this:
 // * Start a new render pass.
 // * Bind whichever framebuffer you want to render to.
-// * Set the vertex and fragment shaders that you want to use.
-// * Add #define statements to the shaders, if needed.
+// * Set the render program you want to use for the pass.
 // * Set the view and projection matrices you want to use for the pass.
 // Then, for each mesh you want to render:
-// * Change shaders or add more defines if required.
+// * Change the render program, if required.
 // * Set the appropriate model matrix for the mesh.
 // * Set any OpenGL state required to draw the mesh's material.
 // * Set shader uniforms (colours, textures, etc.) as appropriate.
 // * Issue a draw call for the mesh.
-
-typedef struct {
-    const char* name;
-    char* version;
-    char* body;
-    char* full;
-} Shader;
-
-#define X(name, path) extern Shader* name;
-XM_ASSETS_SHADERS
-#undef X
-
-#define X(name, glsl_name) extern GLint name;
-XM_ASSETS_SHADER_UNIFORMS
-#undef X
-
-#define X(name, location, glslname, gltfname) extern const GLint name;
-XM_ATTRIBUTE_LOCATIONS
-#undef X
-
-extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
-
-Shader* LoadShaderFromDisk (const char* name, const char* path);
 
 void StartRenderPass (const char* name);
 void PushRenderState();
@@ -74,3 +101,4 @@ void SetMaterial (Material* mat);
 void RenderMesh  (Mesh* mesh,   int w, int h, float t, uint32_t frame);
 void RenderModel (Model* model, int w, int h, float t, uint32_t frame);
 void RunFullscreenPass         (int w, int h, float t, uint32_t frame);
+#endif

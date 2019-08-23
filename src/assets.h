@@ -1,30 +1,28 @@
 #pragma once
 
-#define XM_ASSETS_SHADERS \
-    X(VSH_DEFAULT,          "shaders/default.vert") \
-    X(VSH_FULLSCREEN_PASS,  "shaders/fullscreen.vert") \
-    X(FSH_GBUF_MAIN,        "shaders/gbuf_main.frag") \
-    X(FSH_GBUF_LIGHTING,    "shaders/gbuf_lighting.frag") \
-    X(FSH_FX_DITHER,        "shaders/fx_dither.frag") \
-    X(FSH_FINAL,            "shaders/final.frag") \
-    X(FSH_GEN_CUBEMAP,      "shaders/gen_cubemap.frag") \
-    X(VSH_SKYBOX,           "shaders/skybox.vert") \
-    X(FSH_SKYBOX,           "shaders/skybox.frag") \
+#define XM_SHADERS \
+    X(GL_VERTEX_SHADER,   VSH_DEFAULT,          "shaders/default.vert") \
+    X(GL_VERTEX_SHADER,   VSH_FULLSCREEN_PASS,  "shaders/fullscreen.vert") \
+    X(GL_FRAGMENT_SHADER, FSH_GBUF_MAIN,        "shaders/gbuf_main.frag") \
+    X(GL_FRAGMENT_SHADER, FSH_GBUF_LIGHTING,    "shaders/gbuf_lighting.frag") \
+    X(GL_FRAGMENT_SHADER, FSH_FX_DITHER,        "shaders/fx_dither.frag") \
+    X(GL_FRAGMENT_SHADER, FSH_FINAL,            "shaders/final.frag") \
+    X(GL_FRAGMENT_SHADER, FSH_GEN_CUBEMAP,      "shaders/gen_cubemap.frag") \
+    X(GL_VERTEX_SHADER,   VSH_SKYBOX,           "shaders/skybox.vert") \
+    X(GL_FRAGMENT_SHADER, FSH_SKYBOX,           "shaders/skybox.frag") \
 
-// TODO: Switch to loading programs by names defined here, so we can load them before the models.
-#if 0
-#define XM_ASSETS_PROGRAMS \
-    X(PROG_GBUF_MAIN,  VSH_DEFAULT, FSH_GBUF_MAIN) \
-    X(PROG_FX_DITHER,  VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
-    X(PROG_FINAL,      VSH_FULLSCREEN_PASS, FSH_FINAL)
-#endif
+#define XM_PROGRAMS \
+    X(PROG_GBUF_MAIN,       VSH_DEFAULT,         FSH_GBUF_MAIN) \
+    X(PROG_GBUF_LIGHTING,   VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING) \
+    X(PROG_FX_DITHER,       VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
+    X(PROG_FINAL,           VSH_FULLSCREEN_PASS, FSH_FINAL)
 
 // Syntax for attributes:
 // X(location global name, layout location index, GLSL name, GLTF name)
 // See https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#meshes for
 // GLTF attribute names.
 
-#define XM_ATTRIBUTE_LOCATIONS \
+#define XM_PROGRAM_ATTRIBUTES \
     X(ATTR_POSITION,    0, "aPosition",  "POSITION")    \
     X(ATTR_NORMAL,      1, "aNormal",    "NORMAL")      \
     X(ATTR_TANGENT,     2, "aTangent",   "TANGENT")     \
@@ -38,7 +36,7 @@
 // X(location global name, GLSL name)
 // NOTE: the UNIF_RT uniform variable names should match the render target names defined below
 
-#define XM_ASSETS_SHADER_UNIFORMS \
+#define XM_PROGRAM_UNIFORMS \
     X(UNIF_RT_DEPTH,        "gDepth") \
     X(UNIF_RT_COLOR_LDR,    "gColorLDR") \
     X(UNIF_RT_COLOR_HDR,    "gColorHDR") \
@@ -146,7 +144,7 @@
 // [COLOR|DEPTH](attachment point, render target name)
 // Framebuffers can only have one depth attachment.
 
-#define XM_ASSETS_FRAMEBUFFERS \
+#define XM_FRAMEBUFFERS \
     BEGIN(FB_ALL) \
         DEPTH(GL_DEPTH_ATTACHMENT, RT_DEPTH) \
         COLOR(GL_COLOR_ATTACHMENT0, RT_COLOR_LDR) \
