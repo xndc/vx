@@ -8,30 +8,27 @@ typedef struct {
     mat4 inv_view_matrix;
     mat4 last_proj_matrix;
     mat4 last_view_matrix;
-    bool has_proj_matrix;
-    bool has_view_matrix;
 
     enum CameraProjection {
         CAMERA_ORTHOGRAPHIC,
         CAMERA_PERSPECTIVE,
     } projection;
 
-    float near;
-    float far;      // set lower than near for infinite perspective projection
-    float fov;      // horizontal FOV in perspective mode
-    float zoom;     // zoom factor (world units per [0,1] clip space unit) in orthographic mode
+    // TODO: switch from near/far to zn/zf across the entire program (for windows.h/unity build compatibility)
+    union { float zn; float near; };
+    union { float zf; float far;  }; // set lower than near for infinite perspective projection
+    float fov;  // horizontal FOV in perspective mode
+    float zoom; // zoom factor (world units per [0,1] clip space unit) in orthographic mode
 
-    vec3 position;
-    vec3 target;
+    float hw; // aspect ratio
 
-    float prev_fov;
-    float prev_near;
-    float prev_far;
-    float prev_aspect_hw;
     enum CameraProjection prev_projection;
-    vec3 prev_position;
-    vec3 prev_target;
+    float prev_fov;
+    float prev_zn;
+    float prev_zf;
+    float prev_hw;
 } Camera;
 
-// Updates the given camera's projection and view matrices.
-void UpdateCameraMatrices (Camera* camera, int w, int h);
+void Camera_InitPerspective (Camera* camera, float zn, float zf, float fov);
+void Camera_InitOrtho (Camera* camera, float zoom);
+void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix);

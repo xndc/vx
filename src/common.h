@@ -55,6 +55,9 @@
 #define vxRadians(deg) (deg * M_PI / 180.0)
 #define vxDegrees(rad) (rad * 180.0 / M_PI)
 
+#define VX_UP_INIT {0.0f, 1.0f, 0.0f}
+#define VX_UP ((vec3) VX_UP_INIT)
+
 #define VX_KiB 1024
 #define VX_MiB 1048576
 #define VX_GiB 1073741824

@@ -123,7 +123,7 @@
 // X(name, format)
 // NOTE: render target names should match their corresponding UNIF_RT uniform variable names
 
-#define XM_ASSETS_RENDERTARGETS_SCREENSIZE \
+#define XM_RENDERTARGETS_SCREEN \
     X(RT_DEPTH,         GL_DEPTH_COMPONENT32F) \
     X(RT_COLOR_LDR,     GL_RGBA8) \
     X(RT_COLOR_HDR,     GL_R11F_G11F_B10F) \
@@ -134,8 +134,12 @@
     X(RT_AUX2,          GL_RGBA8) \
     X(RT_AUX_DEPTH,     GL_DEPTH_COMPONENT32F) \
 
-#define XM_ASSETS_RENDERTARGETS_SHADOWSIZE \
+#define XM_RENDERTARGETS_SHADOW \
     X(RT_SHADOW_DEPTH, GL_DEPTH_COMPONENT32F) \
+
+#define XM_RENDERTARGETS_ENVMAP \
+    X(RT_ENVMAP_DEPTH, GL_DEPTH_COMPONENT32F) \
+    X(RT_ENVMAP_COLOR, GL_RGB16F) \
 
 // Syntax for framebuffers:
 // [BEGIN|END](framebuffer name)

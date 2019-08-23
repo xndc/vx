@@ -4,8 +4,9 @@
 
 #define X(name, _) extern GLuint name;
 XM_ASSETS_TEXTURES
-XM_ASSETS_RENDERTARGETS_SCREENSIZE
-XM_ASSETS_RENDERTARGETS_SHADOWSIZE
+XM_RENDERTARGETS_SCREEN
+XM_RENDERTARGETS_SHADOW
+XM_RENDERTARGETS_ENVMAP
 #undef X
 
 extern GLuint ENVMAP_BASE;
@@ -35,8 +36,13 @@ extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
 void InitTextures();
 
-// Resizes all render targets and framebuffers.
-void UpdateFramebuffers (int width, int height, int shadowsize);
+// Resizes all render targets and framebuffers. Returns a bitfield containing UPDATED_*_TARGETS flags for each render
+// target type that was resized.
+int UpdateFramebuffers (int width, int height, int shadowsize, int envmapsize, int skyboxsize);
+static const int UPDATED_SCREEN_TARGETS = 1 << 0;
+static const int UPDATED_SHADOW_TARGETS = 1 << 1;
+static const int UPDATED_ENVMAP_TARGETS = 1 << 2;
+static const int UPDATED_SKYBOX_TARGETS = 1 << 3;
 
 // Loads a texture from disk and uploads it to the GPU. Returns its OpenGL ID.
 // The name doesn't matter, it's only displayed in this function's debug output.

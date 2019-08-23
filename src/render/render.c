@@ -247,8 +247,8 @@ void SetRenderProgram (Shader* vsh, Shader* fsh) {
     // Set render target uniforms:
     #define X(name, format) \
         SetUniformTexture(UNIF_ ## name, name, GL_LINEAR, GL_LINEAR, GL_MIRRORED_REPEAT);
-    XM_ASSETS_RENDERTARGETS_SCREENSIZE
-    XM_ASSETS_RENDERTARGETS_SHADOWSIZE
+    XM_RENDERTARGETS_SCREEN
+    XM_RENDERTARGETS_SHADOW
     #undef X
 }
 

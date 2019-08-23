@@ -17,7 +17,7 @@ vec2 SpheremapUV (vec3 dir) {
 
 void main() {
     vec4 wtf = uEnvmapDirection * vec4(fragCoordClip, 1, 1);
-    vec3 dir = wtf.xyz / wtf.w;
-    vec2 uv = SpheremapUV(normalize(dir));
+    vec3 dir = wtf.xyz;
+    vec2 uv = SpheremapUV(dir);
     outColor = texture(texEnvmap, uv);
 }

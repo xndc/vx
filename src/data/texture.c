@@ -6,8 +6,9 @@
 
 #define X(name, _) GLuint name = 0;
 XM_ASSETS_TEXTURES
-XM_ASSETS_RENDERTARGETS_SCREENSIZE
-XM_ASSETS_RENDERTARGETS_SHADOWSIZE
+XM_RENDERTARGETS_SCREEN
+XM_RENDERTARGETS_SHADOW
+XM_RENDERTARGETS_ENVMAP
 #undef X
 
 #define BEGIN(name) GLuint name = 0;
@@ -109,20 +110,22 @@ void InitTextures() {
     }
 }
 
-void UpdateFramebuffers (int width, int height, int shadowsize) {
+int UpdateFramebuffers (int width, int height, int shadowsize, int envmapsize, int skyboxsize) {
     static int last_width = 0;
     static int last_height = 0;
     static int last_shadowsize = 0;
-    bool regenerate_framebuffers = false;
+    static int last_envmapsize = 0;
+    static int last_skyboxsize = 0;
+    int updated_flags = 0;
 
     // We get called with zeroes when the window is minimized. Just skip the update in this case.
     if (width == 0 || height == 0) {
-        return;
+        return updated_flags;
     }
 
     // Resize screen-sized render targets:
     if (width != last_width || height != last_height) {
-        regenerate_framebuffers = true;
+        updated_flags |= UPDATED_SCREEN_TARGETS;
         last_width  = width;
         last_height = height;
         #define X(name, format) \
@@ -130,25 +133,41 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
             glGenTextures(1, &name); \
             glBindTexture(GL_TEXTURE_2D, name); \
             glTexStorage2D(GL_TEXTURE_2D, 1, format, width, height);
-        XM_ASSETS_RENDERTARGETS_SCREENSIZE
+        XM_RENDERTARGETS_SCREEN
         #undef X
     }
 
     if (shadowsize != last_shadowsize) {
-        regenerate_framebuffers = true;
+        updated_flags |= UPDATED_SHADOW_TARGETS;
         last_shadowsize = shadowsize;
-        // Resize shadow-sized render targets:
         #define X(name, format) \
             if (name != 0) { glDeleteTextures(1, &name); } \
             glGenTextures(1, &name); \
             glBindTexture(GL_TEXTURE_2D, name); \
             glTexStorage2D(GL_TEXTURE_2D, 1, format, shadowsize, shadowsize);
-        XM_ASSETS_RENDERTARGETS_SHADOWSIZE
+        XM_RENDERTARGETS_SHADOW
         #undef X
     }
 
+    if (envmapsize != last_envmapsize) {
+        updated_flags |= UPDATED_ENVMAP_TARGETS;
+        last_envmapsize = envmapsize;
+        #define X(name, format) \
+            if (name != 0) { glDeleteTextures(1, &name); } \
+            glGenTextures(1, &name); \
+            glBindTexture(GL_TEXTURE_2D, name); \
+            glTexStorage2D(GL_TEXTURE_2D, 1, format, envmapsize, envmapsize);
+        XM_RENDERTARGETS_ENVMAP
+        #undef X
+    }
+
+    if (skyboxsize != last_skyboxsize) {
+        updated_flags |= UPDATED_SKYBOX_TARGETS;
+        last_skyboxsize = skyboxsize;
+    }
+
     // Re-generate framebuffers:
-    if (regenerate_framebuffers) {
+    if (updated_flags != 0) {
         GLenum status;
         #define BEGIN(name) \
             if (name != 0) { glDeleteFramebuffers(1, &name); } \
@@ -169,6 +188,8 @@ void UpdateFramebuffers (int width, int height, int shadowsize) {
         #undef COLOR
         #undef END
     }
+
+    return updated_flags;
 }
 
 GLuint LoadTextureFromDisk (const char* name, const char* path, bool mips) {

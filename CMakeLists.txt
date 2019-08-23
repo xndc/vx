@@ -114,7 +114,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     # * Zi      generate PDB files
     # * Zo      generate extra debug information for optimized code
     # * EHsc-   disable C++ exceptions
-    target_compile_options(Game PRIVATE /W4 /Zi /Zo /EHsc- /wd4100 /wd4201 /wd4127)
+    # * d:c     show column numbers in messages
+    target_compile_options(Game PRIVATE /W4 /Zi /Zo /EHsc- /wd4100 /wd4201 /wd4127 /diagnostics:column)
     # Suppressed warnings:
     target_compile_options(Game PRIVATE
         /wd4100  # unreferenced function parameters

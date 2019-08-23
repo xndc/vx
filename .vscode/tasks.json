@@ -10,7 +10,7 @@
             "group": "build",
             "problemMatcher": [
                 "$gcc",
-                {"base": "$msCompile", "fileLocation": ["relative", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+                {"base": "$msCompile", "fileLocation": ["autoDetect", "${workspaceRoot}/build/win-x64-ninja-debug"]},
             ],
             "windows": {
                 "command": "${workspaceRoot}/scripts/build.ps1",
@@ -24,7 +24,7 @@
             "group": "build",
             "problemMatcher": [
                 "$gcc",
-                {"base": "$msCompile", "fileLocation": ["relative", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+                {"base": "$msCompile", "fileLocation": ["autoDetect", "${workspaceRoot}/build/win-x64-ninja-debug"]},
             ],
             "windows": {
                 "command": "${workspaceRoot}/scripts/build.ps1",
@@ -38,7 +38,7 @@
             "group": "build",
             "problemMatcher": [
                 "$gcc",
-                {"base": "$msCompile", "fileLocation": ["relative", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+                {"base": "$msCompile", "fileLocation": ["autoDetect", "${workspaceRoot}/build/win-x64-ninja-debug"]},
             ],
             "windows": {
                 "command": "${workspaceRoot}/scripts/build.ps1",                

@@ -42,11 +42,29 @@ static void GladPostCallback (const char *name, void *funcptr, int len_args, ...
 }
 #endif
 
-int G_WindowConfig_W = 1280;
-int G_WindowConfig_H = 1024;
-int G_RenderConfig_ShadowMapSize = 2048;
-Camera G_MainCamera = {0};
-Camera G_ShadowCamera = {0};
+static void vxConfig_Init (vxConfig* c) {
+    c->displayW = 1280;
+    c->displayH = 1024;
+    c->shadowSize = 2048;
+    c->envmapSize = 512;
+    c->skyboxSize = 2048;
+    Camera_InitPerspective(&c->camMain, 0.01f, 0.0f, 80.0f);
+    glm_lookat((vec3){3.0f, 3.0f, 3.0f}, GLM_VEC3_ZERO, VX_UP, c->camMain.view_matrix);
+    Camera_InitOrtho(&c->camShadow, 100.0f);
+    glm_lookat((vec3){-500.0f, 700.0f, -1000.0f}, GLM_VEC3_ZERO, VX_UP, c->camShadow.view_matrix);
+    Camera_InitPerspective(&c->camEnvXp, 0.1f, 0.0f, 90.0f);
+    Camera_InitPerspective(&c->camEnvXn, 0.1f, 0.0f, 90.0f);
+    Camera_InitPerspective(&c->camEnvYp, 0.1f, 0.0f, 90.0f);
+    Camera_InitPerspective(&c->camEnvYn, 0.1f, 0.0f, 90.0f);
+    Camera_InitPerspective(&c->camEnvZp, 0.1f, 0.0f, 90.0f);
+    Camera_InitPerspective(&c->camEnvZn, 0.1f, 0.0f, 90.0f);
+    glm_lookat(GLM_VEC3_ZERO, (vec3){+1.0f, +0.0f, +0.0f}, VX_UP, c->camEnvXp.view_matrix);
+    glm_lookat(GLM_VEC3_ZERO, (vec3){-1.0f, -0.0f, -0.0f}, VX_UP, c->camEnvXn.view_matrix);
+    glm_lookat(GLM_VEC3_ZERO, (vec3){+0.0f, +1.0f, +0.0f}, VX_UP, c->camEnvYp.view_matrix);
+    glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -1.0f, -0.0f}, VX_UP, c->camEnvYn.view_matrix);
+    glm_lookat(GLM_VEC3_ZERO, (vec3){+0.0f, +0.0f, +1.0f}, VX_UP, c->camEnvZp.view_matrix);
+    glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -0.0f, -1.0f}, VX_UP, c->camEnvZn.view_matrix);
+}
 
 int main() {
     vxEnableSignalHandlers();
@@ -54,12 +72,15 @@ int main() {
     glfwSetErrorCallback(GlfwErrorCallback);
     vxCheck(glfwInit());
 
+    static vxConfig conf;
+    vxConfig_Init(&conf);
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
     glfwWindowHint(GLFW_SRGB_CAPABLE, true);
-    GLFWwindow* window = glfwCreateWindow(G_WindowConfig_W, G_WindowConfig_H, "VX", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(conf.displayW, conf.displayH, "VX", NULL, NULL);
     glfwMakeContextCurrent(window);
     gladLoadGL();
     #ifdef GLAD_DEBUG
@@ -122,12 +143,6 @@ int main() {
     glfwSwapInterval(2);
     #endif
 
-    G_MainCamera.projection = CAMERA_PERSPECTIVE;
-    G_MainCamera.fov  = 80.0f;
-    G_MainCamera.near = 0.1f;
-    G_MainCamera.far  = 0.0f;
-    glm_vec3_copy((vec3){0.0f, 0.5f, 0.0f}, G_MainCamera.target);
-
     MDL_DUCK.materials[0].stipple = true;
     MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
     MDL_DUCK.materials[0].stipple_soft_cutoff = 0.9f;
@@ -159,7 +174,9 @@ int main() {
 
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
-        UpdateFramebuffers(w, h, G_RenderConfig_ShadowMapSize);
+        conf.displayW = w;
+        conf.displayH = h;
+        UpdateFramebuffers(w, h, conf.shadowSize, conf.envmapSize, conf.skyboxSize);
         glViewport(0, 0, w, h);
 
         #if 0
@@ -231,9 +248,10 @@ int main() {
         glm_vec3_add(pos, dpos, pos);
         glm_vec3_rotate(pos, -ry, (vec3){0, 1, 0});
 
-        glm_quat_mat4(q, G_MainCamera.view_matrix);
-        glm_translate(G_MainCamera.view_matrix, pos);
-        UpdateCameraMatrices(&G_MainCamera, w, h);
+        mat4 vmat;
+        glm_quat_mat4(q, vmat);
+        glm_translate(vmat, pos);
+        Camera_Update(&conf.camMain, w, h, vmat);
 
         tFrameRenderStart = glfwGetTime();
 
@@ -245,7 +263,7 @@ int main() {
 
         StartRenderPass("GBuffer render");
         BindFramebuffer(FB_GBUFFER);
-        SetCameraMatrices(&G_MainCamera);
+        SetCameraMatrices(&conf.camMain);
         SetRenderProgram(VSH_DEFAULT, FSH_GBUF_MAIN);
 
         ResetModelMatrix();
@@ -269,7 +287,7 @@ int main() {
         StartRenderPass("GBuffer lighting");
         BindFramebuffer(FB_ONLY_COLOR_HDR);
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING);
-        SetCameraMatrices(&G_MainCamera);
+        SetCameraMatrices(&conf.camMain);
         // Ambient lighting:
         float i = 0.05f;
         glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
@@ -303,9 +321,9 @@ int main() {
         BindFramebuffer(FB_ONLY_COLOR_HDR);
         SetRenderProgram(VSH_SKYBOX, FSH_SKYBOX);
         SetUniformCubemap(UNIF_TEX_ENVMAP, ENVMAP_CUBE, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE);
-        SetCameraMatrices(&G_MainCamera);
+        SetCameraMatrices(&conf.camMain);
         vec3 viewPos;
-        glm_vec3_copy(G_MainCamera.view_matrix[3], viewPos); // extract translation
+        glm_vec3_copy(conf.camMain.view_matrix[3], viewPos); // extract translation
         ResetModelMatrix();
         AddModelPosition(viewPos, viewPos);
         AddModelScale((vec3){1000,1000,1000}, (vec3){1000,1000,1000});
@@ -319,7 +337,7 @@ int main() {
         StartRenderPass("Final Pass");
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         SetRenderProgram(VSH_FULLSCREEN_PASS, FSH_FINAL);
-        SetCameraMatrices(&G_MainCamera);
+        SetCameraMatrices(&conf.camMain);
         glDrawBuffer(GL_BACK);
         RunFullscreenPass(w, h, t, vxFrameNumber);
 
