@@ -21,7 +21,7 @@ extern GLuint ENVMAP_CUBE;
 #define COLOR(point, name) point ,
 #define END(name) \
     0 }; \
-    static const size_t name ## _BUFFER_COUNT = vxSize(name ## _BUFFERS) - 1;
+    static const GLsizei name ## _BUFFER_COUNT = vxSize(name ## _BUFFERS) - 1;
 XM_FRAMEBUFFERS
 #undef BEGIN
 #undef DEPTH

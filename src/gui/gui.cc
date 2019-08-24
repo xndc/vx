@@ -49,7 +49,14 @@ VX_EXPORT void GUI_Render() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void GUI_RenderLoadingFrame (GLFWwindow* window,
+// Returns true if ImGui received the current frame's mouse or keyboard inputs.
+// The engine should avoid doing anything with them in this case.
+VX_EXPORT bool GUI_InterfaceWantsInput() {
+    ImGuiIO& io = ImGui::GetIO();
+    return io.WantCaptureKeyboard || io.WantCaptureMouse || io.WantTextInput;
+}
+
+VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     const char* text1, const char* text2,
     float bgr, float bgg, float bgb,
     float fgr, float fgg, float fgb)
@@ -103,10 +110,6 @@ void GUI_RenderLoadingFrame (GLFWwindow* window,
     GUI_Render();
     glfwSwapBuffers(window);
     glfwPollEvents();
-}
-
-VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window) {
-    ImGui::ShowDemoWindow();
 }
 
 VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
@@ -194,5 +197,45 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
     #endif
 
     ImGui::PopFont();
+    ImGui::End();
+}
+
+static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window);
+static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window);
+
+VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window) {
+    static bool showImguiDemo = false;
+    static bool showTonemapSettings = false;
+
+    static bool kpTonemap = false;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+        if (!kpTonemap) {
+            showTonemapSettings = !showTonemapSettings;
+            kpTonemap = true;
+        }
+    } else {
+        kpTonemap = false;
+    }
+
+    if (showImguiDemo) { sDrawImguiDemo(conf, window); }
+    if (showTonemapSettings) { sDrawTonemapSettings(conf, window); }
+}
+
+static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window) {
+    ImGui::ShowDemoWindow();
+}
+
+static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window) {
+    ImGui::Begin("Tonemapper Settings", NULL);
+    ImGui::RadioButton("Linear",              &conf->tonemapMode, TONEMAP_LINEAR);
+    ImGui::RadioButton("Reinhard",            &conf->tonemapMode, TONEMAP_REINHARD);
+    ImGui::RadioButton("Hable (Uncharted 2)", &conf->tonemapMode, TONEMAP_HABLE);
+    ImGui::RadioButton("ACES Filmic",         &conf->tonemapMode, TONEMAP_ACES);
+    ImGui::SliderFloat("Exposure", &conf->tonemapExposure, 0.0f, 30.0f);
+    ImGui::SliderFloat("ACES A", &conf->tonemapACESParamA, 0.0f, 3.0f);
+    ImGui::SliderFloat("ACES B", &conf->tonemapACESParamB, 0.0f, 3.0f);
+    ImGui::SliderFloat("ACES C", &conf->tonemapACESParamC, 0.0f, 3.0f);
+    ImGui::SliderFloat("ACES D", &conf->tonemapACESParamD, 0.0f, 3.0f);
+    ImGui::SliderFloat("ACES E", &conf->tonemapACESParamE, 0.0f, 3.0f);
     ImGui::End();
 }

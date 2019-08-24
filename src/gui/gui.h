@@ -4,6 +4,7 @@
 
 typedef struct GLFWwindow GLFWwindow;
 typedef struct ImFont ImFont;
+typedef struct vxConfig vxConfig;
 typedef struct vxFrame vxFrame;
 
 #define X(name, path, size) extern ImFont* name;
@@ -17,7 +18,8 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     const char* text1, const char* text2,
     float bgr, float bgg, float bgb,
     float fgr, float fgg, float fgb);
-VX_EXPORT void GUI_DrawDebugOverlay (GLFWwindow* window);
+
+VX_EXPORT bool GUI_InterfaceWantsInput();
 
 typedef struct GUI_Statistics {
     size_t frame;
@@ -32,3 +34,5 @@ typedef struct GUI_Statistics {
 } GUI_Statistics;
 
 VX_EXPORT void GUI_DrawStatistics (vxFrame* frame);
+
+VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window);

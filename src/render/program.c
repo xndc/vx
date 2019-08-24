@@ -30,9 +30,10 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
     if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl || tonemapMode != conf->tonemapMode) {
         blockExists = true;
         gpuSupportsClipControl = conf->gpuSupportsClipControl;
+        tonemapMode = conf->tonemapMode;
 
-        size_t i = 0;
-        size_t l = vxSize(block);
+        int i = 0;
+        int l = vxSize(block);
         if (gpuSupportsClipControl) {
             i += stbsp_snprintf(&block[i], l-i, "#define DEPTH_ZERO_TO_ONE\n");
         }
@@ -42,12 +43,11 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
             case TONEMAP_HABLE:    { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_HABLE\n");    break; }
             case TONEMAP_ACES:     { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_ACES\n");     break; }
         }
-        if (tonemapMode == TONEMAP_LINEAR) {
-            i += stbsp_snprintf(&block[i], l-i, "#define DEPTH_ZERO_TO_ONE\n");            
-        }
 
         block[i] = '\0';
         hash = stbds_hash_string(block, VX_SEED);
+
+        vxLog("Generated new program define block:\n%s", block);
     }
     return (DefineBlock){hash, block};
 }
