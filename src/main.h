@@ -2,6 +2,13 @@
 #include "common.h"
 #include "data/camera.h"
 
+typedef enum TonemapMode {
+    TONEMAP_LINEAR,
+    TONEMAP_REINHARD,
+    TONEMAP_HABLE,
+    TONEMAP_ACES,
+} TonemapMode;
+
 typedef struct vxConfig {
     int displayW;
     int displayH;
@@ -19,6 +26,13 @@ typedef struct vxConfig {
     bool pauseOnFocusLoss;
     bool clearColorBuffers;
     bool gpuSupportsClipControl;
+    int tonemapMode;
+    float tonemapExposure;
+    float tonemapACESParamA;
+    float tonemapACESParamB;
+    float tonemapACESParamC;
+    float tonemapACESParamD;
+    float tonemapACESParamE;
 } vxConfig;
 
 void vxConfig_Init (vxConfig* c);

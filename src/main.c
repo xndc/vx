@@ -65,7 +65,18 @@ void vxConfig_Init (vxConfig* c) {
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -1.0f, -0.0f}, VX_UP, c->camEnvYn.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){+0.0f, +0.0f, +1.0f}, VX_UP, c->camEnvZp.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -0.0f, -1.0f}, VX_UP, c->camEnvZn.view_matrix);
+    
     c->pauseOnFocusLoss = false;
+    c->clearColorBuffers = false;
+    c->gpuSupportsClipControl = false;
+
+    c->tonemapMode = TONEMAP_HABLE;
+    c->tonemapExposure = 16.0f;
+    c->tonemapACESParamA = 2.51f;
+    c->tonemapACESParamB = 0.03f;
+    c->tonemapACESParamC = 2.43f;
+    c->tonemapACESParamD = 0.59f;
+    c->tonemapACESParamE = 0.14f;
 }
 
 // Initializes the game. Should only be run once, at the start of its execution.
@@ -148,7 +159,7 @@ void GameReload (vxConfig* conf, GLFWwindow* window) {
 
 // Tick function for the game. Generates a single frame.
 void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* lastFrame) {
-    frame->t = glfwGetTime();
+    frame->t = (float) glfwGetTime();
     frame->dt = frame->t - lastFrame->t;
 
     // Pause the game if it loses focus:
@@ -289,7 +300,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
     SetCamera(&rs, &conf->camMain);
     // Ambient lighting:
-    float i = 0.05f;
+    float i = 0.01f;
     glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
         3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
         0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
@@ -300,7 +311,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     });
     // Directional lighting:
     glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
-    glUniform3f(UNIF_SUN_COLOR, 2.5f, 2.5f, 2.1f);
+    glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 0.9f);
     // Point lighting:
     glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
         4.9f,  2.0f,  4.2f,
@@ -309,19 +320,29 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         4.1f,  2.9f, -4.5f,
     });
     glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
-        20.0f, 20.0f, 20.0f,
-        20.0f, 20.0f, 20.0f,
-        20.0f, 20.0f, 20.0f,
-        20.0f, 20.0f, 20.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
     });
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
 
     StartRenderPass(&rs, "Final output");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDrawBuffer(GL_BACK);
+    glEnable(GL_FRAMEBUFFER_SRGB);
     SetRenderProgram(&rs, &PROG_FINAL);
     SetCamera(&rs, &conf->camMain);
+    glUniform1f(UNIF_TONEMAP_EXPOSURE, conf->tonemapExposure);
+    if (conf->tonemapMode == TONEMAP_ACES) {
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_A, conf->tonemapACESParamA);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_B, conf->tonemapACESParamB);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_C, conf->tonemapACESParamC);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_D, conf->tonemapACESParamD);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_E, conf->tonemapACESParamE);
+    }
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
     StartRenderPass(&rs, "User interface");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -337,10 +358,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     double tPollStart = glfwGetTime();
     glfwPollEvents();
 
-    frame->tMain   = tRenderStart - frame->t;
-    frame->tRender = tSwapStart - tRenderStart;
-    frame->tSwap   = tPollStart - tSwapStart;
-    frame->tPoll   = glfwGetTime() - tPollStart;
+    frame->tMain   = (float)(tRenderStart - frame->t);
+    frame->tRender = (float)(tSwapStart - tRenderStart);
+    frame->tSwap   = (float)(tPollStart - tSwapStart);
+    frame->tPoll   = (float)(glfwGetTime() - tPollStart);
     frame->n++;
 
     // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the

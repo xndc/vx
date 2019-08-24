@@ -41,8 +41,10 @@ uniform sampler2D gShadow;
 
 #define PI 3.14159265358979323846
 
+const vec3 DielectricSpecular = vec3(0.04);
+
 vec3 SurfaceF0 (vec3 diffuse, float metallic) {
-    return mix(vec3(0.04), diffuse, metallic);
+    return mix(DielectricSpecular, diffuse, metallic);
 }
 
 vec3 FresnelSchlick (float cosTheta, vec3 F0) {
@@ -62,8 +64,7 @@ float DistributionGGX (vec3 N, vec3 H, float roughness) {
     return num / denom;
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness)
-{
+float GeometrySchlickGGX(float NdotV, float roughness) {
     float r = (roughness + 1.0);
     float k = (r*r) / 8.0;
 
@@ -79,7 +80,7 @@ float GeometrySmith(float NdotV, float NdotL, float Rgh) {
     return ggx1 * ggx2;
 }
 
-vec3 DirectionalLight (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
+vec3 DirectionalLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
     vec3 H = normalize(V + L);
     float NdotL = max(dot(N, L), 0.0);
     float NdotV = max(dot(N, V), 0.0);
@@ -94,26 +95,6 @@ vec3 DirectionalLight (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float 
 }
 
 vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
-    #if 0
-    for (int i = 0; i < 4; i++) {
-        vec3 L = normalize(uPointLightPositions[i] - worldPos);
-        vec3 H = normalize(V + L);
-        float distance = length(uPointLightPositions[i] - worldPos);
-        float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = uPointLightColors[i] * attenuation;
-        vec3 F = FresnelSchlick(max(dot(H, V), 0.0), SurfaceF0(diffuse, metal));
-        float NDF = DistributionGGX(N, H, rough);
-        float G = GeometrySmith(N, V, L, rough);
-        vec3 num = NDF * G * F;
-        float denom = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-        vec3 specular = num / max(denom, 0.001);
-        vec3 kS = F;
-        vec3 kD = vec3(1.0) - kS;
-        kD *= 1.0 - metal;
-        float NdotL = max(dot(N, L), 0.0);
-        Lo += (kD * diffuse / PI + specular) * radiance * NdotL;
-    }
-    #endif
     vec3 Lnorm = normalize(L);
     vec3 H = normalize(V + Lnorm);
     float Distance = length(L);
@@ -141,7 +122,7 @@ void main() {
         return;
     }
 
-    // Correct depth on machines without GL_ARB_clip_control support:
+    // Correct depth on machines without GL_ARB_clip_control support: (map [1, 0.5] to [1, 0])
     #ifndef DEPTH_ZERO_TO_ONE
         z = z * 2.0 - 1.0;
     #endif
@@ -154,11 +135,12 @@ void main() {
 
     vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
     vec4 FragPosClip = vec4(fragCoordClip, z, 1.0);
-    vec4 FragPosView = uInvProjMatrix * FragPosClip;
-    FragPosView /= FragPosView.w;
-    vec3 FragPosWorld = (uInvViewMatrix * FragPosView).xyz;
+    // NOTE: Linearized depth seems to end up in FragPosView4.w for some reason.
+    vec4 FragPosView4 = uInvProjMatrix * FragPosClip;
+    vec4 FragPosWorld4 = uInvViewMatrix * FragPosView4;
+    vec3 FragPosWorld = FragPosWorld4.xyz / FragPosWorld4.w;
     vec3 N = normal; // normals output by the gbuf_main pass should already be normalized
-    vec3 V = normalize(CameraPosition - FragPosWorld);
+    vec3 V = normalize(CameraPosition - FragPosWorld.xyz);
 
     vec3 Lo = vec3(0.0);
     #if 1
@@ -173,12 +155,12 @@ void main() {
 
     // Directional lighting:
     // NOTE: uSunDirection is supposed to be the vector coming FROM the light, but for some reason
-    //   our DirectionalLight function is treating it as the sun's POSITION vector. I have no clue
+    //   our DirectionalLightLo function is treating it as the sun's POSITION vector. I have no clue
     //   what we're doing wrong.
     // NOTE: Also, every vector we pass here needs to be normalized. The Fresnel term gets blown
     //   up when you look at the sun otherwise.
     #if 1
-    Lo += DirectionalLight(N, V, normalize(-uSunDirection), uSunColor, diffuse, metal, rough);
+    Lo += DirectionalLightLo(N, V, normalize(-uSunDirection), uSunColor, diffuse, metal, rough);
     #endif
 
     #if 1
@@ -190,45 +172,3 @@ void main() {
 
     outColorHDR = vec4(Lo, 1.0);
 }
-
-/*
-void main() {
-    ivec2 fc = ivec2(gl_FragCoord.xy);
-    vec3 color  = texelFetch(gColorLDR, fc, 0).rgb;
-    vec3 normal = texelFetch(gNormal,   fc, 0).rgb;
-    vec3 aux1   = texelFetch(gAux1,     fc, 0).rgb;
-    float met = aux1.g;
-    float rgh = aux1.b;
-
-    // Get world position from depth:
-    float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
-    vec4 clip = vec4(fragCoordClip, z, 1.0);
-    vec4 view = uInvProjMatrix * clip;
-    view /= view.w;
-    vec3 world = (uInvViewMatrix * view).xyz;
-    vec3 norm = normalize(normal);
-    vec3 viewDir = normalize(view.xyz - world);
-
-    vec3 lightf = vec3(0);
-
-    // Ambient lighting using HL2-style ambient cube:
-    // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
-    vec3 nsq = norm * norm;
-    ivec3 isNegative = ivec3(norm.x < 0.0, norm.y < 0.0, norm.z < 0.0);
-    lightf += nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
-            + nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
-            + nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
-
-    // Directional lighting:
-    vec3 lightDir = -uSunDirection;
-    vec3 diffuse = max(dot(norm, lightDir), 0.0) * uSunColor;
-    lightf += diffuse;
-
-    // There are certainly better ways to do this.
-    if (texelFetch(gDepth, fc, 0).r == 0.0) {
-        outColorHDR = vec4(0.8f, 1.1f, 1.8f, 1.0f);
-    } else {
-        outColorHDR = vec4(lightf * color, 1.0);
-    }
-}
-*/

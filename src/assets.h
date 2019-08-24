@@ -83,6 +83,13 @@
 \
     X(UNIF_TEX_ENVMAP, "texEnvmap") \
     X(UNIF_ENVMAP_DIRECTION, "uEnvmapDirection") \
+\
+    X(UNIF_TONEMAP_EXPOSURE, "uTonemapExposure") \
+    X(UNIF_TONEMAP_ACES_PARAM_A, "uTonemapACESParamA") \
+    X(UNIF_TONEMAP_ACES_PARAM_B, "uTonemapACESParamB") \
+    X(UNIF_TONEMAP_ACES_PARAM_C, "uTonemapACESParamC") \
+    X(UNIF_TONEMAP_ACES_PARAM_D, "uTonemapACESParamD") \
+    X(UNIF_TONEMAP_ACES_PARAM_E, "uTonemapACESParamE") \
 
 // Syntax for textures:
 // X(name, target (GL_TEXTURE_*), needs mipmaps, path)

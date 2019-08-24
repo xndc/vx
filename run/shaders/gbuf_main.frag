@@ -138,11 +138,20 @@ vec4 dither8x8(vec2 position, vec4 color) {
     return vec4(color.rgb * dither8x8(position, luma(color)), 1.0);
 }
 
+// https://gamedev.stackexchange.com/questions/92015/optimized-linear-to-srgb-glsl#92059
+vec4 srgbToLinear (vec4 sRGB) {
+    bvec4 cutoff = lessThan(sRGB, vec4(0.04045));
+    vec4 higher = pow((sRGB + vec4(0.055))/vec4(1.055), vec4(2.4));
+    vec4 lower = sRGB/vec4(12.92);
+    return mix(higher, lower, cutoff);
+}
+
 
 // Main shader:
 
 void main() {
-    vec4 diffuse = VertexColor * texture(texDiffuse, TexCoord0);
+    // NOTE: GLSL spec says all diffuse colour values are stored as sRGB
+    vec4 diffuse = srgbToLinear(VertexColor * texture(texDiffuse, TexCoord0));
 
     if (uStipple != 0) {
         if (diffuse.a < uStippleHardCutoff) {

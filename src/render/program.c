@@ -26,7 +26,8 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
     static char block [4096];
     static bool blockExists = false;
     static bool gpuSupportsClipControl;
-    if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl) {
+    static int tonemapMode;
+    if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl || tonemapMode != conf->tonemapMode) {
         blockExists = true;
         gpuSupportsClipControl = conf->gpuSupportsClipControl;
 
@@ -34,6 +35,15 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
         size_t l = vxSize(block);
         if (gpuSupportsClipControl) {
             i += stbsp_snprintf(&block[i], l-i, "#define DEPTH_ZERO_TO_ONE\n");
+        }
+        switch (tonemapMode) {
+            case TONEMAP_LINEAR:   { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_LINEAR\n");   break; }
+            case TONEMAP_REINHARD: { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_REINHARD\n"); break; }
+            case TONEMAP_HABLE:    { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_HABLE\n");    break; }
+            case TONEMAP_ACES:     { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_ACES\n");     break; }
+        }
+        if (tonemapMode == TONEMAP_LINEAR) {
+            i += stbsp_snprintf(&block[i], l-i, "#define DEPTH_ZERO_TO_ONE\n");            
         }
 
         block[i] = '\0';
