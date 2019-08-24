@@ -27,10 +27,14 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
     static bool blockExists = false;
     static bool gpuSupportsClipControl;
     static int tonemapMode;
-    if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl || tonemapMode != conf->tonemapMode) {
+    static int debugVisMode;
+    if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl || tonemapMode != conf->tonemapMode ||
+        debugVisMode != conf->debugVisMode)
+    {
         blockExists = true;
         gpuSupportsClipControl = conf->gpuSupportsClipControl;
         tonemapMode = conf->tonemapMode;
+        debugVisMode = conf->debugVisMode;
 
         int i = 0;
         int l = vxSize(block);
@@ -42,6 +46,38 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
             case TONEMAP_REINHARD: { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_REINHARD\n"); break; }
             case TONEMAP_HABLE:    { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_HABLE\n");    break; }
             case TONEMAP_ACES:     { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_ACES\n");     break; }
+        }
+        switch (debugVisMode) {
+            case DEBUG_VIS_GBUF_COLOR: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_COLOR\n");
+                break;
+            }
+            case DEBUG_VIS_GBUF_NORMAL: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_NORMAL\n");
+                break;
+            }
+            case DEBUG_VIS_GBUF_ORM: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_ORM\n");
+                break;
+            }
+            case DEBUG_VIS_WORLDPOS: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_WORLDPOS\n");
+                break;
+            }
+            case DEBUG_VIS_DEPTH_RAW: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_DEPTH_RAW\n");
+                break;
+            }
+            case DEBUG_VIS_DEPTH_LINEAR: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_DEPTH_LINEAR\n");
+                break;
+            }
         }
 
         block[i] = '\0';

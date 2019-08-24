@@ -171,4 +171,23 @@ void main() {
     #endif
 
     outColorHDR = vec4(Lo, 1.0);
+
+    #if defined(DEBUG_VIS_GBUF_COLOR)
+        outAux2 = vec4(diffuse, 1.0);
+    #elif defined(DEBUG_VIS_GBUF_NORMAL)
+        outAux2 = vec4(normal, 1.0);
+    #elif defined(DEBUG_VIS_GBUF_ORM)
+        outAux2 = vec4(aux1, 1.0);
+    #elif defined(DEBUG_VIS_WORLDPOS)
+        outAux2 = vec4(FragPosWorld * 0.01, 1.0);
+    #elif defined(DEBUG_VIS_DEPTH_RAW)
+        // Encode raw depth into RGBA channels:
+        // https://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/
+        vec4 enc = vec4(1.0, 255.0, 65025.0, 16581375.0) * texelFetch(gDepth, fc, 0).r;
+        enc = fract(enc);
+        enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);
+        outAux2 = enc;
+    #elif defined(DEBUG_VIS_DEPTH_LINEAR)
+        outAux2 = vec4(FragPosView4.w);
+    #endif
 }

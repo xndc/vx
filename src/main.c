@@ -77,6 +77,8 @@ void vxConfig_Init (vxConfig* c) {
     c->tonemapACESParamC = 2.43f;
     c->tonemapACESParamD = 0.59f;
     c->tonemapACESParamE = 0.14f;
+
+    c->debugVisMode = DEBUG_VIS_NONE;
 }
 
 // Initializes the game. Should only be run once, at the start of its execution.

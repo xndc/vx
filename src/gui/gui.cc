@@ -202,10 +202,12 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
 
 static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window);
 static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window);
+static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window);
 
 VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window) {
     static bool showImguiDemo = false;
     static bool showTonemapSettings = false;
+    static bool showBufferViewer = false;
 
     static bool kpTonemap = false;
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
@@ -217,8 +219,19 @@ VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window) {
         kpTonemap = false;
     }
 
+    static bool kpBuffer = false;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
+        if (!kpBuffer) {
+            showBufferViewer = !showBufferViewer;
+            kpBuffer = true;
+        }
+    } else {
+        kpBuffer = false;
+    }
+
     if (showImguiDemo) { sDrawImguiDemo(conf, window); }
     if (showTonemapSettings) { sDrawTonemapSettings(conf, window); }
+    if (showBufferViewer) { sDrawBufferViewer(conf, window); }
 }
 
 static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window) {
@@ -237,5 +250,17 @@ static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window) {
     ImGui::SliderFloat("ACES C", &conf->tonemapACESParamC, 0.0f, 3.0f);
     ImGui::SliderFloat("ACES D", &conf->tonemapACESParamD, 0.0f, 3.0f);
     ImGui::SliderFloat("ACES E", &conf->tonemapACESParamE, 0.0f, 3.0f);
+    ImGui::End();
+}
+
+static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
+    ImGui::Begin("Buffer Viewer", NULL);
+    ImGui::RadioButton("Final Output",    &conf->debugVisMode, DEBUG_VIS_NONE);
+    ImGui::RadioButton("GBuffer Color",   &conf->debugVisMode, DEBUG_VIS_GBUF_COLOR);
+    ImGui::RadioButton("GBuffer Normal",  &conf->debugVisMode, DEBUG_VIS_GBUF_NORMAL);
+    ImGui::RadioButton("GBuffer O/R/M",   &conf->debugVisMode, DEBUG_VIS_GBUF_ORM);
+    ImGui::RadioButton("World Position",  &conf->debugVisMode, DEBUG_VIS_WORLDPOS);
+    ImGui::RadioButton("Depth (Raw)",     &conf->debugVisMode, DEBUG_VIS_DEPTH_RAW);
+    ImGui::RadioButton("Depth (Linear)",  &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
     ImGui::End();
 }

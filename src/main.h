@@ -9,6 +9,16 @@ typedef enum TonemapMode {
     TONEMAP_ACES,
 } TonemapMode;
 
+typedef enum DebugVisMode {
+    DEBUG_VIS_NONE,
+    DEBUG_VIS_GBUF_COLOR,
+    DEBUG_VIS_GBUF_NORMAL,
+    DEBUG_VIS_GBUF_ORM,
+    DEBUG_VIS_WORLDPOS,
+    DEBUG_VIS_DEPTH_RAW,
+    DEBUG_VIS_DEPTH_LINEAR,
+} DebugVisMode;
+
 typedef struct vxConfig {
     int displayW;
     int displayH;
@@ -33,6 +43,7 @@ typedef struct vxConfig {
     float tonemapACESParamC;
     float tonemapACESParamD;
     float tonemapACESParamE;
+    int debugVisMode;
 } vxConfig;
 
 void vxConfig_Init (vxConfig* c);

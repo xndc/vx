@@ -36,27 +36,31 @@ vec3 TonemapHable (vec3 x) {
 }
 
 void main() {
-    vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb * uTonemapExposure;
-    vec3 ldr;
-    #if defined(TONEMAP_LINEAR)
-        ldr = hdr;
-    #elif defined(TONEMAP_REINHARD)
-        ldr = hdr / (1 + hdr);
-    #elif defined(TONEMAP_HABLE)
-        // John Hable's tonemapping operator, also known as the Uncharted 2 operator:
-        // http://filmicworlds.com/blog/filmic-tonemapping-operators/
-        const vec3 W = vec3(11.2);
-        const vec3 ExposureBias = vec3(2.0);
-        ldr = TonemapHable(hdr * ExposureBias) * (1.0 / TonemapHable(W));
-    #elif defined(TONEMAP_ACES)
-        // Simplified luminance-only ACES filmic tonemapping:
-        // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-        vec3 a = vec3(uTonemapACESParamA);
-        vec3 b = vec3(uTonemapACESParamB);
-        vec3 c = vec3(uTonemapACESParamC);
-        vec3 d = vec3(uTonemapACESParamD);
-        vec3 e = vec3(uTonemapACESParamE);
-        ldr = (hdr*(a*hdr+b))/(hdr*(c*hdr+d)+e);
+    #if defined(DEBUG_VIS)
+        outColor = texelFetch(gAux2, ivec2(gl_FragCoord.xy), 0);
+    #else
+        vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb * uTonemapExposure;
+        vec3 ldr;
+        #if defined(TONEMAP_LINEAR)
+            ldr = hdr;
+        #elif defined(TONEMAP_REINHARD)
+            ldr = hdr / (1 + hdr);
+        #elif defined(TONEMAP_HABLE)
+            // John Hable's tonemapping operator, also known as the Uncharted 2 operator:
+            // http://filmicworlds.com/blog/filmic-tonemapping-operators/
+            const vec3 W = vec3(11.2);
+            const vec3 ExposureBias = vec3(2.0);
+            ldr = TonemapHable(hdr * ExposureBias) * (1.0 / TonemapHable(W));
+        #elif defined(TONEMAP_ACES)
+            // Simplified luminance-only ACES filmic tonemapping:
+            // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+            vec3 a = vec3(uTonemapACESParamA);
+            vec3 b = vec3(uTonemapACESParamB);
+            vec3 c = vec3(uTonemapACESParamC);
+            vec3 d = vec3(uTonemapACESParamD);
+            vec3 e = vec3(uTonemapACESParamE);
+            ldr = (hdr*(a*hdr+b))/(hdr*(c*hdr+d)+e);
+        #endif
+        outColor = vec4(clamp(ldr, 0.0, 1.0), 1.0);
     #endif
-    outColor = vec4(clamp(ldr, 0.0, 1.0), 1.0);
 }
