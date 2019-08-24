@@ -43,7 +43,7 @@ void MulModelPosition (RenderState* rs, vec3 pos, vec3 posLast);
 void MulModelRotation (RenderState* rs, versor rot, versor rotLast);
 void MulModelScale (RenderState* rs, vec3 scl, vec3 sclLast);
 
-int BindTexture (RenderState* rs, GLuint texture, GLuint sampler);
+int BindTexture (RenderState* rs, GLenum target, GLuint texture, GLuint sampler);
 void SetUniformTextureSampler2D (RenderState* rs, GLint unif, GLuint tex, GLuint sampler);
 void SetUniformTexture2D (RenderState* rs, GLint unif, GLuint tex, GLenum min, GLenum mag, GLenum wrap);
 void SetUniformTextureSamplerCube (RenderState* rs, GLint unif, GLuint tex, GLuint sampler);
