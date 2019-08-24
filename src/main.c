@@ -5,6 +5,7 @@
 #include "data/texture.h"
 #include "render/render.h"
 #include "render/program.h"
+#include "scene/core.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -159,8 +160,20 @@ void GameReload (vxConfig* conf, GLFWwindow* window) {
     LoadModels();
 }
 
+// Loads the default scene. Should only be run once.
+void GameLoadScene (Scene* scene) {
+    GameObject* sponza = AddObject(scene, NULL, GAMEOBJECT_MODEL);
+    sponza->model.model = &MDL_SPONZA;
+    sponza->localScale[0] = 2.5f;
+    sponza->localScale[1] = 2.5f;
+    sponza->localScale[2] = 2.5f;
+    sponza->localPosition[0] = +2.5f;
+    sponza->localPosition[1] = -4.0f;
+    sponza->localPosition[2] = +2.5f;
+}
+
 // Tick function for the game. Generates a single frame.
-void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* lastFrame) {
+void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* lastFrame, Scene* scene) {
     frame->t = (float) glfwGetTime();
     frame->dt = frame->t - lastFrame->t;
 
@@ -185,6 +198,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     
     // Run subsystem tick functions:
     UpdatePrograms(conf);
+    UpdateScene(scene);
     GUI_StartFrame();
 
     // Debug user interface:
@@ -265,6 +279,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     static RenderState rs;
     glViewport(0, 0, conf->displayW, conf->displayH);
 
+    static RenderList rl = {0};
+    UpdateRenderList(&rl, scene);
+
     if (updatedTargets & UPDATED_ENVMAP_TARGETS) {
         // TODO: generate environment maps
     }
@@ -286,6 +303,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     BindFramebuffer(FB_GBUFFER);
     SetRenderProgram(&rs, &PROG_GBUF_MAIN);
     SetCamera(&rs, &conf->camMain);
+    #if 0
     {
         RenderState rsModel = rs;
         MulModelScale(&rsModel, (vec3){0.5f, 0.5f, 0.5f}, (vec3){0.5f, 0.5f, 0.5f});
@@ -297,6 +315,14 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         MulModelScale(&rsModel, (vec3){2.5f, 2.5f, 2.5f}, (vec3){2.5f, 2.5f, 2.5f});
         RenderModel(&rsModel, conf, frame, &MDL_SPONZA);
     }
+    #else
+    RenderState rsMesh = rs;
+    for (size_t i = 0; i < rl.meshCount; i++) {
+        glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
+        glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+        RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
+    }
+    #endif
 
     StartRenderPass(&rs, "GBuffer lighting");
     BindFramebuffer(FB_ONLY_COLOR_HDR);
@@ -380,10 +406,14 @@ int main() {
     GLFWwindow* window = NULL;
     GameLoad(&conf, &window);
     GameReload(&conf, window);
+
+    Scene scene = {0};
+    GameLoadScene(&scene);
+
     vxFrame frame = {0};
     vxFrame lastFrame = {0};
     while (!glfwWindowShouldClose(window)) {
-        GameTick(&conf, window, &frame, &lastFrame);
+        GameTick(&conf, window, &frame, &lastFrame, &scene);
         lastFrame = frame;
         memset(&frame, 0, sizeof(frame));
     }

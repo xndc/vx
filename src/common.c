@@ -283,7 +283,7 @@ static inline void vxAlignedFree (void* block) {
 
 // Allocates (block=NULL), reallocates or frees (count*size = 0) a block of memory using the system
 // default aligned memory allocator. The given alignment should be a power of 2.
-// When freeing, the alignnment is not relevant on any of our supported platforms. Just pass 0.
+// When freeing, the alignment is not relevant on any of our supported platforms. Just pass 0.
 void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment) {
     void* p = NULL;
     size_t size = count * itemsize; // FIXME: check for overflow, somehow
