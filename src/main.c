@@ -65,7 +65,7 @@ void vxConfig_Init (vxConfig* c) {
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -1.0f, -0.0f}, VX_UP, c->camEnvYn.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){+0.0f, +0.0f, +1.0f}, VX_UP, c->camEnvZp.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -0.0f, -1.0f}, VX_UP, c->camEnvZn.view_matrix);
-    c->pauseOnFocusLoss = true;
+    c->pauseOnFocusLoss = false;
 }
 
 // Initializes the game. Should only be run once, at the start of its execution.
@@ -91,24 +91,23 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     glad_set_post_callback(sGladPostCallback);
     #endif
 
-    // Initialize game subsystems:
-    InitTextureSystem();
-    InitProgramSystem();
-    InitRenderSystem();
-    GUI_Init(window);
-
     // Reverse Z setup:
     if (glfwExtensionSupported("GL_ARB_clip_control")) {
+        conf->gpuSupportsClipControl = true;
         glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
+        conf->gpuSupportsClipControl = true;
         glDepthRangedNV(-1.0f, 1.0f);
     } else {
-        vxPanic("This machine's graphics driver doesn't support reverse-Z mapping.");
-        // The renderer will technically work without the correct [0,1] depth mapping, but we would need to apply
-        //   z = z * 2.0 - 1.0
-        // in every fragment shader. Once we have a system for passing #defines to them, this might be a good idea.
-        // glDepthRangef may technically be equivalent to glDepthRangedNV on some machines, but it seems like most
-        // OpenGL implementations (including Nvidia's) clamp the near and far values, which is not what we want.
+        conf->gpuSupportsClipControl = false;
+        vxLog("Warning: This machine's graphics driver doesn't support reverse-Z mapping.");
+        // Without modifying OpenGL's clip behaviour, our shaders and transform matrices will map depth to [1, 0.5]
+        // rather than [1, 0]. This has two main caveats:
+        // * Bad precision. The whole point of reverse Z is to exploit the increased precision around z=0.
+        // * Depth has to be transformed (z = z*2-1) in every fragment shader.
+        // glDepthRangef is not a suitable alternative to glDepthRangedNV, despite some claims that it is. While the
+        // OpenGL standard technically allows it to work with unclamped values (i.e. -1.0f), both the Nvidia and Apple
+        // drivers I've tested this on will actually clamp values to [0,1].
     }
 
     // VSync setup:
@@ -130,6 +129,12 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     #ifdef __APPLE__
     glfwSwapInterval(2);
     #endif
+
+    // Initialize game subsystems:
+    InitTextureSystem();
+    InitProgramSystem(conf);
+    InitRenderSystem();
+    GUI_Init(window);
 
     *pwindow = window;
 }
@@ -166,7 +171,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     glViewport(0, 0, w, h);
     
     // Run subsystem tick functions:
-    UpdatePrograms();
+    UpdatePrograms(conf);
+    GUI_StartFrame();
 
     // Manage cursor lock status:
     // TODO: don't lock when clicking on ImGui elements
@@ -234,6 +240,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     frame->mouseY = (float) my;
     frame->mouseDx = (float) dmx;
     frame->mouseDy = (float) dmy;
+
+    // Debug user interface:
+    GUI_DrawStatistics(lastFrame);
     
     // *****************************************************************************************************************
     // Render:
@@ -314,6 +323,11 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     SetCamera(&rs, &conf->camMain);
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
 
+    StartRenderPass(&rs, "User interface");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawBuffer(GL_BACK);
+    GUI_Render();
+
     // *****************************************************************************************************************
     // Swap & poll:
 
@@ -328,6 +342,13 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     frame->tSwap   = tPollStart - tSwapStart;
     frame->tPoll   = glfwGetTime() - tPollStart;
     frame->n++;
+
+    // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
+    // window is moving. Ignore the frame for timing purposes if this happens.
+    if (frame->tPoll > 0.1f) {
+        frame->tPoll = 0.0f;
+        glfwSetTime(tPollStart);
+    }
 }
 
 int main() {
@@ -340,6 +361,7 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         GameTick(&conf, window, &frame, &lastFrame);
         lastFrame = frame;
+        memset(&frame, 0, sizeof(frame));
     }
 }
 

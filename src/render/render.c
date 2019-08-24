@@ -391,9 +391,9 @@ void RenderMesh (RenderState* rs, vxConfig* conf, vxFrame* frame, Mesh* mesh, Ma
 
     if (componentType != 0) {
         glDrawElements(mesh->type, elementCount, componentType, NULL);
-        pfFrameDrawCount += 1;
-        pfFrameTriCount  += triangleCount;
-        pfFrameVertCount += mesh->gl_vertex_count;
+        frame->perfDrawCalls += 1;
+        frame->perfTriangles += triangleCount;
+        frame->perfVertices += mesh->gl_vertex_count;
     }
 
     rs->nextFreeTextureUnit = saved_nextFreeTextureUnit;

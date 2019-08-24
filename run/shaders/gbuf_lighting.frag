@@ -135,15 +135,16 @@ void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
 
     // Don't do lighting calculations for missing fragments (e.g. sky):
-    float zRaw = texelFetch(gDepth, fc, 0).r;
-    if (zRaw == 0) {
+    float z = texelFetch(gDepth, fc, 0).r;
+    if (z == 0) {
         outColorHDR = vec4(0.0);
         return;
     }
 
-    // NOTE: The lighting algorithms presumably assume that depth is in [-1, 1].
-    // float z = texelFetch(gDepth, fc, 0).r * 2.0 - 1.0;
-    float z = zRaw;
+    // Correct depth on machines without GL_ARB_clip_control support:
+    #ifndef DEPTH_ZERO_TO_ONE
+        z = z * 2.0 - 1.0;
+    #endif
 
     vec3 diffuse = texelFetch(gColorLDR, fc, 0).rgb;
     vec3 normal  = texelFetch(gNormal,   fc, 0).rgb;
@@ -188,7 +189,6 @@ void main() {
     #endif
 
     outColorHDR = vec4(Lo, 1.0);
-    // outColorHDR = vec4(z);
 }
 
 /*

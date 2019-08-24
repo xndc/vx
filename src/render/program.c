@@ -16,7 +16,33 @@ XM_PROGRAM_UNIFORMS
 XM_PROGRAM_ATTRIBUTES
 #undef X
 
-static void sCompileShader (Shader* s) {
+typedef struct DefineBlock {
+    uint64_t hash;
+    char* defines;
+} DefineBlock;
+
+static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
+    static size_t hash = 0;
+    static char block [4096];
+    static bool blockExists = false;
+    static bool gpuSupportsClipControl;
+    if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl) {
+        blockExists = true;
+        gpuSupportsClipControl = conf->gpuSupportsClipControl;
+
+        size_t i = 0;
+        size_t l = vxSize(block);
+        if (gpuSupportsClipControl) {
+            i += stbsp_snprintf(&block[i], l-i, "#define DEPTH_ZERO_TO_ONE\n");
+        }
+
+        block[i] = '\0';
+        hash = stbds_hash_string(block, VX_SEED);
+    }
+    return (DefineBlock){hash, block};
+}
+
+static void sCompileShader (Shader* s, DefineBlock defineBlock) {
     char* code = vxReadFile(s->path, "r", NULL);
     if (strncmp(code, "#version", 8) != 0) {
         vxLog("Warning: shader %s has no #version declaration", s->path);
@@ -29,10 +55,11 @@ static void sCompileShader (Shader* s) {
         strncpy(s->versionBlock, code, linesize);
         s->versionBlock[linesize] = '\0';
     }
-    const char* sources[] = {s->versionBlock, s->codeBlock};
+    const char* sources[] = {s->versionBlock, defineBlock.defines, s->codeBlock};
 
     GLuint shader = glCreateShader(s->type);
     glShaderSource(shader, (GLsizei) vxSize(sources), sources, NULL);
+    s->defineBlockHash = defineBlock.hash;
     
     int ok, logsize;
     glCompileShader(shader);
@@ -96,7 +123,7 @@ Shader**  gShaders = NULL;
 size_t    gProgramCount = 0;
 Program** gPrograms = NULL;
 
-static void sInitShader (size_t idx, Shader* s, const GLenum type, const char* path) {
+static void sInitShader (size_t idx, Shader* s, const GLenum type, const char* path, DefineBlock defineBlock) {
     gShaders[idx] = s;
     s->object = 0;
     s->type = type;
@@ -108,7 +135,7 @@ static void sInitShader (size_t idx, Shader* s, const GLenum type, const char* p
         s->versionBlock = NULL;
         s->codeBlock = NULL;
     } else {
-        sCompileShader(s);
+        sCompileShader(s, defineBlock);
     }
 }
 
@@ -121,7 +148,7 @@ static void sInitProgram (size_t idx, Program* p, Shader* vsh, Shader* fsh) {
 
 // Loads all defined shaders into memory and compiles all defined render programs.
 // Populates the shader and program globals (VSH_*, FSH_*, PROG_*).
-void InitProgramSystem() {
+void InitProgramSystem (vxConfig* conf) {
     #define X(type, name, path) gShaderCount++;
     XM_SHADERS
     #undef X
@@ -133,8 +160,10 @@ void InitProgramSystem() {
     gShaders  = vxAlloc(gShaderCount,  Shader*);
     gPrograms = vxAlloc(gProgramCount, Program*);
 
+    DefineBlock defineBlock = sGenerateDefineBlock(conf);
+
     size_t iS = 0;
-    #define X(type, name, path) sInitShader(iS++, &name, type, path);
+    #define X(type, name, path) sInitShader(iS++, &name, type, path, defineBlock);
     XM_SHADERS
     #undef X
 
@@ -144,16 +173,16 @@ void InitProgramSystem() {
     #undef X
 }
 
-static void sUpdateShader (Shader* s) {
+static void sUpdateShader (Shader* s, DefineBlock defineBlock) {
     uint64_t newMtime = vxGetFileMtime(s->path);
-    if (newMtime != s->mtime) {
+    if (newMtime != s->mtime || defineBlock.hash != s->defineBlockHash) {
         s->mtime = newMtime;
-        sCompileShader(s);
+        sCompileShader(s, defineBlock);
     }
 }
 
 // Updates shaders and programs from disk. Should be called on each frame.
-void UpdatePrograms() {
+void UpdatePrograms (vxConfig* conf) {
     static enum {
         STEP_UNMARK_SHADERS,
         STEP_UPDATE_SHADERS,
@@ -171,7 +200,8 @@ void UpdatePrograms() {
     } else if (step == STEP_UPDATE_SHADERS) {
         static int i = 0;
         Shader* s = gShaders[i];
-        sUpdateShader(s);
+        DefineBlock defineBlock = sGenerateDefineBlock(conf);
+        sUpdateShader(s, defineBlock);
         if (++i >= gShaderCount) {
             i = 0;
             step = STEP_UPDATE_PROGRAMS;

@@ -2,14 +2,6 @@
 #include "common.h"
 #include "data/camera.h"
 
-extern size_t pfFrameTriCount;
-extern size_t pfFrameVertCount;
-extern size_t pfFrameDrawCount;
-
-// TODO: move to data/texture.h
-extern GLuint rSmpDefault;
-extern GLuint rTexWhite1x1;
-
 typedef struct vxConfig {
     int displayW;
     int displayH;
@@ -26,6 +18,7 @@ typedef struct vxConfig {
     Camera camEnvZn;
     bool pauseOnFocusLoss;
     bool clearColorBuffers;
+    bool gpuSupportsClipControl;
 } vxConfig;
 
 void vxConfig_Init (vxConfig* c);
@@ -38,6 +31,9 @@ typedef struct vxFrame {
     float tRender; // time taken by the rendering loop
     float tSwap;   // time taken by OpenGL (glfwSwapBuffers)
     float tPoll;   // time taken by the operating system (glfwPollEvents)
+    uint64_t perfTriangles;
+    uint64_t perfVertices;
+    uint64_t perfDrawCalls;
     float mouseX;
     float mouseY;
     float mouseDx;

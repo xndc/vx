@@ -4,6 +4,7 @@
 
 typedef struct GLFWwindow GLFWwindow;
 typedef struct ImFont ImFont;
+typedef struct vxFrame vxFrame;
 
 #define X(name, path, size) extern ImFont* name;
 XM_ASSETS_FONTS
@@ -30,4 +31,4 @@ typedef struct GUI_Statistics {
     size_t triangles;
 } GUI_Statistics;
 
-VX_EXPORT void GUI_DrawStatistics (GUI_Statistics* stats);
+VX_EXPORT void GUI_DrawStatistics (vxFrame* frame);

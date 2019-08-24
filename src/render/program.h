@@ -1,6 +1,7 @@
 #pragma once
 #include "common.h"
 #include "assets.h"
+#include "main.h"
 
 typedef struct Shader {
     char* path;
@@ -8,6 +9,7 @@ typedef struct Shader {
     GLenum type;
     char* versionBlock;
     char* codeBlock;
+    size_t defineBlockHash;
     GLuint object;
     bool justReloaded;
 } Shader;
@@ -34,8 +36,8 @@ XM_PROGRAM_UNIFORMS
 XM_PROGRAM_ATTRIBUTES
 #undef X
 
-void InitProgramSystem();
-void UpdatePrograms();
+void InitProgramSystem (vxConfig* conf);
+void UpdatePrograms (vxConfig* conf);
 
 extern size_t    gShaderCount;
 extern Shader**  gShaders;
