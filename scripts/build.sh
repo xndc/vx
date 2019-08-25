@@ -200,6 +200,7 @@ esac
 # Launch Remotery:
 RemoteryPath="$LibraryRoot/remotery/vis/index.html"
 if $Remotery; then
+    LogInfo "Launching Remotery profiler..."
     if   which open     > /dev/null; then open     "$RemoteryPath";
     elif which xdg-open > /dev/null; then xdg-open "$RemoteryPath";
     else LogWarn "Failed to find a valid 'open' command for this system."; fi
