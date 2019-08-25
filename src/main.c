@@ -287,12 +287,16 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     glViewport(0, 0, conf->displayW, conf->displayH);
 
     static RenderList rl = {0};
+    rmt_BeginCPUSample(UpdateRenderList, 0);
     UpdateRenderList(&rl, scene);
+    rmt_EndCPUSample(UpdateRenderList);
 
     if (updatedTargets & UPDATED_ENVMAP_TARGETS) {
         // TODO: generate environment maps
     }
     
+    rmt_BeginCPUSample(GBufferClear, 0);
+    rmt_BeginOpenGLSample(GBufferClear);
     if (conf->clearColorBuffers) {
         StartRenderPass(&rs, "GBuffer clear (color+depth)");
         BindFramebuffer(FB_GBUFFER);
@@ -305,8 +309,12 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glClearDepth(0.0f);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
+    rmt_EndCPUSample(GBufferClear);
+    rmt_EndOpenGLSample(GBufferClear);
 
     StartRenderPass(&rs, "GBuffer main (opaque objects)");
+    rmt_BeginCPUSample(RenderGBufferMain, 0);
+    rmt_BeginOpenGLSample(RenderGBufferMain);
     BindFramebuffer(FB_GBUFFER);
     SetRenderProgram(&rs, &PROG_GBUF_MAIN);
     SetCamera(&rs, &conf->camMain);
@@ -330,8 +338,12 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
     }
     #endif
+    rmt_EndCPUSample(RenderGBufferMain);
+    rmt_EndOpenGLSample(RenderGBufferMain);
 
     StartRenderPass(&rs, "GBuffer lighting");
+    rmt_BeginCPUSample(RenderGBufferLighting, 0);
+    rmt_BeginOpenGLSample(RenderGBufferLighting);
     BindFramebuffer(FB_ONLY_COLOR_HDR);
     SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
     SetCamera(&rs, &conf->camMain);
@@ -362,8 +374,12 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         1.0f, 1.0f, 1.0f,
     });
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    rmt_EndCPUSample(RenderGBufferLighting);
+    rmt_EndOpenGLSample(RenderGBufferLighting);
 
     StartRenderPass(&rs, "Final output");
+    rmt_BeginCPUSample(RenderFinalOutput, 0);
+    rmt_BeginOpenGLSample(RenderFinalOutput);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDrawBuffer(GL_BACK);
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -379,21 +395,34 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     }
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     glDisable(GL_FRAMEBUFFER_SRGB);
+    rmt_EndCPUSample(RenderFinalOutput);
+    rmt_EndOpenGLSample(RenderFinalOutput);
 
     StartRenderPass(&rs, "User interface");
+    rmt_BeginCPUSample(RenderUI, 0);
+    rmt_BeginOpenGLSample(RenderUI);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDrawBuffer(GL_BACK);
     GUI_Render();
+    rmt_EndCPUSample(RenderUI);
+    rmt_EndOpenGLSample(RenderUI);
 
     // *****************************************************************************************************************
     // Swap & poll:
 
     double tSwapStart = glfwGetTime();
+    rmt_BeginCPUSample(SwapBuffers, 0);
+    rmt_BeginOpenGLSample(SwapBuffers);
     glfwSwapBuffers(window);
+    rmt_EndCPUSample(SwapBuffers);
+    rmt_EndOpenGLSample(SwapBuffers);
 
     double tPollStart = glfwGetTime();
+    rmt_BeginCPUSample(PollEvents, 0);
     glfwPollEvents();
+    rmt_EndCPUSample(PollEvents);
 
+    rmt_BeginCPUSample(FrameTiming, 0);
     frame->tMain   = (float)(tRenderStart - frame->t);
     frame->tRender = (float)(tSwapStart - tRenderStart);
     frame->tSwap   = (float)(tPollStart - tSwapStart);
@@ -406,22 +435,43 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         frame->tPoll = 0.0f;
         glfwSetTime(tPollStart);
     }
+    rmt_EndCPUSample(FrameTiming, 0);
 }
 
 int main() {
     vxConfig conf = {0};
     GLFWwindow* window = NULL;
+
+    Remotery* rmt;
+    rmt_CreateGlobalInstance(&rmt);
+
+    rmt_BeginCPUSample(GameLoad, 0);
     GameLoad(&conf, &window);
+    rmt_EndCPUSample(GameLoad);
+    rmt_BindOpenGL();
+
+    rmt_BeginCPUSample(GameReload, 0);
     GameReload(&conf, window);
+    rmt_EndCPUSample(GameReload);
 
     Scene scene = {0};
+    rmt_BeginCPUSample(GameLoadScene, 0);
     GameLoadScene(&scene);
+    rmt_EndCPUSample(GameLoadScene);
 
     vxFrame frame = {0};
     vxFrame lastFrame = {0};
     while (!glfwWindowShouldClose(window)) {
+        rmt_BeginCPUSample(GameTick, 0);
         GameTick(&conf, window, &frame, &lastFrame, &scene);
+        rmt_EndCPUSample(GameTick);
+
+        rmt_BeginCPUSample(FrameMemset, 0);
         lastFrame = frame;
         memset(&frame, 0, sizeof(frame));
+        rmt_EndCPUSample(FrameMemset);
     }
+
+    rmt_UnbindOpenGL();
+    rmt_DestroyGlobalInstance(rmt);
 }

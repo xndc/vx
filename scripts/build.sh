@@ -14,6 +14,7 @@ Usage() {
     echo "  -NoDebugInfo    Omit debug information for release builds."
     echo "  -r, -Run        Run the program after compilation."
     echo "  -Xcode          Generate and open an Xcode project. Implies -g Xcode."
+    echo "  -Remotery       Launch the Remotery profiler. Can be used together with -r."
     echo "  -g, -Generator [Ninja|\"Unix Makefiles\"|...]"
     echo "    Specifies the CMake generator to use. Ninja is the default."
     echo ""
@@ -28,6 +29,7 @@ Release=false
 NoDebugInfo=false
 Run=false
 Xcode=false
+Remotery=false
 Generator="Ninja"
 
 set +u
@@ -42,6 +44,7 @@ while :; do
         release         ) Release=true  ;;
         r | run         ) Run=true      ;;
         xcode           ) Generator="Xcode"; Run=false; Xcode=true ;;
+        remotery        ) Remotery=true ;;
         g | generator   ) Generator=$2; shift ;;
         *) break ;; # end of options
     esac
@@ -193,6 +196,15 @@ case $Generator in
         Run=false
         ;;
 esac
+
+# Launch Remotery:
+RemoteryPath="$LibraryRoot/remotery/vis/index.html"
+if $Remotery; then
+    if   which open     > /dev/null; then open     "$RemoteryPath";
+    elif which xdg-open > /dev/null; then xdg-open "$RemoteryPath";
+    else LogWarn "Failed to find a valid 'open' command for this system."; fi
+    sleep 1
+fi
 
 # Run game:
 BinaryPath="$BuildDir/$TargetName"

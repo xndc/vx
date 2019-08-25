@@ -42,7 +42,9 @@ param (
     # Run the program under WinDbg after compilation.
     [switch] $WinDbg,
     # Generate and open a Visual Studio project. Implies -Generator MSBuild.
-    [switch] $VS
+    [switch] $VS,
+    # Open the Remotery profiler (in a web browser). Doesn't imply -Run.
+    [switch] $Remotery
 )
 
 # Stop script if an error is encountered:
@@ -408,6 +410,13 @@ try {
     })
     $Main = GetTimerMs "Main"
     LogInfo "Total: $Main ms ($($Main - $TotalTimeTracked) ms untracked)"
+
+    # Launch the Remotery profiler:
+    if ($Remotery) {
+        LogInfo "Launching Remotery profiler..."
+        Start-Process "$LibraryRoot/remotery/vis/index.html"
+        Start-Sleep 1
+    }
 
     # Run game:
     if ($Run) {

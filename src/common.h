@@ -19,6 +19,7 @@
 #include <cglm/cglm.h>
 #include <glad/glad.h>
 #include <stb_sprintf.h>
+#include <Remotery.h>
 
 // stb_ds trips some warnings and has one bug that we have to fix:
 #if defined(_MSC_VER) && !defined(__clang__)
