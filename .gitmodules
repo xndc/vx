@@ -19,3 +19,6 @@
 [submodule "lib/cglm"]
 	path = lib/cglm
 	url = https://github.com/recp/cglm
+[submodule "lib/remotery"]
+	path = lib/remotery
+	url = https://github.com/Celtoys/Remotery

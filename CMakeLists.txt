@@ -61,13 +61,6 @@ target_include_directories(cglm INTERFACE "lib/cglm/include")
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "lib/stb")
 
-# set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
-# add_subdirectory(lib/glm)
-
-# file(GLOB_RECURSE cglm_sources RELATIVE ${CMAKE_SOURCE_DIR} "lib/cglm/src/*.c")
-# add_library(cglm ${cglm_sources})
-# target_include_directories(cglm PUBLIC "lib/cglm/include")
-
 add_library(imgui
     "lib/imgui/imgui.cpp"
     "lib/imgui/imgui_demo.cpp"
@@ -79,6 +72,10 @@ target_include_directories(imgui PUBLIC "lib/imgui")
 target_compile_definitions(imgui PRIVATE "IMGUI_IMPL_OPENGL_LOADER_GLAD")
 target_include_directories(imgui PRIVATE "build/include")
 target_link_libraries(imgui PUBLIC glfw)
+
+add_library(remotery "lib/remotery/lib/Remotery.c")
+target_include_directories(remotery PUBLIC "lib/remotery/lib")
+target_compile_definitions(remotery PUBLIC "RMT_USE_OPENGL")
 
 # Main executable target:
 
@@ -99,6 +96,7 @@ target_link_libraries(Game PRIVATE glfw)
 target_link_libraries(Game PRIVATE imgui)
 target_link_libraries(Game PRIVATE cglm)
 target_link_libraries(Game PRIVATE stb)
+target_link_libraries(Game PRIVATE remotery)
 
 # Compiler and linker options:
 

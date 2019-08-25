@@ -9,6 +9,7 @@
                 "${workspaceFolder}/lib/glfw/include",
                 "${workspaceFolder}/lib/imgui",
                 "${workspaceFolder}/lib/stb",
+                "${workspaceFolder}/lib/remotery/lib",
                 "${workspaceFolder}/build/include"
             ],
             "defines": [
