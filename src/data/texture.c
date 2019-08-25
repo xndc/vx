@@ -163,6 +163,11 @@ uint8_t UpdateRenderTargets (vxConfig* conf) {
     int envmapSize = conf->envmapSize;
     uint8_t updated = 0;
 
+    if (screenW == 0 || screenH == 0) {
+        // Trying to generate a 0x0 framebuffer does not go well.
+        return 0;
+    }
+
     if (screenW != lastScreenW || screenH != lastScreenH) {
         updated |= UPDATED_SCREEN_TARGETS;
         #define X(name, format) sUpdateRenderTarget(#name, #format, &name, format, screenW, screenH);

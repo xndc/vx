@@ -162,6 +162,8 @@ void GameReload (vxConfig* conf, GLFWwindow* window) {
 
 // Loads the default scene. Should only be run once.
 void GameLoadScene (Scene* scene) {
+    InitScene(scene);
+    
     GameObject* sponza = AddObject(scene, NULL, GAMEOBJECT_MODEL);
     sponza->model.model = &MDL_SPONZA;
     sponza->localScale[0] = 2.5f;
@@ -170,12 +172,49 @@ void GameLoadScene (Scene* scene) {
     sponza->localPosition[0] = +1.5f;
     sponza->localPosition[1] = -4.0f;
     sponza->localPosition[2] = +1.5f;
+
     GameObject* duck = AddObject(scene, sponza, GAMEOBJECT_MODEL);
     duck->model.model = &MDL_DUCK;
     duck->localPosition[1] = 2.0f;
     duck->localScale[0] = 1/sponza->localScale[0];
     duck->localScale[1] = 1/sponza->localScale[1];
     duck->localScale[2] = 1/sponza->localScale[2];
+
+    GameObject* sunlight = AddObject(scene, NULL, GAMEOBJECT_DIRECTIONAL_LIGHT);
+    sunlight->localPosition[0] = +1.0f;
+    sunlight->localPosition[1] = +1.0f;
+    sunlight->localPosition[2] = +1.0f;
+    sunlight->directionalLight.color[0] = 2.0f;
+    sunlight->directionalLight.color[1] = 2.0f;
+    sunlight->directionalLight.color[2] = 1.8f;
+
+    GameObject* p1 = AddObject(scene, NULL, GAMEOBJECT_POINT_LIGHT);
+    p1->localPosition[0] = 4.0f;
+    p1->localPosition[1] = 0.0f;
+    p1->localPosition[2] = 0.0f;
+    p1->pointLight.color[0] = 10.0f;
+    p1->pointLight.color[1] = 10.0f;
+    p1->pointLight.color[2] = 10.0f;
+
+    GameObject* p2 = AddObject(scene, NULL, GAMEOBJECT_POINT_LIGHT);
+    p2->localPosition[0] = -4.0f;
+    p2->localPosition[1] = 0.0f;
+    p2->localPosition[2] = 0.0f;
+    p2->pointLight.color[0] = 10.0f;
+    p2->pointLight.color[1] = 10.0f;
+    p2->pointLight.color[2] = 10.0f;
+
+    GameObject* lp = AddObject(scene, NULL, GAMEOBJECT_LIGHT_PROBE);
+    lp->localPosition[0] = 0.0f;
+    lp->localPosition[1] = 0.0f;
+    lp->localPosition[2] = 0.0f;
+    const float mul = 0.05f;
+    glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorXp);
+    glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorXn);
+    glm_vec3_copy((vec3){mul*1.5f, mul*1.5f, mul*1.5f}, lp->lightProbe.colorYp);
+    glm_vec3_copy((vec3){mul*0.5f, mul*0.5f, mul*0.5f}, lp->lightProbe.colorYn);
+    glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZp);
+    glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZn);
 }
 
 // Tick function for the game. Generates a single frame.
@@ -341,10 +380,36 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     }
     EndRenderPass();
 
-    RenderPass(&rs, "GBuffer lighting", {
-        BindFramebuffer(FB_ONLY_COLOR_HDR);
-        SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
-        SetCamera(&rs, &conf->camMain);
+    StartRenderPass(&rs, "GBuffer lighting");
+    BindFramebuffer(FB_ONLY_COLOR_HDR);
+    SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
+    SetCamera(&rs, &conf->camMain);
+    // Extract light info from scene:
+    RenderableLightProbe* ambient = NULL;
+    RenderableDirectionalLight* directional = NULL;
+    vec3 pointPositions[4] = {0};
+    vec3 pointColors[4]    = {0};
+    if (rl.lightProbeCount > 0) {
+        ambient = &rl.lightProbes[0];
+    }
+    if (rl.directionalLightCount > 0) {
+        directional = &rl.directionalLights[0];
+    }
+    for (int i = 0; i < vxMin(4, rl.pointLightCount); i++) {
+        glm_vec3_copy(rl.pointLights[i].position, pointPositions[i]);
+        glm_vec3_copy(rl.pointLights[i].color, pointColors[i]);
+    }
+    // Send light uniforms:
+    if (ambient) {
+        glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float*) ambient->colors);
+    }
+    if (directional) {
+        glUniform3fv(UNIF_SUN_POSITION, 1, directional->position);
+        glUniform3fv(UNIF_SUN_COLOR, 1, directional->color);
+    }
+    glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float*) pointPositions);
+    glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float*) pointColors);
+    #if 0
         // Ambient lighting:
         float i = 0.01f;
         glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
@@ -371,26 +436,27 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
             1.0f, 1.0f, 1.0f,
             1.0f, 1.0f, 1.0f,
         });
-        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
-    });
+    #endif
+    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    EndRenderPass();
 
-    RenderPass(&rs, "Final output", {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDrawBuffer(GL_BACK);
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        SetRenderProgram(&rs, &PROG_FINAL);
-        SetCamera(&rs, &conf->camMain);
-        glUniform1f(UNIF_TONEMAP_EXPOSURE, conf->tonemapExposure);
-        if (conf->tonemapMode == TONEMAP_ACES) {
-            glUniform1f(UNIF_TONEMAP_ACES_PARAM_A, conf->tonemapACESParamA);
-            glUniform1f(UNIF_TONEMAP_ACES_PARAM_B, conf->tonemapACESParamB);
-            glUniform1f(UNIF_TONEMAP_ACES_PARAM_C, conf->tonemapACESParamC);
-            glUniform1f(UNIF_TONEMAP_ACES_PARAM_D, conf->tonemapACESParamD);
-            glUniform1f(UNIF_TONEMAP_ACES_PARAM_E, conf->tonemapACESParamE);
-        }
-        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
-        glDisable(GL_FRAMEBUFFER_SRGB);
-    });
+    StartRenderPass(&rs, "Final output");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawBuffer(GL_BACK);
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    SetRenderProgram(&rs, &PROG_FINAL);
+    SetCamera(&rs, &conf->camMain);
+    glUniform1f(UNIF_TONEMAP_EXPOSURE, conf->tonemapExposure);
+    if (conf->tonemapMode == TONEMAP_ACES) {
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_A, conf->tonemapACESParamA);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_B, conf->tonemapACESParamB);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_C, conf->tonemapACESParamC);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_D, conf->tonemapACESParamD);
+        glUniform1f(UNIF_TONEMAP_ACES_PARAM_E, conf->tonemapACESParamE);
+    }
+    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    glDisable(GL_FRAMEBUFFER_SRGB);
+    EndRenderPass();
 
     RenderPass(&rs, "User interface", {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -436,28 +502,19 @@ int main() {
     Remotery* rmt;
     rmt_CreateGlobalInstance(&rmt);
 
-    TimedBlock("GameLoad", {
-        GameLoad(&conf, &window);
-    });
-    
+    TimedBlock("GameLoad", GameLoad(&conf, &window));
     rmt_BindOpenGL();
-
-    TimedBlock("GameReload", {
-        GameReload(&conf, window);
-    });
+    
+    TimedBlock("GameReload", GameReload(&conf, window));
 
     Scene scene = {0};
-    TimedBlock("GameLoadScene", {
-        GameLoadScene(&scene);
-    });
+    TimedBlock("GameLoadScene", GameLoadScene(&scene));
 
     vxFrame frame = {0};
     vxFrame lastFrame = {0};
     while (!glfwWindowShouldClose(window)) {
         TimedBlock("Frame", {
-            TimedBlock("GameTick", {
-                GameTick(&conf, window, &frame, &lastFrame, &scene);
-            });
+            TimedBlock("GameTick", GameTick(&conf, window, &frame, &lastFrame, &scene));
             lastFrame = frame;
             memset(&frame, 0, sizeof(frame));
         });

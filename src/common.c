@@ -309,13 +309,14 @@ void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t align
         }
     } else {
         if (block) {
-            #if defined(_MSC_VER)
+            #if defined(_MSC_VER) && 0
                 p = _aligned_realloc(block, size, alignment);
             #else
                 p = vxAlignedAlloc(size, alignment);
                 // NOTE: This can return a bogus value on Windows if the alignments are different.
                 size_t block_size = vxAlignedMemSize(block, alignment);
                 memcpy(p, block, vxMin(block_size, size));
+                vxAlignedFree(block);
             #endif
         } else {
             p = vxAlignedAlloc(size, alignment);

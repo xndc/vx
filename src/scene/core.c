@@ -40,12 +40,16 @@ void UpdateScene (Scene* scene) {
     }
 }
 
+void InitScene (Scene* scene) {
+    scene->slots = 2048;
+    scene->objects = vxAlloc(scene->slots, GameObject);
+}
+
 GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type) {
     scene->size++;
     if (scene->size > scene->slots) {
-        scene->slots = scene->size * 2;
-        scene->objects = (GameObject*) vxAlignedRealloc(
-            scene->objects, scene->slots, sizeof(GameObject), vxAlignOf(GameObject));
+        vxLog("Warning: Scene object limit hit!");
+        return NULL;
     }
     GameObject* obj = &scene->objects[scene->size - 1];
     memset(obj, 0, sizeof(GameObject));
@@ -67,6 +71,7 @@ static void sAllocRenderList (RenderList* rl) {
     rl->meshes = vxAlloc(rl->meshSlots, RenderableMesh);
     rl->directionalLights = vxAlloc(rl->directionalLightSlots, RenderableDirectionalLight);
     rl->pointLights = vxAlloc(rl->pointLightSlots, RenderablePointLight);
+    rl->lightProbes = vxAlloc(rl->lightProbeSlots, RenderableLightProbe);
 }
 
 void ClearRenderList (RenderList* rl) {
@@ -75,51 +80,31 @@ void ClearRenderList (RenderList* rl) {
         rl->meshSlots = RenderList_DefaultMeshSlots;
         rl->directionalLightSlots = RenderList_DefaultDirectionalLightSlots;
         rl->pointLightSlots = RenderList_DefaultPointLightSlots;
+        rl->lightProbeSlots = RenderList_DefaultLightProbeSlots;
         sAllocRenderList(rl);
     }
     rl->meshCount = 0;
     rl->directionalLightCount = 0;
     rl->pointLightCount = 0;
+    rl->lightProbeCount = 0;
 }
 
-static RenderableMesh* sAddRenderableMesh (RenderList* rl) {
-    rl->meshCount++;
-    if (rl->meshCount > rl->meshSlots) {
-        rl->meshSlots = rl->meshCount * 2;
-        rl->meshes = (RenderableMesh*) vxAlignedRealloc(
-            rl->meshes,
-            rl->meshSlots,
-            sizeof(RenderableMesh),
-            vxAlignOf(RenderableMesh));
+#define MAKE_RENDERABLE_ADD_FUNCTION(type, slotsField, countField, objField) \
+    static type* sAdd ## type (RenderList* rl) { \
+        rl->countField++; \
+        if (rl->countField > rl->slotsField) { \
+            rl->slotsField = rl->countField * 2; \
+            rl->objField = (type*) vxAlignedRealloc(rl->objField, rl->slotsField, sizeof(type), vxAlignOf(type)); \
+        } \
+        return &rl->objField[rl->countField - 1]; \
     }
-    return &rl->meshes[rl->meshCount - 1];
-}
 
-static RenderableDirectionalLight* sAddRenderableDirectionalLight (RenderList* rl) {
-    rl->directionalLightCount++;
-    if (rl->directionalLightCount > rl->directionalLightSlots) {
-        rl->directionalLightSlots = rl->directionalLightCount * 2;
-        rl->directionalLights = (RenderableDirectionalLight*) vxAlignedRealloc(
-            rl->directionalLights,
-            rl->directionalLightSlots,
-            sizeof(RenderableDirectionalLight),
-            vxAlignOf(RenderableDirectionalLight));
-    }
-    return &rl->directionalLights[rl->directionalLightCount - 1];
-}
+MAKE_RENDERABLE_ADD_FUNCTION(RenderableMesh, meshSlots, meshCount, meshes);
+MAKE_RENDERABLE_ADD_FUNCTION(RenderableDirectionalLight, directionalLightSlots, directionalLightCount, directionalLights);
+MAKE_RENDERABLE_ADD_FUNCTION(RenderablePointLight, pointLightSlots, pointLightCount, pointLights);
+MAKE_RENDERABLE_ADD_FUNCTION(RenderableLightProbe, lightProbeSlots, lightProbeCount, lightProbes);
 
-static RenderablePointLight* sAddRenderablePointLight (RenderList* rl) {
-    rl->pointLightCount++;
-    if (rl->pointLightCount > rl->pointLightSlots) {
-        rl->pointLightSlots = rl->pointLightCount * 2;
-        rl->pointLights = (RenderablePointLight*) vxAlignedRealloc(
-            rl->pointLights,
-            rl->pointLightSlots,
-            sizeof(RenderablePointLight),
-            vxAlignOf(RenderablePointLight));
-    }
-    return &rl->pointLights[rl->pointLightCount - 1];
-}
+#undef MAKE_RENDERABLE_ADD_FUNCTION
 
 void UpdateRenderList (RenderList* rl, Scene* scene) {
     ClearRenderList(rl);
@@ -148,6 +133,17 @@ void UpdateRenderList (RenderList* rl, Scene* scene) {
                 RenderablePointLight* rpl = sAddRenderablePointLight(rl);
                 glm_vec3_copy(obj->localPosition, rpl->position);
                 glm_vec3_copy(obj->pointLight.color, rpl->color);
+            } break;
+
+            case GAMEOBJECT_LIGHT_PROBE: {
+                RenderableLightProbe* rlp = sAddRenderableLightProbe(rl);
+                glm_vec3_copy(obj->localPosition, rlp->position);
+                glm_vec3_copy(obj->lightProbe.colorXp, ((vec3*)rlp->colors)[0]);
+                glm_vec3_copy(obj->lightProbe.colorXn, ((vec3*)rlp->colors)[1]);
+                glm_vec3_copy(obj->lightProbe.colorYp, ((vec3*)rlp->colors)[2]);
+                glm_vec3_copy(obj->lightProbe.colorYn, ((vec3*)rlp->colors)[3]);
+                glm_vec3_copy(obj->lightProbe.colorZp, ((vec3*)rlp->colors)[4]);
+                glm_vec3_copy(obj->lightProbe.colorZn, ((vec3*)rlp->colors)[5]);
             } break;
         }
     }

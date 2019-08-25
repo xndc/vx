@@ -56,7 +56,7 @@
     X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
 \
     X(UNIF_AMBIENT_CUBE,         "uAmbientCube") \
-    X(UNIF_SUN_DIRECTION,        "uSunDirection") \
+    X(UNIF_SUN_POSITION,         "uSunPosition") \
     X(UNIF_SUN_COLOR,            "uSunColor") \
     X(UNIF_POINTLIGHT_POSITIONS, "uPointLightPositions") \
     X(UNIF_POINTLIGHT_COLORS,    "uPointLightColors") \

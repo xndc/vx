@@ -7,6 +7,7 @@ typedef enum GameObjectType {
     GAMEOBJECT_MODEL,
     GAMEOBJECT_DIRECTIONAL_LIGHT,
     GAMEOBJECT_POINT_LIGHT,
+    GAMEOBJECT_LIGHT_PROBE,
 } GameObjectType;
 
 typedef struct GameObject_Model {
@@ -15,11 +16,23 @@ typedef struct GameObject_Model {
 
 typedef struct GameObject_DirectionalLight {
     vec3 color;
+    bool editorIntensityMode;
 } GameObject_DirectionalLight;
 
 typedef struct GameObject_PointLight {
     vec3 color;
+    bool editorIntensityMode;
 } GameObject_PointLight;
+
+typedef struct GameObject_LightProbe {
+    vec3 colorXp;
+    vec3 colorXn;
+    vec3 colorYp;
+    vec3 colorYn;
+    vec3 colorZp;
+    vec3 colorZn;
+    bool editorIntensityMode;
+} GameObject_LightProbe;
 
 typedef struct GameObject {
     GameObjectType type;
@@ -38,6 +51,7 @@ typedef struct GameObject {
         GameObject_Model model;
         GameObject_DirectionalLight directionalLight;
         GameObject_PointLight pointLight;
+        GameObject_LightProbe lightProbe;
     };
 } GameObject;
 
@@ -48,6 +62,7 @@ typedef struct Scene {
     GameObject* objects;
 } Scene;
 
+void InitScene (Scene* scene);
 void UpdateScene (Scene* scene);
 GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type);
 
@@ -69,9 +84,15 @@ typedef struct RenderablePointLight {
     vec3 color;
 } RenderablePointLight;
 
+typedef struct RenderableLightProbe {
+    vec3 position;
+    vec3 colors [6]; // X+, X-, Y+, Y-, Z+, Z-
+} RenderableLightProbe;
+
 static const size_t RenderList_DefaultMeshSlots = 1024;
 static const size_t RenderList_DefaultDirectionalLightSlots = 4;
 static const size_t RenderList_DefaultPointLightSlots = 128;
+static const size_t RenderList_DefaultLightProbeSlots = 64;
 
 typedef struct RenderList {
     size_t meshSlots;
@@ -83,6 +104,9 @@ typedef struct RenderList {
     size_t pointLightSlots;
     size_t pointLightCount;
     RenderablePointLight* pointLights;
+    size_t lightProbeSlots;
+    size_t lightProbeCount;
+    RenderableLightProbe* lightProbes;
 } RenderList;
 
 void ClearRenderList (RenderList* rl);

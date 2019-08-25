@@ -17,13 +17,7 @@ uniform mat4 uLastViewMatrix;
 uniform mat4 uLastProjMatrix;
 
 uniform vec3 uAmbientCube[6];
-// uniform vec3 uAmbientZP;
-// uniform vec3 uAmbientZN;
-// uniform vec3 uAmbientYP;
-// uniform vec3 uAmbientYN;
-// uniform vec3 uAmbientXP;
-// uniform vec3 uAmbientXN;
-uniform vec3 uSunDirection;
+uniform vec3 uSunPosition;
 uniform vec3 uSunColor;
 uniform vec3 uPointLightPositions[4];
 uniform vec3 uPointLightColors[4];
@@ -148,9 +142,9 @@ void main() {
     // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
     vec3 Nsq = N * N;
     ivec3 isNegative = ivec3(N.x < 0.0, N.y < 0.0, N.z < 0.0);
-    Lo += diffuse * Nsq.y * uAmbientCube[isNegative.y]        // maps to [0] for Y+, [1] for Y-
-        + diffuse * Nsq.z * uAmbientCube[isNegative.z + 2]    // maps to [2] for Z+, [3] for Z-
-        + diffuse * Nsq.x * uAmbientCube[isNegative.x + 4];   // maps to [4] for X+, [5] for X-
+    Lo += diffuse * Nsq.x * uAmbientCube[isNegative.x + 0]    // maps to [0] for X+, [1] for X-
+        + diffuse * Nsq.y * uAmbientCube[isNegative.y + 2]    // maps to [2] for Y+, [3] for Y-
+        + diffuse * Nsq.z * uAmbientCube[isNegative.z + 4];   // maps to [4] for Z+, [5] for Z-
     #endif
 
     // Directional lighting:
@@ -160,7 +154,7 @@ void main() {
     // NOTE: Also, every vector we pass here needs to be normalized. The Fresnel term gets blown
     //   up when you look at the sun otherwise.
     #if 1
-    Lo += DirectionalLightLo(N, V, normalize(-uSunDirection), uSunColor, diffuse, metal, rough);
+    Lo += DirectionalLightLo(N, V, normalize(uSunPosition), uSunColor, diffuse, metal, rough);
     #endif
 
     #if 1
