@@ -45,6 +45,7 @@ typedef struct Mesh {
 } Mesh;
 
 typedef struct Model {
+    char* sourceFilePath;
     size_t textureCount;
     GLuint* textures;
     size_t materialCount;

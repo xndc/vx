@@ -1,5 +1,6 @@
 #include "gui.h"
 #include "main.h"
+#include "scene/core.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <imgui.h>
@@ -200,38 +201,39 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
     ImGui::End();
 }
 
-static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window);
+static void sDrawImguiDemo       (vxConfig* conf, GLFWwindow* window);
 static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window);
-static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window);
+static void sDrawBufferViewer    (vxConfig* conf, GLFWwindow* window);
+static void sDrawSceneViewer     (vxConfig* conf, GLFWwindow* window, Scene* scene);
 
-VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window) {
-    static bool showImguiDemo = false;
+VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene) {
+    static bool showImguiDemo       = false;
     static bool showTonemapSettings = false;
-    static bool showBufferViewer = false;
+    static bool showBufferViewer    = false;
+    static bool showSceneViewer     = false;
 
-    static bool kpTonemap = false;
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
-        if (!kpTonemap) {
-            showTonemapSettings = !showTonemapSettings;
-            kpTonemap = true;
+    #define ToggleOnConditionOnce(boolean, cond) \
+        static bool boolean ## __triggered = false; \
+        if (cond) { \
+            if (!(boolean ## __triggered)) { \
+                boolean = !boolean; \
+                boolean ## __triggered = true; \
+            } \
+        } else { \
+            boolean ## __triggered = false; \
         }
-    } else {
-        kpTonemap = false;
-    }
+    
+    #define KeyDown(key) glfwGetKey(window, key) == GLFW_PRESS
+    
+    ToggleOnConditionOnce(showImguiDemo,       KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_I));
+    ToggleOnConditionOnce(showTonemapSettings, KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_T));
+    ToggleOnConditionOnce(showBufferViewer,    KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_B));
+    ToggleOnConditionOnce(showSceneViewer,     KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_O));
 
-    static bool kpBuffer = false;
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
-        if (!kpBuffer) {
-            showBufferViewer = !showBufferViewer;
-            kpBuffer = true;
-        }
-    } else {
-        kpBuffer = false;
-    }
-
-    if (showImguiDemo) { sDrawImguiDemo(conf, window); }
-    if (showTonemapSettings) { sDrawTonemapSettings(conf, window); }
-    if (showBufferViewer) { sDrawBufferViewer(conf, window); }
+    if (showImguiDemo)       { sDrawImguiDemo       (conf, window); }
+    if (showTonemapSettings) { sDrawTonemapSettings (conf, window); }
+    if (showBufferViewer)    { sDrawBufferViewer    (conf, window); }
+    if (showSceneViewer)     { sDrawSceneViewer     (conf, window, scene); }
 }
 
 static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window) {
@@ -262,5 +264,28 @@ static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
     ImGui::RadioButton("World Position",  &conf->debugVisMode, DEBUG_VIS_WORLDPOS);
     ImGui::RadioButton("Depth (Raw)",     &conf->debugVisMode, DEBUG_VIS_DEPTH_RAW);
     ImGui::RadioButton("Depth (Linear)",  &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
+    ImGui::End();
+}
+
+static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
+    ImGui::Begin("Scene Viewer");
+    for (size_t i = 0; i < scene->size; i++) {
+        GameObject* obj = &scene->objects[i];
+        ImGui::PushID(i);
+        switch (obj->type) {
+            case GAMEOBJECT_MODEL: {
+                ImGui::Text("Model");
+                ImGui::SameLine(100);
+                ImGui::Text("%s", obj->model.model->sourceFilePath);
+                ImGui::Spacing();
+                ImGui::SameLine(20);
+                ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
+                ImGui::Spacing();
+                ImGui::SameLine(20);
+                ImGui::DragFloat3("Scale", obj->localScale, 0.01f, 0.01f, 20.0f);
+            } break;
+        }
+        ImGui::PopID();
+    }
     ImGui::End();
 }

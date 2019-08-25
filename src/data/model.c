@@ -489,6 +489,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
 
     // Fill out model fields:
     // TODO: Add an atomic lock to the model so we can load it on another thread.
+    model->sourceFilePath = strdup(gltfPath);
     model->textureCount = textureCount;
     model->textures = textures;
     model->materialCount = materialCount;

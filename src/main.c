@@ -170,6 +170,12 @@ void GameLoadScene (Scene* scene) {
     sponza->localPosition[0] = +2.5f;
     sponza->localPosition[1] = -4.0f;
     sponza->localPosition[2] = +2.5f;
+    GameObject* duck = AddObject(scene, sponza, GAMEOBJECT_MODEL);
+    duck->model.model = &MDL_DUCK;
+    duck->localPosition[1] = 2.0f;
+    duck->localScale[0] = 1/sponza->localScale[0];
+    duck->localScale[1] = 1/sponza->localScale[1];
+    duck->localScale[2] = 1/sponza->localScale[2];
 }
 
 // Tick function for the game. Generates a single frame.
@@ -203,7 +209,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // Debug user interface:
     GUI_DrawStatistics(lastFrame);
-    GUI_DrawDebugUI(conf, window);
+    GUI_DrawDebugUI(conf, window, scene);
     bool uiWantsInput = GUI_InterfaceWantsInput();
 
     // Manage cursor lock status:
@@ -223,8 +229,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     {
         static float lmx = 0;
         static float lmy = 0;
-        static float ry = 0;
-        static float rx = 0;
+        static float ry = vxRadians(-45);
+        static float rx = vxRadians(20);
         glfwGetCursorPos(window, &mx, &my);
         dmx = lmx - (float) mx;
         dmy = lmy - (float) my;
@@ -247,7 +253,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glm_quat(qx, rx, 1, 0, 0);
         glm_quat_mul(qx, qy, q);
 
-        static vec3 pos = {-2, -2, -2};
+        static vec3 pos = {-3, -4, -3};
         // FIXME: I have no idea why these have to be negative.
         vec3 spd = {-7.0f * frame->dt, -7.0f * frame->dt, -7.0f * frame->dt};
         vec3 dpos = GLM_VEC3_ZERO_INIT;
