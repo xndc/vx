@@ -240,29 +240,29 @@ GLuint LoadTextureFromDisk (const char* path, bool mips) {
         size_t idata = 4 * sizeof(uint32_t);
         GLenum internalformat, format;
         switch (c) {
-            case 1: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;    format = GL_RED;  break; }
-            case 2: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;   format = GL_RG;   break; }
+            case 1: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  format = GL_RED;  break; }
+            case 2: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  format = GL_RG;   break; }
             case 3: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  format = GL_RGB;  break; }
             case 4: { internalformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; format = GL_RGBA; break; }
             default: { vxPanic("Unknown channel count %d for %s (%s)", c, path, cachedTexturePath); }
         }
         int levelw = w;
         int levelh = h;
-        for (int ilevel = 0; ilevel < l; ilevel++) {
-            int size = *(int*)(&data[idata]);
+        for (int ilevel = 0; ilevel < (int) l; ilevel++) {
+            int levelsize = *(int*)(&data[idata]);
             idata += sizeof(int);
             // if ((size - idata) < levelw * levelh * c) {
             //     vxPanic("%s has wrong size %ju for parameters %ux%ux%ux%u", size, w, h, c, l);
             // }
             char* leveldata = data + idata;
             // idata += levelw * levelh * c;
-            idata += size;
+            idata += levelsize;
             // glTexImage2D(GL_TEXTURE_2D, ilevel, internalformat, levelw, levelh, 0, format,
             //     GL_UNSIGNED_BYTE, leveldata);
-            glCompressedTexImage2D(GL_TEXTURE_2D, ilevel, internalformat, levelw, levelh, 0, (GLsizei) size, leveldata);
+            glCompressedTexImage2D(GL_TEXTURE_2D, ilevel, internalformat, levelw, levelh, 0, (GLsizei) levelsize,
+                leveldata);
             levelw /= 2;
             levelh /= 2;
-            vxLog("Read %u bytes for level %d (%dx%d) of texture %s", size, ilevel, levelw, levelh, path);
         }
         free(data);
         double t = (glfwGetTime() - tStart) * 1000.0;
@@ -287,8 +287,8 @@ GLuint LoadTextureFromDisk (const char* path, bool mips) {
     // Upload:
     GLenum internalformat, format;
     switch (c) {
-        case 1: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;    format = GL_RED;  break; }
-        case 2: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;   format = GL_RG;   break; }
+        case 1: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  format = GL_RED;  break; }
+        case 2: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  format = GL_RG;   break; }
         case 3: { internalformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  format = GL_RGB;  break; }
         case 4: { internalformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; format = GL_RGBA; break; }
         default: { vxPanic("Unknown channel count %d for %s (%s)", c, path, cachedTexturePath); }
@@ -308,7 +308,7 @@ GLuint LoadTextureFromDisk (const char* path, bool mips) {
     } else {
         uint32_t info[] = {(uint32_t) w, (uint32_t) h, (uint32_t) c, l};
         fwrite(info, sizeof(uint32_t), 4, cachedTextureFile);
-        for (int ilevel = 0; ilevel < l; ilevel++) {
+        for (int ilevel = 0; ilevel < (int) l; ilevel++) {
             // FIXME: the docs for glGetTexImage mention GL_PACK_ALIGNMENT - what's that?
             GLint levelw, levelh, compressedSize;
             glGetTexLevelParameteriv(GL_TEXTURE_2D, ilevel, GL_TEXTURE_WIDTH,  &levelw);
@@ -322,7 +322,6 @@ GLuint LoadTextureFromDisk (const char* path, bool mips) {
             fwrite(&compressedSize, sizeof(compressedSize), 1, cachedTextureFile);
             fwrite(pixels, 1, compressedSize, cachedTextureFile);
             free(pixels);
-            vxLog("Wrote out %u bytes for level %i (%dx%d) of texture %s", compressedSize, ilevel, levelw, levelh, cachedTexturePath);
         }
         fclose(cachedTextureFile);
     }
