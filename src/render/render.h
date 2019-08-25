@@ -30,6 +30,10 @@ typedef struct RenderState {
 } RenderState;
 
 void StartRenderPass (RenderState* rs, const char* passName);
+void EndRenderPass();
+
+#define RenderPass(pRenderState, passName, block) { StartRenderPass(pRenderState, passName); block; EndRenderPass(); }
+
 void CopyRenderState (RenderState* src, RenderState* dst);
 
 void SetViewMatrix (RenderState* rs, mat4 view, mat4 viewInv, mat4 viewLast);

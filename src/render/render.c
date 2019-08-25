@@ -153,6 +153,13 @@ void StartRenderPass (RenderState* rs, const char* passName) {
     glm_mat4_identity(rs->matModel);
     glm_mat4_identity(rs->matModelLast);
     rs->nextFreeTextureUnit = 0;
+    rmt_BeginOpenGLSampleDynamic(passName);
+    rmt_BeginCPUSampleDynamic(passName, 0);
+}
+
+void EndRenderPass() {
+    rmt_EndCPUSample();
+    rmt_EndOpenGLSample();
 }
 
 void CopyRenderState (RenderState* src, RenderState* dst) {

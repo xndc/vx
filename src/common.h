@@ -132,3 +132,12 @@ VX_EXPORT void vxCreateDirectory (const char* path);
 VX_EXPORT void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
 #define vxAlloc(count, type) (type*) vxAlignedRealloc(NULL, count, sizeof(type), vxAlignOf(type));
 #define vxFree(block) vxAlignedRealloc(block, 0, 0, 0);
+
+#define StartBlock(name) rmt_BeginCPUSampleDynamic(name, 0)
+#define EndBlock() rmt_EndCPUSample()
+
+#define StartGPUBlock(name) { rmt_BeginOpenGLSampleDynamic(name); StartBlock(name); }
+#define EndGPUBlock() { EndBlock(); rmt_EndOpenGLSample(); }
+
+#define TimedBlock(name, block)    { StartBlock(name); block; EndBlock(); }
+#define TimedGPUBlock(name, block) { StartGPUBlock(name); block; EndGPUBlock(); }

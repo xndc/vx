@@ -194,23 +194,29 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // *****************************************************************************************************************
     // Update:
 
+    StartBlock("Frame Update");
+
     // Retrieve new framebuffer size and update framebuffers if required:
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
     conf->displayW = w;
     conf->displayH = h;
+    StartGPUBlock("Update Render Targets");
     uint8_t updatedTargets = UpdateRenderTargets(conf);
+    EndGPUBlock();
     glViewport(0, 0, w, h);
     
     // Run subsystem tick functions:
-    UpdatePrograms(conf);
-    UpdateScene(scene);
-    GUI_StartFrame();
+    TimedBlock("Update Programs",  UpdatePrograms(conf));
+    TimedBlock("Update Scene",     UpdateScene(scene));
+    TimedBlock("ImGui StartFrame", GUI_StartFrame());
 
     // Debug user interface:
+    StartBlock("GUI Update");
     GUI_DrawStatistics(lastFrame);
     GUI_DrawDebugUI(conf, window, scene);
     bool uiWantsInput = GUI_InterfaceWantsInput();
+    EndBlock();
 
     // Manage cursor lock status:
     // TODO: don't affect ImGui elements when locked
@@ -226,6 +232,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // FPS-style camera movement & mouse-look:
     double mx, my, dmx, dmy;
+    StartBlock("FPS Camera Control");
     {
         static float lmx = 0;
         static float lmy = 0;
@@ -274,168 +281,152 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glm_vec3_negate(pos);
         Camera_Update(&conf->camMain, w, h, vmat);
     }
+    EndBlock();
     frame->mouseX = (float) mx;
     frame->mouseY = (float) my;
     frame->mouseDx = (float) dmx;
     frame->mouseDy = (float) dmy;
     
+    EndBlock();
+    
     // *****************************************************************************************************************
     // Render:
+
+    StartBlock("Frame Render");
 
     double tRenderStart = glfwGetTime();
     static RenderState rs;
     glViewport(0, 0, conf->displayW, conf->displayH);
 
     static RenderList rl = {0};
-    rmt_BeginCPUSample(UpdateRenderList, 0);
-    UpdateRenderList(&rl, scene);
-    rmt_EndCPUSample();
+    TimedBlock("UpdateRenderList", {
+        UpdateRenderList(&rl, scene);
+    });
 
     if (updatedTargets & UPDATED_ENVMAP_TARGETS) {
         // TODO: generate environment maps
     }
     
-    rmt_BeginCPUSample(GBufferClear, 0);
-    rmt_BeginOpenGLSample(GBufferClear);
     if (conf->clearColorBuffers) {
-        StartRenderPass(&rs, "GBuffer clear (color+depth)");
-        BindFramebuffer(FB_GBUFFER);
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        glClearDepth(0.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        RenderPass(&rs, "GBuffer clear (color+depth)", {
+            BindFramebuffer(FB_GBUFFER);
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClearDepth(0.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        });
     } else {
-        StartRenderPass(&rs, "GBuffer clear (depth-only)");
-        BindFramebuffer(FB_GBUFFER);
-        glClearDepth(0.0f);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        RenderPass(&rs, "GBuffer clear (depth-only)", {
+            BindFramebuffer(FB_GBUFFER);
+            glClearDepth(0.0f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+        });
     }
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
 
     StartRenderPass(&rs, "GBuffer main (opaque objects)");
-    rmt_BeginCPUSample(RenderGBufferMain, 0);
-    rmt_BeginOpenGLSample(RenderGBufferMain);
     BindFramebuffer(FB_GBUFFER);
     SetRenderProgram(&rs, &PROG_GBUF_MAIN);
     SetCamera(&rs, &conf->camMain);
-    #if 0
-    {
-        RenderState rsModel = rs;
-        MulModelScale(&rsModel, (vec3){0.5f, 0.5f, 0.5f}, (vec3){0.5f, 0.5f, 0.5f});
-        RenderModel(&rsModel, conf, frame, &MDL_SPHERES);
-    }
-    {
-        RenderState rsModel = rs;
-        MulModelPosition(&rsModel, (vec3){0.0f, -4.0f, 0.0f}, (vec3){0.0f, -4.0f, 0.0f});
-        MulModelScale(&rsModel, (vec3){2.5f, 2.5f, 2.5f}, (vec3){2.5f, 2.5f, 2.5f});
-        RenderModel(&rsModel, conf, frame, &MDL_SPONZA);
-    }
-    #else
     RenderState rsMesh = rs;
     for (size_t i = 0; i < rl.meshCount; i++) {
         glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
         glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+        static char blockName [128];
+        int written = stbsp_snprintf(blockName, 128, "RenderMesh %u (%ju tris)",
+            rl.meshes[i].mesh.gl_vertex_array,
+            rl.meshes[i].mesh.gl_element_count / 3);
+        blockName[written] = '\0';
+        StartGPUBlock(blockName);
         RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
+        EndGPUBlock();
     }
-    #endif
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
+    EndRenderPass();
 
-    StartRenderPass(&rs, "GBuffer lighting");
-    rmt_BeginCPUSample(RenderGBufferLighting, 0);
-    rmt_BeginOpenGLSample(RenderGBufferLighting);
-    BindFramebuffer(FB_ONLY_COLOR_HDR);
-    SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
-    SetCamera(&rs, &conf->camMain);
-    // Ambient lighting:
-    float i = 0.01f;
-    glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
-        3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
-        0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
-        1.05f * i, 1.1f * i, 1.0f * i,  // Z+ (north)
-        1.05f * i, 1.1f * i, 1.0f * i,  // Z- (south)
-        1.05f * i, 1.1f * i, 1.0f * i,  // X+ (east)
-        1.05f * i, 1.1f * i, 1.0f * i,  // X- (west)
+    RenderPass(&rs, "GBuffer lighting", {
+        BindFramebuffer(FB_ONLY_COLOR_HDR);
+        SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
+        SetCamera(&rs, &conf->camMain);
+        // Ambient lighting:
+        float i = 0.01f;
+        glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
+            3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
+            0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
+            1.05f * i, 1.1f * i, 1.0f * i,  // Z+ (north)
+            1.05f * i, 1.1f * i, 1.0f * i,  // Z- (south)
+            1.05f * i, 1.1f * i, 1.0f * i,  // X+ (east)
+            1.05f * i, 1.1f * i, 1.0f * i,  // X- (west)
+        });
+        // Directional lighting:
+        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
+        glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 0.9f);
+        // Point lighting:
+        glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
+            4.9f,  2.0f,  4.2f,
+            -4.8f,  2.5f,  4.4f,
+            -4.2f,  2.3f, -4.6f,
+            4.1f,  2.9f, -4.5f,
+        });
+        glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
+            1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+        });
+        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     });
-    // Directional lighting:
-    glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
-    glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 0.9f);
-    // Point lighting:
-    glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
-        4.9f,  2.0f,  4.2f,
-        -4.8f,  2.5f,  4.4f,
-        -4.2f,  2.3f, -4.6f,
-        4.1f,  2.9f, -4.5f,
-    });
-    glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-    });
-    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
 
-    StartRenderPass(&rs, "Final output");
-    rmt_BeginCPUSample(RenderFinalOutput, 0);
-    rmt_BeginOpenGLSample(RenderFinalOutput);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDrawBuffer(GL_BACK);
-    glEnable(GL_FRAMEBUFFER_SRGB);
-    SetRenderProgram(&rs, &PROG_FINAL);
-    SetCamera(&rs, &conf->camMain);
-    glUniform1f(UNIF_TONEMAP_EXPOSURE, conf->tonemapExposure);
-    if (conf->tonemapMode == TONEMAP_ACES) {
-        glUniform1f(UNIF_TONEMAP_ACES_PARAM_A, conf->tonemapACESParamA);
-        glUniform1f(UNIF_TONEMAP_ACES_PARAM_B, conf->tonemapACESParamB);
-        glUniform1f(UNIF_TONEMAP_ACES_PARAM_C, conf->tonemapACESParamC);
-        glUniform1f(UNIF_TONEMAP_ACES_PARAM_D, conf->tonemapACESParamD);
-        glUniform1f(UNIF_TONEMAP_ACES_PARAM_E, conf->tonemapACESParamE);
-    }
-    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
-    glDisable(GL_FRAMEBUFFER_SRGB);
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
+    RenderPass(&rs, "Final output", {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawBuffer(GL_BACK);
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        SetRenderProgram(&rs, &PROG_FINAL);
+        SetCamera(&rs, &conf->camMain);
+        glUniform1f(UNIF_TONEMAP_EXPOSURE, conf->tonemapExposure);
+        if (conf->tonemapMode == TONEMAP_ACES) {
+            glUniform1f(UNIF_TONEMAP_ACES_PARAM_A, conf->tonemapACESParamA);
+            glUniform1f(UNIF_TONEMAP_ACES_PARAM_B, conf->tonemapACESParamB);
+            glUniform1f(UNIF_TONEMAP_ACES_PARAM_C, conf->tonemapACESParamC);
+            glUniform1f(UNIF_TONEMAP_ACES_PARAM_D, conf->tonemapACESParamD);
+            glUniform1f(UNIF_TONEMAP_ACES_PARAM_E, conf->tonemapACESParamE);
+        }
+        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+        glDisable(GL_FRAMEBUFFER_SRGB);
+    });
 
-    StartRenderPass(&rs, "User interface");
-    rmt_BeginCPUSample(RenderUI, 0);
-    rmt_BeginOpenGLSample(RenderUI);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDrawBuffer(GL_BACK);
-    GUI_Render();
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
+    RenderPass(&rs, "User interface", {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawBuffer(GL_BACK);
+        GUI_Render();
+    });
+
+    EndBlock();
 
     // *****************************************************************************************************************
     // Swap & poll:
 
     double tSwapStart = glfwGetTime();
-    rmt_BeginCPUSample(SwapBuffers, 0);
-    rmt_BeginOpenGLSample(SwapBuffers);
-    glfwSwapBuffers(window);
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
+    TimedGPUBlock("Swap buffers", {
+        glfwSwapBuffers(window);
+    });
 
     double tPollStart = glfwGetTime();
-    rmt_BeginCPUSample(PollEvents, 0);
-    glfwPollEvents();
-    rmt_EndCPUSample();
+    TimedBlock("Poll events", {
+        glfwPollEvents();
+    });
 
-    rmt_BeginCPUSample(FrameTiming, 0);
-    frame->tMain   = (float)(tRenderStart - frame->t);
-    frame->tRender = (float)(tSwapStart - tRenderStart);
-    frame->tSwap   = (float)(tPollStart - tSwapStart);
-    frame->tPoll   = (float)(glfwGetTime() - tPollStart);
-    frame->n++;
+    TimedBlock("FrameTiming", {
+        frame->tMain   = (float)(tRenderStart - frame->t);
+        frame->tRender = (float)(tSwapStart - tRenderStart);
+        frame->tSwap   = (float)(tPollStart - tSwapStart);
+        frame->tPoll   = (float)(glfwGetTime() - tPollStart);
+        frame->n++;
 
-    // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
-    // window is moving. Ignore the frame for timing purposes if this happens.
-    if (frame->tPoll > 0.1f) {
-        frame->tPoll = 0.0f;
-        glfwSetTime(tPollStart);
-    }
-    rmt_EndCPUSample();
+        // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
+        // window is moving. Ignore the frame for timing purposes if this happens.
+        if (frame->tPoll > 0.1f) {
+            frame->tPoll = 0.0f;
+            glfwSetTime(tPollStart);
+        }
+    });
 }
 
 int main() {
@@ -445,31 +436,31 @@ int main() {
     Remotery* rmt;
     rmt_CreateGlobalInstance(&rmt);
 
-    rmt_BeginCPUSample(GameLoad, 0);
-    GameLoad(&conf, &window);
-    rmt_EndCPUSample();
+    TimedBlock("GameLoad", {
+        GameLoad(&conf, &window);
+    });
+    
     rmt_BindOpenGL();
 
-    rmt_BeginCPUSample(GameReload, 0);
-    GameReload(&conf, window);
-    rmt_EndCPUSample();
+    TimedBlock("GameReload", {
+        GameReload(&conf, window);
+    });
 
     Scene scene = {0};
-    rmt_BeginCPUSample(GameLoadScene, 0);
-    GameLoadScene(&scene);
-    rmt_EndCPUSample();
+    TimedBlock("GameLoadScene", {
+        GameLoadScene(&scene);
+    });
 
     vxFrame frame = {0};
     vxFrame lastFrame = {0};
     while (!glfwWindowShouldClose(window)) {
-        rmt_BeginCPUSample(GameTick, 0);
-        GameTick(&conf, window, &frame, &lastFrame, &scene);
-        rmt_EndCPUSample();
-
-        rmt_BeginCPUSample(FrameMemset, 0);
-        lastFrame = frame;
-        memset(&frame, 0, sizeof(frame));
-        rmt_EndCPUSample();
+        TimedBlock("Frame", {
+            TimedBlock("GameTick", {
+                GameTick(&conf, window, &frame, &lastFrame, &scene);
+            });
+            lastFrame = frame;
+            memset(&frame, 0, sizeof(frame));
+        });
     }
 
     rmt_UnbindOpenGL();
