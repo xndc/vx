@@ -167,9 +167,9 @@ void GameLoadScene (Scene* scene) {
     sponza->localScale[0] = 2.5f;
     sponza->localScale[1] = 2.5f;
     sponza->localScale[2] = 2.5f;
-    sponza->localPosition[0] = +2.5f;
+    sponza->localPosition[0] = +1.5f;
     sponza->localPosition[1] = -4.0f;
-    sponza->localPosition[2] = +2.5f;
+    sponza->localPosition[2] = +1.5f;
     GameObject* duck = AddObject(scene, sponza, GAMEOBJECT_MODEL);
     duck->model.model = &MDL_DUCK;
     duck->localPosition[1] = 2.0f;
@@ -253,9 +253,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glm_quat(qx, rx, 1, 0, 0);
         glm_quat_mul(qx, qy, q);
 
-        static vec3 pos = {-3, -4, -3};
-        // FIXME: I have no idea why these have to be negative.
-        vec3 spd = {-7.0f * frame->dt, -7.0f * frame->dt, -7.0f * frame->dt};
+        static vec3 pos = {3, 4, 3};
+        vec3 spd = {8.0f * frame->dt, 8.0f * frame->dt, 8.0f * frame->dt};
         vec3 dpos = GLM_VEC3_ZERO_INIT;
         if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) { pos[1] -= spd[1]; }
@@ -270,7 +269,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
         mat4 vmat;
         glm_quat_mat4(q, vmat);
+        glm_vec3_negate(pos);
         glm_translate(vmat, pos);
+        glm_vec3_negate(pos);
         Camera_Update(&conf->camMain, w, h, vmat);
     }
     frame->mouseX = (float) mx;
