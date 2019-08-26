@@ -267,96 +267,121 @@ static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
     ImGui::End();
 }
 
-static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
-    ImGui::Begin("Scene Viewer");
+static const int SHOW_MODELS = 1 << 0;
+static const int SHOW_POINT_LIGHTS = 1 << 1;
+static const int SHOW_OTHER_LIGHTS = 1 << 2;
+
+static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) {
     const int sliderMarginLeft = 30;
-    for (size_t i = 0; i < scene->size; i++) {
+    for (int i = 0; i < (int) scene->size; i++) {
         GameObject* obj = &scene->objects[i];
         ImGui::PushID(i);
-        switch (obj->type) {
-            case GAMEOBJECT_MODEL: {
-                ImGui::Text("Model");
-                ImGui::SameLine(100);
-                ImGui::Text("%s", obj->model.model->sourceFilePath);
-                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
-                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Scale", obj->localScale, 0.01f, 0.01f, 20.0f);
-            } break;
-            
-            case GAMEOBJECT_DIRECTIONAL_LIGHT: {
-                ImGui::Text("Directional Light");
-                ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->directionalLight.editorIntensityMode);
-                if (obj->directionalLight.editorIntensityMode) {
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    float c = glm_vec3_max(obj->directionalLight.color);
-                    ImGui::DragFloat("Intensity", &c, 0.01f, 0.0f, 20.0f);
-                    glm_vec3_broadcast(c, obj->directionalLight.color);
-                } else {
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("Color", obj->directionalLight.color, 0.01f, 0.0f, 20.0f);
-                }
-                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Position (norm)", obj->localPosition, 0.01f, -1.0f, 1.0f);
-            } break;
-
-            case GAMEOBJECT_POINT_LIGHT: {
-                ImGui::Text("Point Light");
-                static bool intensityMode = false;
-                ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->pointLight.editorIntensityMode);
-                if (obj->pointLight.editorIntensityMode) {
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    float c = glm_vec3_max(obj->pointLight.color);
-                    ImGui::DragFloat("Intensity", &c, 0.01f, 0.0f, 20.0f);
-                    glm_vec3_broadcast(c, obj->pointLight.color);
-                } else {
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("Color", obj->pointLight.color, 0.01f, 0.0f, 20.0f);
-                }
-                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
-            } break;
-            
-            case GAMEOBJECT_LIGHT_PROBE: {
-                ImGui::Text("Light Probe");
-                ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->lightProbe.editorIntensityMode);
-                if (obj->lightProbe.editorIntensityMode) {
-                    float xc[2] = { glm_vec3_max(obj->lightProbe.colorXp), glm_vec3_max(obj->lightProbe.colorXn) };
-                    float yc[2] = { glm_vec3_max(obj->lightProbe.colorYp), glm_vec3_max(obj->lightProbe.colorYn) };
-                    float zc[2] = { glm_vec3_max(obj->lightProbe.colorZp), glm_vec3_max(obj->lightProbe.colorZn) };
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat2("X+/X-", xc, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat2("Y+/Y-", yc, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat2("Z+/Z-", zc, 0.01f, 0.0f, 5.0f);
-                    glm_vec3_broadcast(xc[0], obj->lightProbe.colorXp);
-                    glm_vec3_broadcast(xc[1], obj->lightProbe.colorXn);
-                    glm_vec3_broadcast(yc[0], obj->lightProbe.colorYp);
-                    glm_vec3_broadcast(yc[1], obj->lightProbe.colorYn);
-                    glm_vec3_broadcast(zc[0], obj->lightProbe.colorZp);
-                    glm_vec3_broadcast(zc[1], obj->lightProbe.colorZn);
-                } else {
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("X+ Color", obj->lightProbe.colorXp, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("X- Color", obj->lightProbe.colorXn, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("Y+ Color", obj->lightProbe.colorYp, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("Y- Color", obj->lightProbe.colorYn, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("Z+ Color", obj->lightProbe.colorZp, 0.01f, 0.0f, 5.0f);
-                    ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                    ImGui::DragFloat3("Z- Color", obj->lightProbe.colorZn, 0.01f, 0.0f, 5.0f);
-                }
-                #if 0 // not needed yet
-                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
-                #endif
-            } break;
+        
+        if (obj->type == GAMEOBJECT_MODEL && (show & SHOW_MODELS)) {
+            ImGui::Text("Model");
+            ImGui::SameLine(100);
+            ImGui::Text("%s", obj->model.model->sourceFilePath);
+            ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+            ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
+            ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+            ImGui::DragFloat3("Scale", obj->localScale, 0.01f, 0.01f, 20.0f);
         }
+        
+        if (obj->type == GAMEOBJECT_POINT_LIGHT && (show & SHOW_POINT_LIGHTS)) {
+            ImGui::Text("Point Light");
+            static bool intensityMode = false;
+            ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->pointLight.editorIntensityMode);
+            if (obj->pointLight.editorIntensityMode) {
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                float c = glm_vec3_max(obj->pointLight.color);
+                ImGui::DragFloat("Intensity", &c, 0.01f, 0.0f, 20.0f);
+                glm_vec3_broadcast(c, obj->pointLight.color);
+            } else {
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("Color", obj->pointLight.color, 0.01f, 0.0f, 20.0f);
+            }
+            ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+            ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
+        }
+        
+        if (obj->type == GAMEOBJECT_DIRECTIONAL_LIGHT && (show & SHOW_OTHER_LIGHTS)) {
+            ImGui::Text("Directional Light");
+            ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->directionalLight.editorIntensityMode);
+            if (obj->directionalLight.editorIntensityMode) {
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                float c = glm_vec3_max(obj->directionalLight.color);
+                ImGui::DragFloat("Intensity", &c, 0.01f, 0.0f, 20.0f);
+                glm_vec3_broadcast(c, obj->directionalLight.color);
+            } else {
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("Color", obj->directionalLight.color, 0.01f, 0.0f, 20.0f);
+            }
+            ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+            ImGui::DragFloat3("Position (norm)", obj->localPosition, 0.01f, -1.0f, 1.0f);
+        }
+        
+        if (obj->type == GAMEOBJECT_LIGHT_PROBE && (show & SHOW_OTHER_LIGHTS)) {
+            ImGui::Text("Light Probe");
+            ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->lightProbe.editorIntensityMode);
+            if (obj->lightProbe.editorIntensityMode) {
+                float xc[2] = { glm_vec3_max(obj->lightProbe.colorXp), glm_vec3_max(obj->lightProbe.colorXn) };
+                float yc[2] = { glm_vec3_max(obj->lightProbe.colorYp), glm_vec3_max(obj->lightProbe.colorYn) };
+                float zc[2] = { glm_vec3_max(obj->lightProbe.colorZp), glm_vec3_max(obj->lightProbe.colorZn) };
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat2("X+/X-", xc, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat2("Y+/Y-", yc, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat2("Z+/Z-", zc, 0.01f, 0.0f, 5.0f);
+                glm_vec3_broadcast(xc[0], obj->lightProbe.colorXp);
+                glm_vec3_broadcast(xc[1], obj->lightProbe.colorXn);
+                glm_vec3_broadcast(yc[0], obj->lightProbe.colorYp);
+                glm_vec3_broadcast(yc[1], obj->lightProbe.colorYn);
+                glm_vec3_broadcast(zc[0], obj->lightProbe.colorZp);
+                glm_vec3_broadcast(zc[1], obj->lightProbe.colorZn);
+            } else {
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("X+ Color", obj->lightProbe.colorXp, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("X- Color", obj->lightProbe.colorXn, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("Y+ Color", obj->lightProbe.colorYp, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("Y- Color", obj->lightProbe.colorYn, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("Z+ Color", obj->lightProbe.colorZp, 0.01f, 0.0f, 5.0f);
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+                ImGui::DragFloat3("Z- Color", obj->lightProbe.colorZn, 0.01f, 0.0f, 5.0f);
+            }
+            #if 0 // not needed yet
+            ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
+            ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
+            #endif
+        }
+        
         ImGui::PopID();
     }
+}
+
+static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
+    ImGui::Begin("Scene Viewer");
+    ImGui::BeginTabBar("Object Types Tab Bar");
+    if (ImGui::BeginTabItem("All Objects")) {
+        sDrawSceneViewerObjectList(conf, scene, SHOW_MODELS | SHOW_POINT_LIGHTS | SHOW_OTHER_LIGHTS);
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Models")) {
+        sDrawSceneViewerObjectList(conf, scene, SHOW_MODELS);
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Point Lights")) {
+        sDrawSceneViewerObjectList(conf, scene, SHOW_POINT_LIGHTS);
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Other Lights")) {
+        sDrawSceneViewerObjectList(conf, scene, SHOW_OTHER_LIGHTS);
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
     ImGui::End();
 }
