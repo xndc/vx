@@ -17,7 +17,7 @@ typedef struct {
     // TODO: switch from near/far to zn/zf across the entire program (for windows.h/unity build compatibility)
     union { float zn; float near; };
     union { float zf; float far;  }; // set lower than near for infinite perspective projection
-    float fov;  // horizontal FOV in perspective mode
+    float fov;  // horizontal FOV at aspect ratio 4:3, in perspective mode
     float zoom; // zoom factor (world units per [0,1] clip space unit) in orthographic mode
 
     float hw; // aspect ratio
