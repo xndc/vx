@@ -39,6 +39,8 @@ param (
     [switch] $Run,
     # Run the program under RenderDoc after compilation.
     [switch] $RenderDoc,
+    # Run the program under APITrace after compilation.
+    [switch] $APITrace,
     # Run the program under WinDbg after compilation.
     [switch] $WinDbg,
     # Generate and open a Visual Studio project. Implies -Generator MSBuild.
@@ -55,8 +57,8 @@ if ($Help) {
     Get-Help $PSCommandPath -Detailed
     Exit
 }
-if ([bool]$Run + [bool]$VS + [bool]$RenderDoc + [bool]$WinDbg -gt 1) {
-    LogWarn("Options -Run, -VS, -RenderDoc and -WinDbg are mutually exclusive.")
+if ([bool]$Run + [bool]$VS + [bool]$RenderDoc + [bool]$APITrace + [bool]$WinDbg -gt 1) {
+    LogWarn("Options -Run, -VS, -RenderDoc, -APITrace and -WinDbg are mutually exclusive.")
     Exit 1
 }
 if ($VS) {
@@ -449,6 +451,24 @@ try {
         # Launch:
         LogInfo "Launching RenderDoc ($Rd)..."
         & $Rd $CapFile
+    }
+
+    # Run game under APITrace:
+    if ($APITrace) {
+        $ATDir = "$RepositoryRoot/tools/apitrace-msvc-x64/"
+        $AT = Resolve-Path "$ATDir/bin/apitrace.exe"  -ErrorAction Ignore
+        $QA = Resolve-Path "$ATDir/bin/qapitrace.exe" -ErrorAction Ignore
+        if (-not ($AT -and $QA)) {
+            LogError "APITrace not found. Please download it from one of the following sources:"
+            LogError " * https://apitrace.github.io/#download"
+            LogError " * https://people.freedesktop.org/~jrfonseca/apitrace/"
+            Panic    "And unpack it into $ATDir."
+        }
+        Set-Location "$WorkingRoot"
+        LogInfo "Running $BinaryPath under APITrace ($AT)..."
+        & $AT trace -o gl.trace $BinaryPath
+        LogInfo "Opening gl.trace with QAPITrace..."
+        & $QA gl.trace
     }
 
     # Launch WinDbg:

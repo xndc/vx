@@ -6,6 +6,7 @@ run/*
 !run/shaders
 !run/terrain
 !run/textures
+tools/apitrace*
 
 # Backup and temporary files
 *.bak
