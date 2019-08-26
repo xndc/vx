@@ -467,6 +467,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     EndBlock();
 
+    double tRenderEnd = glfwGetTime();
     StartBlock("OpenGL render time query");
     glEndQuery(GL_TIME_ELAPSED);
     int64_t dtOpenGLRender = 0;
@@ -498,7 +499,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     TimedBlock("FrameTiming", {
         // All of these values are supposed to be in seconds.
         frame->tMain   = (float)(tRenderStart - frame->t);
-        frame->tSubmit = (float)(tSwapStart - tRenderStart);
+        frame->tSubmit = (float)(tRenderEnd - tRenderStart);
         frame->tRender = (float)(dtOpenGLRender) / 1000000000.0f; // nanoseconds
         frame->tSwap   = (float)(tPollStart - tSwapStart);
         frame->tPoll   = (float)(glfwGetTime() - tPollStart);
