@@ -121,9 +121,7 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
     static double avgMs = 0;
     avgFrames++;
 
-    const int avgInterval = 10;
-    RingBufferDeclareStatic(lastMsMainThread,   float, avgInterval);
-    RingBufferDeclareStatic(lastMsRenderThread, float, avgInterval);
+    const int avgInterval = 30;
 
     ImGui::SetNextWindowSize(ImVec2(300, 0));
     ImGui::SetNextWindowPos(ImVec2(10, 10));
@@ -143,41 +141,43 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
     ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 120);
     ImGui::Text("%.0lf FPS (%.02lf ms)", avgFps, avgMs);
 
-    if (RingBufferFull(lastMsMainThread)) {
-        RingBufferPop(lastMsMainThread);
-    }
-    RingBufferPushItem(lastMsMainThread, frame->tMain * 1000.0f);
-    float avgMsMainThread = 0;
-    float maxMsMainThread = 0;
-    for (ptrdiff_t i = 0; i < RingBufferUsed(lastMsMainThread); i++) {
-        avgMsMainThread += lastMsMainThread[i];
-        if (lastMsMainThread[i] > maxMsMainThread) {
-            maxMsMainThread = lastMsMainThread[i];
-        }
-    }
-    avgMsMainThread /= (float) RingBufferUsed(lastMsMainThread);
+    // This does three main things:
+    // * Statically declares a ringbuffer called [name].
+    // * Pushes [thisFrameMs] to the ringbuffer on every invocation of this macro.
+    // * Computes the average and maximum values for the entire ringbuffer.
+    #define AVG_MAX_RINGBUFFER(name, interval, avgMsVar, maxMsVar, thisFrameMs) \
+        RingBufferDeclareStatic(name, float, interval); \
+        float avgMsVar = 0; \
+        float maxMsVar = 0; \
+        if (RingBufferFull(name)) { RingBufferPop(name); } \
+        RingBufferPushItem(name, thisFrameMs); \
+        for (ptrdiff_t i = 0; i < RingBufferUsed(name); i++) { \
+            avgMsVar += name[i]; \
+            if (name[i] > maxMsVar) { maxMsVar = name[i]; } \
+        } \
+        avgMsVar /= (float) RingBufferUsed(name);
 
-    if (RingBufferFull(lastMsRenderThread)) {
-        RingBufferPop(lastMsRenderThread);
-    }
-    RingBufferPushItem(lastMsRenderThread, frame->tRender * 1000.0f);
-    float avgMsRenderThread = 0;
-    float maxMsRenderThread = 0;
-    for (ptrdiff_t i = 0; i < RingBufferUsed(lastMsRenderThread); i++) {
-        avgMsRenderThread += lastMsRenderThread[i];
-        if (lastMsRenderThread[i] > maxMsRenderThread) {
-            maxMsRenderThread = lastMsRenderThread[i];
-        }
-    }
-    avgMsRenderThread /= (float) RingBufferUsed(lastMsRenderThread);
+    AVG_MAX_RINGBUFFER(bufMain,   avgInterval, avgMsMain,   maxMsMain,   frame->tMain   * 1000.0f);
+    AVG_MAX_RINGBUFFER(bufSubmit, avgInterval, avgMsSubmit, maxMsSubmit, frame->tSubmit * 1000.0f);
+    AVG_MAX_RINGBUFFER(bufRender, avgInterval, avgMsRender, maxMsRender, frame->tRender * 1000.0f);
 
     ImGui::Text("Main:");
-    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsMainThread);
-    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsMainThread);
+    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsMain);
+    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsMain);
 
-    ImGui::Text("Renderer:");
-    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsRenderThread);
-    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsRenderThread);
+    ImGui::Text("GPU Submit:");
+    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsSubmit);
+    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsSubmit);
+
+    #if RMT_USE_OPENGL == 1
+    ImGui::TextColored(ImColor(200, 200, 200), "GPU Render:");
+    ImGui::SameLine(100); ImGui::TextColored(ImColor(200, 200, 200), "%.2lf avg ms", avgMsRender);
+    ImGui::SameLine(200); ImGui::TextColored(ImColor(200, 200, 200), "%.2lf max ms", maxMsRender);
+    #else
+    ImGui::Text("GPU Render:");
+    ImGui::SameLine(100); ImGui::Text("%.2lf avg ms", avgMsRender);
+    ImGui::SameLine(200); ImGui::Text("%.2lf max ms", maxMsRender);
+    #endif
 
     ImGui::Text("Tris: %.01fk", ((float) frame->perfTriangles) / 1000.0f);
     ImGui::SameLine(100); ImGui::Text("Verts: %.01fk", ((float) frame->perfVertices) / 1000.0f);
@@ -192,10 +192,6 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
 
     ImGui::Text("PollEvents: %.2lf ms", avgPoll);
     ImGui::SameLine(140); ImGui::Text("SwapBuffers: %.2lf ms", avgSwap);
-
-    #if 0
-    ImGui::Text("Ringbuffer used: %ju", RingBufferUsed(lastMsMainThread));
-    #endif
 
     ImGui::PopFont();
     ImGui::End();

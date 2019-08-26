@@ -19,6 +19,11 @@
 #include <cglm/cglm.h>
 #include <glad/glad.h>
 #include <stb_sprintf.h>
+
+// Remotery is a profiler that runs in Chrome and connects to our program via WebSocket.
+// Note that Remotery's OpenGL support conflicts with our Unity-style stats display.
+#define RMT_ENABLED 1
+#define RMT_USE_OPENGL 0
 #include <Remotery.h>
 
 // stb_ds trips some warnings and has one bug that we have to fix:
@@ -62,7 +67,7 @@
 #define VX_KiB 1024
 #define VX_MiB 1048576
 #define VX_GiB 1073741824
- // Randomly generated 32-bit value, for use with hash functions:
+// Randomly generated 32-bit value, for use with hash functions:
 #define VX_SEED 4105099677U
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -71,6 +76,8 @@
     // NOTE: __func__ can't be concatenated with anything else, at least on Clang
     #define VX_LOCATION __FILE__ ":" VX_STRINGIFY(__LINE__)
 #endif
+
+// Logging, assertions, global frame counter:
 
 extern size_t vxFrameNumber;
 extern void vxAdvanceFrame();
@@ -118,9 +125,13 @@ VX_EXPORT void vxEnableSignalHandlers();
     #define vxAssertMsg(...)
 #endif
 
+// File IO:
+
 VX_EXPORT char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
 VX_EXPORT uint64_t vxGetFileMtime (const char* path);
 VX_EXPORT void vxCreateDirectory (const char* path);
+
+// Memory management:
 
 #if defined(_MSC_VER) && !defined(__clang__)
     #define vxAlignOf(t) __alignof(t)
@@ -132,6 +143,9 @@ VX_EXPORT void vxCreateDirectory (const char* path);
 VX_EXPORT void* vxAlignedRealloc (void* block, size_t count, size_t itemsize, size_t alignment);
 #define vxAlloc(count, type) (type*) vxAlignedRealloc(NULL, count, sizeof(type), vxAlignOf(type));
 #define vxFree(block) vxAlignedRealloc(block, 0, 0, 0);
+
+// Profiler instrumentation:
+// We're using Remotery now, but that can change at any time.
 
 #define StartBlock(name) rmt_BeginCPUSampleDynamic(name, 0)
 #define EndBlock() rmt_EndCPUSample()

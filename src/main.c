@@ -337,6 +337,16 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     static RenderState rs;
     glViewport(0, 0, conf->displayW, conf->displayH);
 
+    // tRenderStart to tSwapStart will just be the CPU time taken up by drawcall submission. To monitor GPU time we need
+    // to use an OpenGL query object: https://www.khronos.org/opengl/wiki/Query_Object
+    // We use multiple query objects to try to avoid stalls due to results being delayed one or more frames.
+    static int rtqIndex = 0;
+    static GLuint rtq [4] = {0};
+    if (rtq[0] == 0) {
+        glGenQueries(4, &rtq);
+    }
+    glBeginQuery(GL_TIME_ELAPSED, rtq[rtqIndex]);
+
     static RenderList rl = {0};
     TimedBlock("UpdateRenderList", {
         UpdateRenderList(&rl, scene);
@@ -369,14 +379,18 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     for (size_t i = 0; i < rl.meshCount; i++) {
         glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
         glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+        #if 0
         static char blockName [128];
         int written = stbsp_snprintf(blockName, 128, "RenderMesh %u (%ju tris)",
             rl.meshes[i].mesh.gl_vertex_array,
             rl.meshes[i].mesh.gl_element_count / 3);
         blockName[written] = '\0';
         StartGPUBlock(blockName);
+        #endif
         RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
+        #if 0
         EndGPUBlock();
+        #endif
     }
     EndRenderPass();
 
@@ -409,34 +423,6 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     }
     glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float*) pointPositions);
     glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float*) pointColors);
-    #if 0
-        // Ambient lighting:
-        float i = 0.01f;
-        glUniform3fv(UNIF_AMBIENT_CUBE, 6, (float[]){
-            3.4f * i, 3.4f * i, 3.3f * i,  // Y+ (sky)
-            0.4f * i, 0.4f * i, 0.4f * i,  // Y- (ground)
-            1.05f * i, 1.1f * i, 1.0f * i,  // Z+ (north)
-            1.05f * i, 1.1f * i, 1.0f * i,  // Z- (south)
-            1.05f * i, 1.1f * i, 1.0f * i,  // X+ (east)
-            1.05f * i, 1.1f * i, 1.0f * i,  // X- (west)
-        });
-        // Directional lighting:
-        glUniform3f(UNIF_SUN_DIRECTION, -1.0f, -1.2f, -1.0f);
-        glUniform3f(UNIF_SUN_COLOR, 1.0f, 1.0f, 0.9f);
-        // Point lighting:
-        glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float[]){
-            4.9f,  2.0f,  4.2f,
-            -4.8f,  2.5f,  4.4f,
-            -4.2f,  2.3f, -4.6f,
-            4.1f,  2.9f, -4.5f,
-        });
-        glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float[]){
-            1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-        });
-    #endif
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     EndRenderPass();
 
@@ -481,6 +467,21 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     EndBlock();
 
+    StartBlock("OpenGL render time query");
+    glEndQuery(GL_TIME_ELAPSED);
+    int64_t dtOpenGLRender = 0;
+    // glGetQueryObject will produce INVALID_OPERATION errors if called for queries that have never been started.
+    // During the first frames, we'll just query the current frame's render time (synchronously). After all query
+    // objects become valid, we can switch to asynchronous queries (N frames behind).
+    if (frame->n >= 4) {
+        rtqIndex = (rtqIndex + 1) % 4;
+        glGetQueryObjecti64v(rtq[rtqIndex], GL_QUERY_RESULT, &dtOpenGLRender);
+    } else {
+        glGetQueryObjecti64v(rtq[rtqIndex], GL_QUERY_RESULT, &dtOpenGLRender);
+        rtqIndex = (rtqIndex + 1) % 4;
+    }
+    EndBlock();
+
     // *****************************************************************************************************************
     // Swap & poll:
 
@@ -495,8 +496,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     });
 
     TimedBlock("FrameTiming", {
+        // All of these values are supposed to be in seconds.
         frame->tMain   = (float)(tRenderStart - frame->t);
-        frame->tRender = (float)(tSwapStart - tRenderStart);
+        frame->tSubmit = (float)(tSwapStart - tRenderStart);
+        frame->tRender = (float)(dtOpenGLRender) / 1000000000.0f; // nanoseconds
         frame->tSwap   = (float)(tPollStart - tSwapStart);
         frame->tPoll   = (float)(glfwGetTime() - tPollStart);
         frame->n++;

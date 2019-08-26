@@ -53,8 +53,9 @@ typedef struct vxFrame {
     float t;   // time at frame start
     float dt;  // delta between current frame start and last frame start
     float tMain;   // time taken by the main processing loop
-    float tRender; // time taken by the rendering loop
-    float tSwap;   // time taken by OpenGL (glfwSwapBuffers)
+    float tSubmit; // time taken by draw call submission
+    float tRender; // time taken by OpenGL on the GPU side (actual rendering)
+    float tSwap;   // time taken by OpenGL on the CPU side (glfwSwapBuffers)
     float tPoll;   // time taken by the operating system (glfwPollEvents)
     uint64_t perfTriangles;
     uint64_t perfVertices;
