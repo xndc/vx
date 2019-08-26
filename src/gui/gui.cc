@@ -328,11 +328,11 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
                 float yc[2] = { glm_vec3_max(obj->lightProbe.colorYp), glm_vec3_max(obj->lightProbe.colorYn) };
                 float zc[2] = { glm_vec3_max(obj->lightProbe.colorZp), glm_vec3_max(obj->lightProbe.colorZn) };
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat2("X+/X-", xc, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat2("X+/X-", xc, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat2("Y+/Y-", yc, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat2("Y+/Y-", yc, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat2("Z+/Z-", zc, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat2("Z+/Z-", zc, 0.0025f, 0.0f, 5.0f);
                 glm_vec3_broadcast(xc[0], obj->lightProbe.colorXp);
                 glm_vec3_broadcast(xc[1], obj->lightProbe.colorXn);
                 glm_vec3_broadcast(yc[0], obj->lightProbe.colorYp);
@@ -341,17 +341,17 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
                 glm_vec3_broadcast(zc[1], obj->lightProbe.colorZn);
             } else {
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("X+ Color", obj->lightProbe.colorXp, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat3("X+ Color", obj->lightProbe.colorXp, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("X- Color", obj->lightProbe.colorXn, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat3("X- Color", obj->lightProbe.colorXn, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Y+ Color", obj->lightProbe.colorYp, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat3("Y+ Color", obj->lightProbe.colorYp, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Y- Color", obj->lightProbe.colorYn, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat3("Y- Color", obj->lightProbe.colorYn, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Z+ Color", obj->lightProbe.colorZp, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat3("Z+ Color", obj->lightProbe.colorZp, 0.0025f, 0.0f, 5.0f);
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-                ImGui::DragFloat3("Z- Color", obj->lightProbe.colorZn, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat3("Z- Color", obj->lightProbe.colorZn, 0.0025f, 0.0f, 5.0f);
             }
             #if 0 // not needed yet
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
