@@ -10,6 +10,7 @@ extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
 extern int vxglMaxTextureUnits;
 
 extern Material MAT_FULLSCREEN_QUAD;
+extern Material MAT_DIFFUSE_WHITE;
 extern Mesh MESH_QUAD;
 extern Mesh MESH_CUBE;
 
@@ -27,6 +28,8 @@ typedef struct RenderState {
     mat4 matModel;
     mat4 matModelLast;
     int nextFreeTextureUnit;
+    bool forceNoDepthTest;
+    bool forceNoDepthWrite;
 } RenderState;
 
 void StartRenderPass (RenderState* rs, const char* passName);

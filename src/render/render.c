@@ -6,6 +6,7 @@ PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = NULL;
 int vxglMaxTextureUnits = 0;
 
 Material MAT_FULLSCREEN_QUAD;
+Material MAT_DIFFUSE_WHITE;
 Mesh MESH_QUAD;
 Mesh MESH_CUBE;
 
@@ -25,6 +26,8 @@ void InitRenderSystem() {
     // Generate standard materials:
     InitMaterial(&MAT_FULLSCREEN_QUAD);
     MAT_FULLSCREEN_QUAD.depth_test = false;
+    InitMaterial(&MAT_DIFFUSE_WHITE);
+    MAT_DIFFUSE_WHITE.const_metallic = 0.0f;
 
     // Generate standard upwards-facing quad mesh:
     {
@@ -153,13 +156,13 @@ void StartRenderPass (RenderState* rs, const char* passName) {
     glm_mat4_identity(rs->matModel);
     glm_mat4_identity(rs->matModelLast);
     rs->nextFreeTextureUnit = 0;
-    rmt_BeginOpenGLSampleDynamic(passName);
-    rmt_BeginCPUSampleDynamic(passName, 0);
+    rs->forceNoDepthTest = false;
+    rs->forceNoDepthTest = false;
+    StartGPUBlock(passName);
 }
 
 void EndRenderPass() {
-    rmt_EndCPUSample();
-    rmt_EndOpenGLSample();
+    EndGPUBlock();
 }
 
 void CopyRenderState (RenderState* src, RenderState* dst) {
@@ -329,10 +332,10 @@ void SetRenderMaterial (RenderState* rs, Material* mat) {
             glDisable(GL_CULL_FACE);
         }
 
-        if (mat->depth_test) {
+        if (mat->depth_test && !rs->forceNoDepthTest) {
             glEnable(GL_DEPTH_TEST);
             glDepthFunc(mat->depth_func);
-            glDepthMask(mat->depth_write ? GL_TRUE : GL_FALSE);
+            glDepthMask((mat->depth_write && !rs->forceNoDepthWrite) ? GL_TRUE : GL_FALSE);
         } else {
             glDisable(GL_DEPTH_TEST);
         }

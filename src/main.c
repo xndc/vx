@@ -440,6 +440,21 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     EndRenderPass();
 
+    StartRenderPass(&rs, "Debug: Point Light Positions");
+    // We do the binding manually to avoid PROG_GBUF_MAIN wiping out any data in gAux2.
+    glBindFramebuffer(GL_FRAMEBUFFER, FB_ONLY_COLOR_HDR);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    SetRenderProgram(&rs, &PROG_GBUF_MAIN);
+    SetCamera(&rs, &conf->camMain);
+    for (int i = 0; i < rl.pointLightCount; i++) {
+        const float scale = 0.2f;
+        RenderState cubeRs = rs;
+        MulModelPosition(&cubeRs, rl.pointLights[i].position, rl.pointLights[i].position);
+        MulModelScale(&cubeRs, (vec3){scale, scale, scale}, (vec3){scale, scale, scale});
+        RenderMesh(&cubeRs, conf, frame, &MESH_CUBE, &MAT_DIFFUSE_WHITE);
+    }
+    EndRenderPass();
+
     StartRenderPass(&rs, "Final output");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDrawBuffer(GL_BACK);
