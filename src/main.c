@@ -358,9 +358,15 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         directional = &rl.directionalLights[0];
         // Update shadow camera:
         vec3 camPos;
-        glm_vec3_sub(pos, directional->position, camPos);
+        // We integer-divide the player's position as seen by the camera in order to minimize shadow crawling.
+        vec3 playerPos;
+        static const int factor = 5;
+        playerPos[0] = (float)((int)pos[0] / factor);
+        playerPos[1] = (float)((int)pos[1] / factor);
+        playerPos[2] = (float)((int)pos[2] / factor);
+        glm_vec3_sub(playerPos, directional->position, camPos);
         mat4 vmat;
-        glm_lookat(camPos, pos, VX_UP, vmat);
+        glm_lookat(camPos, playerPos, VX_UP, vmat);
         Camera_Update(&conf->camShadow, conf->shadowSize, conf->shadowSize, vmat);
         // Render shadowmap:
         StartRenderPass(&rs, "Shadow Map");
