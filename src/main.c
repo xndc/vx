@@ -9,13 +9,6 @@
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
-size_t pfFrameTriCount = 0;
-size_t pfFrameVertCount = 0;
-size_t pfFrameDrawCount = 0;
-
-GLuint rSmpDefault = 0;
-GLuint rTexWhite1x1 = 0;
-
 static void sGlfwErrorCallback (int code, const char* error) {
     vxLog("GLFW error %d: %s", code, error);
 }
@@ -515,6 +508,13 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 }
 
 int main() {
+    char** files = vxListFiles("shaders", NULL);
+    while (files[0] != NULL) {
+        printf("%s\n", files[0]);
+        files++;
+    }
+    return 0;
+
     vxConfig conf = {0};
     GLFWwindow* window = NULL;
 
@@ -541,4 +541,5 @@ int main() {
 
     rmt_UnbindOpenGL();
     rmt_DestroyGlobalInstance(rmt);
+    return 0;
 }

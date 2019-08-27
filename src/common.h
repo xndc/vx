@@ -22,6 +22,8 @@
 
 // Remotery is a profiler that runs in Chrome and connects to our program via WebSocket.
 // Note that Remotery's OpenGL support conflicts with our Unity-style stats display.
+#undef RMT_ENABLED
+#undef RMT_USE_OPENGL
 #define RMT_ENABLED 1
 #define RMT_USE_OPENGL 0
 #include <Remotery.h>
@@ -129,6 +131,7 @@ VX_EXPORT void vxEnableSignalHandlers();
 
 VX_EXPORT char* vxReadFile (const char* filename, const char* mode, size_t* outLength);
 VX_EXPORT uint64_t vxGetFileMtime (const char* path);
+VX_EXPORT char** vxListFiles (const char* directory, const char* pattern);
 VX_EXPORT void vxCreateDirectory (const char* path);
 
 // Memory management:

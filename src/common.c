@@ -11,11 +11,15 @@
 #elif __APPLE__
     #include <malloc/malloc.h>
     #include <sys/stat.h>
+    #include <sys/types.h>
+    #include <dirent.h>
     // #include <mach-o/dyld.h>
     // #include <copyfile.h>
 #else
     #include <malloc.h>
     #include <unistd.h>
+    #include <sys/types.h>
+    #include <dirent.h>
     // #include <dlfcn.h>
 #endif
 
@@ -222,7 +226,7 @@ void vxCreateDirectory (const char* path) {
 // not point to a valid filesystem object.
 uint64_t vxGetFileMtime (const char* path) {
     uint64_t t = 0;
-    #if defined(_WIN32)
+    #ifdef _WIN32
         WIN32_FIND_DATAA fd;
         HANDLE find = FindFirstFileA(path, &fd);
         if (find != INVALID_HANDLE_VALUE) {
@@ -232,6 +236,7 @@ uint64_t vxGetFileMtime (const char* path) {
             fti.HighPart = ft.dwHighDateTime;
             t = (uint64_t) fti.QuadPart;
         }
+        FindClose(find);
     #else
         struct stat statbuf;
         if (stat(path, &statbuf) == 0) {
@@ -240,6 +245,82 @@ uint64_t vxGetFileMtime (const char* path) {
         }
     #endif
     return t;
+}
+
+static bool vxi_ListFiles_NameMatchesPattern (const char* name, const char* pattern);
+
+// Lists every file and directory in a given directory. The [pattern] argument can be used to filter the list. 
+// Patterns are matched using strstr. You can pass NULL to get the entire list.
+// Returns a static array of strings, i.e. only valid until the next vxListFiles call.
+// Returns NULL if the given directory was not found.
+char** vxListFiles (const char* directory, const char* pattern) {
+    #define MAXFILES 512
+    #define MAXPATH  512
+    static char* list [MAXFILES];
+    static char filenames [MAXFILES * MAXPATH]; // ought to be enough for anyone!
+    int iList = 0;
+    int iFilename = 0;
+    list[0] = NULL;
+    #ifdef _WIN32
+        static char globPath [MAX_PATH + 1];
+        int dlen = strlen(directory);
+        vxCheck(dlen < MAX_PATH - 2);
+        strcpy(globPath, directory);
+        globPath[dlen + 0] = '\\';
+        globPath[dlen + 1] = '*';
+        globPath[dlen + 2] = '\0';
+        WIN32_FIND_DATAA fd;
+        HANDLE find = FindFirstFileA(globPath, &fd);
+        while (find != INVALID_HANDLE_VALUE) {
+            char* name = fd.cFileName;
+            if (name[0] != '.' && vxi_ListFiles_NameMatchesPattern(name, pattern)) {
+                list[iList] = &filenames[iFilename];
+                iList++;
+                int nlen = strlen(name);
+                strncpy(&filenames[iFilename], name, nlen);
+                iFilename += nlen;
+                filenames[iFilename] = '\0';
+                iFilename++;
+            }
+            if (!FindNextFileA(find, &fd)) {
+                FindClose(find);
+                find = INVALID_HANDLE_VALUE;
+            }
+        }
+        if (find != INVALID_HANDLE_VALUE) {
+            FindClose(find);
+        }
+    #else
+        DIR *dfd = opendir(directory);
+        if (dfd == NULL) {
+            return list;
+        }
+        struct dirent *dp;
+        while (((dp = readdir(dfd)) != NULL) && (iList < MAXFILES - 2)) {
+            char* name = dp->d_name;
+            if (name[0] != '.' && vxi_ListFiles_NameMatchesPattern(name, pattern)) {
+                list[iList] = &filenames[iFilename];
+                iList++;
+                int nlen = strlen(name);
+                strncpy(&filenames[iFilename], name, nlen);
+                iFilename += nlen;
+                filenames[iFilename] = '\0';
+                iFilename++;
+            }
+        }
+        closedir(dfd);
+    #endif
+    list[iList] = NULL;
+    return list;
+    #undef MAXFILES
+    #undef MAXPATH
+}
+
+static bool vxi_ListFiles_NameMatchesPattern (const char* name, const char* pattern) {
+    if (pattern == NULL) {
+        return true;
+    }
+    return strstr(name, pattern) != NULL;
 }
 
 // Generic aligned_alloc, malloc_size and free functions.
