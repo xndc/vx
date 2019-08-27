@@ -84,6 +84,7 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowSize = 4096;
     c->shadowBiasMin = 0.0002f;
     c->shadowBiasMax = 0.01f;
+    c->shadowHoverFix = false;
     Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
 }
 
@@ -365,8 +366,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         SetRenderProgram(&rs, &PROG_SHADOW);
         SetCamera(&rs, &conf->camShadow);
         RenderState rsMesh = rs;
-        // This is supposed to mitigate the shadow "Peter Panning" effect, but I can't tell the difference.
-        rsMesh.forceCullFace = GL_FRONT;
+        if (conf->shadowHoverFix) {
+            // This is supposed to mitigate the shadow "Peter Panning" effect, but I can't tell the difference.
+            rsMesh.forceCullFace = GL_FRONT;
+        }
         for (size_t i = 0; i < rl.meshCount; i++) {
             glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
             RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
