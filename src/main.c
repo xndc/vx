@@ -508,13 +508,6 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 }
 
 int main() {
-    char** files = vxListFiles("shaders", NULL);
-    while (files[0] != NULL) {
-        printf("%s\n", files[0]);
-        files++;
-    }
-    return 0;
-
     vxConfig conf = {0};
     GLFWwindow* window = NULL;
 
