@@ -235,14 +235,20 @@ void UpdatePrograms (vxConfig* conf) {
         STEP_UPDATE_PROGRAMS,
     } step = STEP_UNMARK_SHADERS;
 
-    if (step == STEP_UNMARK_SHADERS) {
-        static int i = 0;
-        Shader* s = gShaders[i];
-        s->justReloaded = false;
-        if (++i >= gShaderCount) {
-            i = 0;
-            step = STEP_UPDATE_SHADERS;
+    if (conf->forceShaderRecompile) {
+        for (int i = 0; i < gShaderCount; i++) {
+            sUpdateShader(gShaders[i], sGenerateDefineBlock(conf));
         }
+        step = STEP_UPDATE_PROGRAMS;
+        conf->forceShaderRecompile = false;
+    }
+
+    if (step == STEP_UNMARK_SHADERS) {
+        for (int i = 0; i < gShaderCount; i++) {
+            Shader* s = gShaders[i];
+            s->justReloaded = false;
+        }
+        step = STEP_UPDATE_SHADERS;
     } else if (step == STEP_UPDATE_SHADERS) {
         static int i = 0;
         Shader* s = gShaders[i];

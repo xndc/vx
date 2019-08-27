@@ -204,12 +204,14 @@ static void sDrawImguiDemo       (vxConfig* conf, GLFWwindow* window);
 static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window);
 static void sDrawBufferViewer    (vxConfig* conf, GLFWwindow* window);
 static void sDrawSceneViewer     (vxConfig* conf, GLFWwindow* window, Scene* scene);
+static void sDrawConfigurator    (vxConfig* conf, GLFWwindow* window);
 
 VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene) {
     static bool showImguiDemo       = false;
     static bool showTonemapSettings = false;
     static bool showBufferViewer    = false;
     static bool showSceneViewer     = false;
+    static bool showConfigurator    = false;
 
     #define ToggleOnConditionOnce(boolean, cond) \
         static bool boolean ## __triggered = false; \
@@ -228,11 +230,13 @@ VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene
     ToggleOnConditionOnce(showTonemapSettings, KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_T));
     ToggleOnConditionOnce(showBufferViewer,    KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_B));
     ToggleOnConditionOnce(showSceneViewer,     KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_O));
+    ToggleOnConditionOnce(showConfigurator,    KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_P));
 
     if (showImguiDemo)       { sDrawImguiDemo       (conf, window); }
     if (showTonemapSettings) { sDrawTonemapSettings (conf, window); }
     if (showBufferViewer)    { sDrawBufferViewer    (conf, window); }
     if (showSceneViewer)     { sDrawSceneViewer     (conf, window, scene); }
+    if (showConfigurator)    { sDrawConfigurator    (conf, window); }
 }
 
 static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window) {
@@ -255,6 +259,7 @@ static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window) {
 }
 
 static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
+    int mode = conf->debugVisMode;
     ImGui::Begin("Buffer Viewer", NULL);
     ImGui::RadioButton("Final Output",    &conf->debugVisMode, DEBUG_VIS_NONE);
     ImGui::RadioButton("GBuffer Color",   &conf->debugVisMode, DEBUG_VIS_GBUF_COLOR);
@@ -264,6 +269,9 @@ static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
     ImGui::RadioButton("Depth (Raw)",     &conf->debugVisMode, DEBUG_VIS_DEPTH_RAW);
     ImGui::RadioButton("Depth (Linear)",  &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
     ImGui::End();
+    if (mode != conf->debugVisMode) {
+        conf->forceShaderRecompile = true;
+    }
 }
 
 static const int SHOW_MODELS = 1 << 0;
@@ -436,5 +444,47 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
         ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
+    ImGui::End();
+}
+
+static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
+    ImGui::Begin("Engine Configuration");
+    ImGui::InputInt("Shadow Map Size", &conf->shadowSize, 128, 512);
+    ImGui::InputInt("Environment Map Size", &conf->envmapSize, 32, 128);
+    ImGui::Checkbox("Pause on focus loss", &conf->pauseOnFocusLoss);
+    ImGui::Checkbox("Clear GBuffer on redraw", &conf->clearColorBuffers);
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::Text("Clears all color buffers at the start of the frame. By default, only depth buffers are cleared.");
+        ImGui::Text("This is mostly useful when debugging under RenderDoc.");
+        ImGui::EndTooltip();
+    }
+
+    static bool lastClipControlState = !conf->gpuSupportsClipControl;
+    ImGui::Checkbox("Enable clip control", &conf->gpuSupportsClipControl);
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::Text("Clip control allows mapping depth to the correct [0,1] range rather than [0.5,1].");
+        ImGui::Text("Disabling this will significantly increase Z-fighting at medium to large distances.");
+        ImGui::EndTooltip();
+    }
+    // TODO: Move this out of here! This should be done at the start of each frame.
+    if (conf->gpuSupportsClipControl != lastClipControlState) {
+        lastClipControlState = conf->gpuSupportsClipControl;
+        conf->forceShaderRecompile = true;
+        if (conf->gpuSupportsClipControl) {
+            if (glfwExtensionSupported("GL_ARB_clip_control")) {
+                glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+            } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
+                glDepthRangedNV(-1.0f, 1.0f);
+            }
+        } else {
+            if (glfwExtensionSupported("GL_ARB_clip_control")) {
+                glClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+            } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
+                glDepthRangedNV(0.0f, 1.0f);
+            }
+        }
+    }
     ImGui::End();
 }

@@ -38,6 +38,8 @@ static void sGladPostCallback (const char *name, void *funcptr, int len_args, ..
 #endif
 
 void vxConfig_Init (vxConfig* c) {
+    memset(c, 0, sizeof(vxConfig));
+
     c->displayW = 1280;
     c->displayH = 1024;
     c->shadowSize = 2048;
@@ -59,7 +61,7 @@ void vxConfig_Init (vxConfig* c) {
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -1.0f, -0.0f}, VX_UP, c->camEnvYn.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){+0.0f, +0.0f, +1.0f}, VX_UP, c->camEnvZp.view_matrix);
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -0.0f, -1.0f}, VX_UP, c->camEnvZn.view_matrix);
-    
+
     c->pauseOnFocusLoss = false;
     c->clearColorBuffers = false;
     c->gpuSupportsClipControl = false;

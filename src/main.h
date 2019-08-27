@@ -44,6 +44,7 @@ typedef struct vxConfig {
     float tonemapACESParamD;
     float tonemapACESParamE;
     int debugVisMode;
+    bool forceShaderRecompile;
 } vxConfig;
 
 void vxConfig_Init (vxConfig* c);
