@@ -34,7 +34,7 @@ void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix) {
             // this is standard or not, but it matches my intuition of what the FOV slider in a game does.
             float vfov = 2.0f * atanf(tanf((float) vxRadians(camera->fov) / 2.0f) * (3.0f/4.0f));
             // See the following for info about pespective projection matrix generation:
-            // * http://dev.theomader.com/depth-precision/ (NOTE: given matrices are transposed)
+            // * http://dev.theomader.com/depth-precision/
             // * https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/
             // VX also uses reverse depth, for increased precision on hardware that supports it.
             float f = 1.0f / tanf(vfov / 2.0f);
@@ -42,20 +42,21 @@ void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix) {
                 // Non-infinite reverse-Z perspective projection:
                 float a = camera->far / (camera->near - camera->far);
                 float b = camera->near * a;
-                glm_mat4_copy((mat4) {
-                    f * hw, 0.0f,   0.0f,       0.0f,
-                    0.0f,   f,      0.0f,       0.0f,
-                    0.0f,   0.0f,   -a-1.0f,    -1.0f,
-                    0.0f,   0.0f,   -b,         0.0f
+                // Note that glm uses column-major order.
+                glm_mat4_transpose_to((mat4) {
+                    f * hw, 0.0f,  0.0f,    0.0f,
+                    0.0f,   f,     0.0f,    0.0f,
+                    0.0f,   0.0f,  -a-1.0f, -b,
+                    0.0f,   0.0f,  -1.0f,   0.0f
                 }, camera->proj_matrix);
             } else {
                 // Infinite reverse-Z perspective projection:
                 float n = camera->near;
-                glm_mat4_copy((mat4) {
+                glm_mat4_transpose_to((mat4) {
                     f * hw, 0.0f,   0.0f,   0.0f,
                     0.0f,   f,      0.0f,   0.0f,
-                    0.0f,   0.0f,   0.0f,   -1.0f,
-                    0.0f,   0.0f,   n,      0.0f
+                    0.0f,   0.0f,   0.0f,   n,
+                    0.0f,   0.0f,   -1.0f,  0.0f
                 }, camera->proj_matrix);
             }
         } else if (camera->projection == CAMERA_ORTHOGRAPHIC) {

@@ -110,6 +110,12 @@ vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met,
     return (kD * Diffuse / PI + Specular) * Radiance * NdotL;
 }
 
+// https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
+float Random01 (vec4 seed) {
+    float dot_product = dot(seed, vec4(12.9898,78.233,45.164,94.673));
+    return fract(sin(dot_product) * 43758.5453);
+}
+
 void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
 
@@ -133,7 +139,7 @@ void main() {
 
     vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
     vec4 FragPosClip = vec4(fragCoordClip, z, 1.0);
-    // NOTE: Linearized depth seems to end up in FragPosView4.w for some reason.
+    // NOTE: Linearized depth is in FragPosView4.w (z is always 1, I think).
     vec4 FragPosView4 = uInvProjMatrix * FragPosClip;
     vec4 FragPosWorld4 = uInvViewMatrix * FragPosView4;
     vec3 FragPosWorld = FragPosWorld4.xyz / FragPosWorld4.w;
@@ -162,9 +168,10 @@ void main() {
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
         for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
             for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
+                // This spreads samples fairly well, but is obviously very noisy. TAA is required.
                 vec2 offset = vec2(
-                    (ipcfX - (SHADOW_PCF_TAPS_X / 2)) * 1,
-                    (ipcfY - (SHADOW_PCF_TAPS_Y / 2)) * 1);
+                    (ipcfX - (SHADOW_PCF_TAPS_X / 2)) + mix(-1, 1, Random01(iTime * FragPosWorld4)),
+                    (ipcfY - (SHADOW_PCF_TAPS_Y / 2)) + mix(-1, 1, Random01(iTime * FragPosWorld4)));
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
                 // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
                 #ifndef DEPTH_ZERO_TO_ONE
