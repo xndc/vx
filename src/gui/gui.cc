@@ -34,6 +34,9 @@ VX_EXPORT void GUI_Init (GLFWwindow* window) {
     #undef X
     io.Fonts->Build();
 
+    ImGuiStyle& s = ImGui::GetStyle();
+    s.FramePadding.y = 2;
+
     // NOTE: the default is 150, which doesn't work on macOS
     ImGui_ImplOpenGL3_Init("#version 140");
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -272,21 +275,45 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
     for (int i = 0; i < (int) scene->size; i++) {
         GameObject* obj = &scene->objects[i];
         ImGui::PushID(i);
+
+        #define PARENTED_VIEW() \
+            if (obj->parent != NULL) { \
+                ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft); \
+                int index = -1; \
+                for (int ip = 0; ip < scene->size; ip++) { \
+                    if (&scene->objects[ip] == obj->parent) { \
+                        index = ip; \
+                    } \
+                } \
+                ImGui::TextColored(ImColor(200, 200, 200), "Parented to object %d.", index); \
+                ImGui::SameLine(284); if (ImGui::Button("Unparent")) { \
+                    obj->parent = NULL; \
+                    obj->needsUpdate = true; \
+                    mat4 rot; \
+                    glm_decompose(obj->worldMatrix, obj->localPosition, rot, obj->localScale); \
+                    glm_mat4_quat(rot, obj->localRotation); \
+                } \
+            }
         
         if (obj->type == GAMEOBJECT_MODEL && (show & SHOW_MODELS)) {
-            ImGui::Text("Model");
-            ImGui::SameLine(100);
-            ImGui::Text("%s", obj->model.model->sourceFilePath);
+            ImGui::Text("%d: Model %s", i, obj->model.model->name);
+            ImGui::SameLine(300); if (ImGui::Button("Delete")) {
+                DeleteObjectFromScene(scene, obj);
+            }
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
             ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
             ImGui::DragFloat3("Scale", obj->localScale, 0.01f, 0.01f, 20.0f);
+            PARENTED_VIEW();
+            ImGui::Separator();
         }
         
         if (obj->type == GAMEOBJECT_POINT_LIGHT && (show & SHOW_POINT_LIGHTS)) {
-            ImGui::Text("Point Light");
-            static bool intensityMode = false;
-            ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->pointLight.editorIntensityMode);
+            ImGui::Text("%d: Point Light", i);
+            ImGui::SameLine(150); ImGui::Checkbox("Intensity Only", &obj->pointLight.editorIntensityMode);
+            ImGui::SameLine(300); if (ImGui::Button("Delete")) {
+                DeleteObjectFromScene(scene, obj);
+            }
             if (obj->pointLight.editorIntensityMode) {
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
                 float c = glm_vec3_max(obj->pointLight.color);
@@ -298,11 +325,13 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
             }
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
             ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
+            PARENTED_VIEW();
+            ImGui::Separator();
         }
         
         if (obj->type == GAMEOBJECT_DIRECTIONAL_LIGHT && (show & SHOW_OTHER_LIGHTS)) {
-            ImGui::Text("Directional Light");
-            ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->directionalLight.editorIntensityMode);
+            ImGui::Text("%d: Directional Light", i);
+            ImGui::SameLine(150); ImGui::Checkbox("Intensity Only", &obj->directionalLight.editorIntensityMode);
             if (obj->directionalLight.editorIntensityMode) {
                 ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
                 float c = glm_vec3_max(obj->directionalLight.color);
@@ -313,12 +342,14 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
                 ImGui::DragFloat3("Color", obj->directionalLight.color, 0.01f, 0.0f, 20.0f);
             }
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-            ImGui::DragFloat3("Position (norm)", obj->localPosition, 0.01f, -1.0f, 1.0f);
+            ImGui::DragFloat3("Position", obj->localPosition, 0.01f, -1.0f, 1.0f);
+            PARENTED_VIEW();
+            ImGui::Separator();
         }
         
         if (obj->type == GAMEOBJECT_LIGHT_PROBE && (show & SHOW_OTHER_LIGHTS)) {
-            ImGui::Text("Light Probe");
-            ImGui::SameLine(200); ImGui::Checkbox("Intensity Only", &obj->lightProbe.editorIntensityMode);
+            ImGui::Text("%d: Light Probe", i);
+            ImGui::SameLine(150); ImGui::Checkbox("Intensity Only", &obj->lightProbe.editorIntensityMode);
             if (obj->lightProbe.editorIntensityMode) {
                 float xc[2] = { glm_vec3_max(obj->lightProbe.colorXp), glm_vec3_max(obj->lightProbe.colorXn) };
                 float yc[2] = { glm_vec3_max(obj->lightProbe.colorYp), glm_vec3_max(obj->lightProbe.colorYn) };
@@ -353,14 +384,40 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
             ImGui::DragFloat3("Position", obj->localPosition, 0.05f, -100.0f, 100.0f);
             #endif
+            PARENTED_VIEW();
+            ImGui::Separator();
         }
         
+        #undef PARENTED_VIEW
         ImGui::PopID();
     }
 }
 
 static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
-    ImGui::Begin("Scene Viewer");
+    ImGui::Begin("Scene Viewer", NULL, ImGuiWindowFlags_MenuBar);
+    
+    ImGui::BeginMenuBar();
+    if (ImGui::BeginMenu("Add Object")) {
+        for (size_t i = 0; i < ModelCount; i++) {
+            if (ImGui::MenuItem(Models[i]->name, NULL)) {
+                GameObject* obj = AddObject(scene, NULL, GAMEOBJECT_MODEL);
+                obj->model.model = Models[i];
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("%s", Models[i]->sourceFilePath);
+                ImGui::EndTooltip();
+            }
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Point Light")) {
+            GameObject* obj = AddObject(scene, NULL, GAMEOBJECT_POINT_LIGHT);
+            glm_vec3_broadcast(1.0f, obj->pointLight.color);
+        }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+    
     ImGui::BeginTabBar("Object Types Tab Bar");
     if (ImGui::BeginTabItem("All Objects")) {
         sDrawSceneViewerObjectList(conf, scene, SHOW_MODELS | SHOW_POINT_LIGHTS | SHOW_OTHER_LIGHTS);

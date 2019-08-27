@@ -6,7 +6,8 @@ void UpdateScene (Scene* scene) {
         GameObject* obj = &scene->objects[i];
         if (!glm_vec3_eqv(obj->localPosition, obj->lastLocalPosition) ||
             !glm_vec3_eqv(obj->localScale,    obj->lastLocalScale) ||
-            !glm_vec4_eqv(obj->localRotation, obj->lastLocalRotation))
+            !glm_vec4_eqv(obj->localRotation, obj->lastLocalRotation) ||
+            obj->needsUpdate)
         {
             glm_translate_make(obj->localMatrix, obj->localPosition);
             glm_quat_rotate(obj->localMatrix, obj->localRotation, obj->localMatrix);
@@ -65,6 +66,27 @@ GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type) {
     glm_mat4_identity(obj->worldMatrix);
     glm_mat4_identity(obj->lastWorldMatrix);
     return obj;
+}
+
+void DeleteObjectFromScene (Scene* scene, GameObject* object) {
+    int index = -1;
+    for (int i = 0; i < scene->size; i++) {
+        if (&scene->objects[i] == object) {
+            index = i;
+        }
+        if (scene->objects[i].parent == object) {
+            scene->objects[i].parent = object->parent;
+        }
+    }
+    if (index == -1) {
+        vxLog("Warning: Object 0x%lx not found in scene 0x%lx", object, scene);
+        return;
+    }
+    for (int i = index + 1; i < scene->size; i++) {
+        scene->objects[i-1] = scene->objects[i];
+        // memcpy(&scene->objects[i-1], &scene->objects[i], sizeof(GameObject));
+    }
+    scene->size--;
 }
 
 static void sAllocRenderList (RenderList* rl) {

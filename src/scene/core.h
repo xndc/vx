@@ -47,6 +47,7 @@ typedef struct GameObject {
     mat4   worldMatrix;     // read-only
     mat4   lastWorldMatrix; // read-only
     bool   worldMatrixChanged;
+    bool   needsUpdate; // forces world matrix update
     union {
         GameObject_Model model;
         GameObject_DirectionalLight directionalLight;
@@ -62,9 +63,10 @@ typedef struct Scene {
     GameObject* objects;
 } Scene;
 
-void InitScene (Scene* scene);
-void UpdateScene (Scene* scene);
-GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type);
+VX_EXPORT void InitScene (Scene* scene);
+VX_EXPORT void UpdateScene (Scene* scene);
+VX_EXPORT GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type);
+VX_EXPORT void DeleteObjectFromScene (Scene* scene, GameObject* object);
 
 
 typedef struct RenderableMesh {
@@ -109,5 +111,5 @@ typedef struct RenderList {
     RenderableLightProbe* lightProbes;
 } RenderList;
 
-void ClearRenderList (RenderList* rl);
-void UpdateRenderList (RenderList* rl, Scene* scene);
+VX_EXPORT void ClearRenderList (RenderList* rl);
+VX_EXPORT void UpdateRenderList (RenderList* rl, Scene* scene);

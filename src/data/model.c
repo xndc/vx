@@ -11,31 +11,29 @@
 XM_ASSETS_MODELS_GLTF
 #undef X
 
-#if 0
-#define NO_GLTF_LOADER_DEBUG
-#ifndef NO_GLTF_LOADER_DEBUG
-    #define LOADER_DEBUG(...) vxDebug(__VA_ARGS__)
-#else
-    #define LOADER_DEBUG(...)
-#endif
+size_t ModelCount = 0;
+char** ModelNames = NULL;
+Model** Models = NULL;
 
-typedef struct {
-    mat4 matrix;
-    mat4 worldMatrix;
-    int parent; // -1 if this is a root node
-    int meshId; // -1 if this node is not a mesh
-    bool worldTransformComputed;
-} Node;
+void LoadModels() {
+    ModelCount = 0;
+    #define X(name, dir, file) \
+        ModelCount++; \
+        ReadModelFromDisk(#name, &name, dir, file);
+    XM_ASSETS_MODELS_GLTF
+    #undef X
 
-static inline JSON_Value* ReadJSONFromFile (const char* filename);
-static void ComputeWorldTransformForNode (Node* list, size_t index);
-#endif
+    if (Models != NULL) { free(Models); }
+    Models = (Model**) calloc(ModelCount, sizeof(Model*));
 
-// void InitModelSystem() {
-//     #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
-//     XM_ASSETS_MODELS_GLTF
-//     #undef X
-// }
+    size_t i = 0;
+    #define X(name, dir, file) { \
+        Models[i] = &name; \
+        i++; \
+    }
+    XM_ASSETS_MODELS_GLTF
+    #undef X
+}
 
 void InitMaterial (Material* m) {
     memset(m, 0, sizeof(Material));
@@ -80,12 +78,6 @@ typedef struct GLTFNode {
     mat4 scene; // scene-space transform
     struct GLTFNode* parent; // optional - may be a root node
 } GLTFNode;
-
-void LoadModels() {
-    #define X(name, dir, file) ReadModelFromDisk(#name, &name, dir, file);
-    XM_ASSETS_MODELS_GLTF
-    #undef X
-}
 
 void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirectory, const char* gltfFilename) {
     double tStart = glfwGetTime();
@@ -489,6 +481,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
 
     // Fill out model fields:
     // TODO: Add an atomic lock to the model so we can load it on another thread.
+    model->name = strdup(name);
     model->sourceFilePath = strdup(gltfPath);
     model->textureCount = textureCount;
     model->textures = textures;

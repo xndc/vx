@@ -45,6 +45,7 @@ typedef struct Mesh {
 } Mesh;
 
 typedef struct Model {
+    char* name;
     char* sourceFilePath;
     size_t textureCount;
     GLuint* textures;
@@ -60,5 +61,8 @@ typedef struct Model {
 XM_ASSETS_MODELS_GLTF
 #undef X
 
-void LoadModels();
-void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file);
+VX_EXPORT extern size_t ModelCount;
+VX_EXPORT extern Model** Models;
+
+VX_EXPORT void LoadModels();
+VX_EXPORT void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file);
