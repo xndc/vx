@@ -149,11 +149,13 @@ void StartFrame (vxConfig* conf, GLFWwindow* window) {
     // VSync setup:
     static int swapInterval = -100;
     if (swapInterval != conf->swapInterval) {
+        swapInterval = conf->swapInterval;
+        // Use adaptive VSync (swap interval -1) on machines that support it, and use regular VSync otherwise:
         if (glfwExtensionSupported("WGL_EXT_swap_control_tear") ||
             glfwExtensionSupported("GLX_EXT_swap_control_tear")) {
-            glfwSwapInterval(-1);
+            glfwSwapInterval(swapInterval);
         } else {
-            glfwSwapInterval(1);
+            glfwSwapInterval((swapInterval < 0) ? 1 : swapInterval);
         }
     }
 

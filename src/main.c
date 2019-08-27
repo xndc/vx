@@ -16,9 +16,6 @@ static void sGlfwErrorCallback (int code, const char* error) {
 #ifdef GLAD_DEBUG
 static void sGladPostCallback (const char *name, void *funcptr, int len_args, ...) {
     GLenum error;
-    // NOTE: glGetError seems to crash the Nvidia Windows driver for some reason, under some
-    //   circumstances that I can't figure out. If you get weird crashes in an nvoglv64 worker
-    //   thread, remove this call and see if they go away.
     error = glad_glGetError();
     if (error != GL_NO_ERROR) {
         const char* str = "<UNKNOWN>";
@@ -37,13 +34,19 @@ static void sGladPostCallback (const char *name, void *funcptr, int len_args, ..
 }
 #endif
 
+// Initializes the engine's configuration struct.
+// This function is where default configuration values are defined. To add a new option, you should:
+// * Update the vxConfig struct (main.h)
+// * Add a default value for the new option (here), or just let this function initialize it to 0
+// * Add a UI field for it in sDrawConfigurator (gui.cc)
+// * If shaders need to be aware of it, update sGenerateDefineBlock (program.c) to add a define for it
 void vxConfig_Init (vxConfig* c) {
     memset(c, 0, sizeof(vxConfig));
 
-    // HACK: 30 FPS lock for the MacBook
-    // Locking to 60FPS or not at all results in heavy stuttering. It seems like the macOS compositor expects one frame
-    // per VSync interval and just drops everything else. TODO: Try out triple buffering as an alternative solution.
     #ifdef __APPLE__
+    // HACK: 30 FPS lock for the MacBook
+    // Locking to 60FPS and missing frames, or not locking at all, results in heavy stuttering. It seems like the macOS
+    // compositor expects one frame per VSync interval and just drops anything else.
     c->swapInterval = 2;
     #else
     c->swapInterval = -1;
@@ -53,7 +56,11 @@ void vxConfig_Init (vxConfig* c) {
     c->displayH = 1024;
     c->envmapSize = 512;
     c->skyboxSize = 2048;
-    Camera_InitPerspective(&c->camMain, 0.01f, 0.0f, 80.0f);
+
+    // zn=0.5f results in reasonably high depth precision even without clip-control support.
+    Camera_InitPerspective(&c->camMain, 0.5f, 0.0f, 80.0f);
+
+    // These are meant to be used for dynamic cubemap generation, but I probably won't get to that in time.
     Camera_InitPerspective(&c->camEnvXp, 0.1f, 0.0f, 90.0f);
     Camera_InitPerspective(&c->camEnvXn, 0.1f, 0.0f, 90.0f);
     Camera_InitPerspective(&c->camEnvYp, 0.1f, 0.0f, 90.0f);
@@ -69,7 +76,13 @@ void vxConfig_Init (vxConfig* c) {
 
     c->pauseOnFocusLoss = false;
     c->clearColorBuffers = false;
-    c->gpuSupportsClipControl = false;
+
+    // We use glClipControl/glDepthRangedNV when possible to tell OpenGL that the clip-space depth values we generate
+    // are in the [0,1] range rather than the default [-1,1] range.
+    // If glClipControl is not available, OpenGL will squish our [0,1] range into [0.5,1] when writing to the depth
+    // buffer, destroying most of its precision (which is close to 0). We can still work with that, though.
+    // This flag is set in GameInit, since we need an OpenGL context to list extensions.
+    c->gpuSupportsClipControl = false;    
 
     c->tonemapMode = TONEMAP_HABLE;
     c->tonemapExposure = 16.0f;
@@ -113,19 +126,12 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     glad_set_post_callback(sGladPostCallback);
     #endif
 
-    // Reverse depth/clip-control setup:
-    // This is now done in render.c (StartFrame).
+    // Figure out if this machine supports glClipControl:
     if (glfwExtensionSupported("GL_ARB_clip_control") || glfwExtensionSupported("NV_depth_buffer_float")) {
         conf->gpuSupportsClipControl = true;
     } else {
-        // Without modifying OpenGL's clip behaviour, our shaders and transform matrices will map depth to [1, 0.5]
-        // rather than [1, 0]. This has two main caveats:
-        // * Bad precision. The whole point of reverse Z is to exploit the increased precision around z=0.
-        // * Depth has to be transformed (z = z*2-1) in every fragment shader.
-        // glDepthRangef is not a suitable alternative to glDepthRangedNV, despite some claims that it is. While the
-        // OpenGL standard technically allows it to work with unclamped values (i.e. -1.0f), both the Nvidia and Apple
-        // drivers I've tested this on will actually clamp values to [0,1].
-        vxLog("Warning: This machine's graphics driver doesn't support reverse-Z mapping.");
+        conf->gpuSupportsClipControl = false;
+        vxLog("Warning: This machine's graphics driver doesn't support glClipControl.");
     }
 
     // Window configuration:
@@ -149,7 +155,7 @@ void GameReload (vxConfig* conf, GLFWwindow* window) {
     LoadModels();
 }
 
-// Loads the default scene. Should only be run once.
+// Loads the default scene.
 void GameLoadScene (Scene* scene) {
     InitScene(scene);
     
@@ -206,7 +212,7 @@ void GameLoadScene (Scene* scene) {
     glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZn);
 }
 
-// Tick function for the game. Generates a single frame.
+// Tick function for the game. Renders a single frame.
 void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* lastFrame, Scene* scene) {
     frame->t = (float) glfwGetTime();
     frame->dt = frame->t - lastFrame->t;
@@ -217,13 +223,15 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glfwSetTime(frame->t);
         return;
     }
+
+    // Print the last frame's log:
     vxAdvanceFrame();
 
     // *****************************************************************************************************************
     // Update:
 
     StartBlock("Frame Update");
-    StartFrame(conf, window);
+    StartFrame(conf, window); // applies swap interval and clip-control settings
 
     // Retrieve new framebuffer size and update framebuffers if required:
     int w, h;
@@ -231,9 +239,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     conf->displayW = w;
     conf->displayH = h;
     StartGPUBlock("Update Render Targets");
-    uint8_t updatedTargets = UpdateRenderTargets(conf);
+    uint8_t updatedTargets = UpdateRenderTargets(conf); // resizes framebuffer render targets
     EndGPUBlock();
-    glViewport(0, 0, w, h);
     
     // Run subsystem tick functions:
     TimedBlock("Update Programs",  UpdatePrograms(conf));
@@ -261,7 +268,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // FPS-style camera movement & mouse-look:
     double mx, my, dmx, dmy;
-    static vec3 pos = {3, 4, 3};
+    static vec3 pos = {3, 4, 3}; // player (camera) position
     StartBlock("FPS Camera Control");
     {
         static float lmx = 0;
@@ -272,8 +279,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         dmx = lmx - (float) mx;
         dmy = lmy - (float) my;
         if (cursorLocked) {
-            const float sx = -0.002f;
-            const float sy = -0.002f;
+            const float sx = -0.002f; // player look speed (horizontal)
+            const float sy = -0.002f; // player look speed (vertical)
             ry += dmx * sx;
             rx += dmy * sy;
             rx = vxClamp(rx, vxRadians(-90.0f), vxRadians(90.0f));
@@ -283,14 +290,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         lmx = (float) mx;
         lmy = (float) my;
 
-        vec4 q  = GLM_QUAT_IDENTITY_INIT;
-        vec4 qy = GLM_QUAT_IDENTITY_INIT;
-        vec4 qx = GLM_QUAT_IDENTITY_INIT;
-        glm_quat(qy, ry, 0, 1, 0);
-        glm_quat(qx, rx, 1, 0, 0);
-        glm_quat_mul(qx, qy, q);
-
-        vec3 spd = {8.0f * frame->dt, 8.0f * frame->dt, 8.0f * frame->dt};
+        vec3 spd = {8.0f * frame->dt, 8.0f * frame->dt, 8.0f * frame->dt}; // player movement speed
         vec3 dpos = GLM_VEC3_ZERO_INIT;
         if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) { pos[1] -= spd[1]; }
@@ -302,6 +302,13 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glm_vec3_rotate(pos, ry, (vec3){0, 1, 0});
         glm_vec3_add(pos, dpos, pos);
         glm_vec3_rotate(pos, -ry, (vec3){0, 1, 0});
+
+        vec4 q  = GLM_QUAT_IDENTITY_INIT;
+        vec4 qy = GLM_QUAT_IDENTITY_INIT;
+        vec4 qx = GLM_QUAT_IDENTITY_INIT;
+        glm_quat(qy, ry, 0, 1, 0);
+        glm_quat(qx, rx, 1, 0, 0);
+        glm_quat_mul(qx, qy, q);
 
         mat4 vmat;
         glm_quat_mat4(q, vmat);
@@ -326,9 +333,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     double tRenderStart = glfwGetTime();
     static RenderState rs;
 
-    // tRenderStart to tSwapStart will just be the CPU time taken up by drawcall submission. To monitor GPU time we need
+    // tRenderStart to tRenderEnd will just be the CPU time taken up by drawcall submission. To monitor GPU time we need
     // to use an OpenGL query object: https://www.khronos.org/opengl/wiki/Query_Object
-    // We use multiple query objects to try to avoid stalls due to results being delayed one or more frames.
+    // We use multiple query objects in order to avoid stalling the renderer just to wait for a reply from the GPU.
     static int rtqIndex = 0;
     static GLuint rtq [4] = {0};
     if (rtq[0] == 0) {
@@ -336,6 +343,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     }
     glBeginQuery(GL_TIME_ELAPSED, rtq[rtqIndex]);
 
+    // Render lists contain abbreviated entries for game objects that affect the rendered image.
     static RenderList rl = {0};
     TimedBlock("UpdateRenderList", {
         UpdateRenderList(&rl, scene);
@@ -345,6 +353,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         // TODO: generate environment maps
     }
 
+    // Don't forget to set the correct viewports!
     glViewport(0, 0, conf->shadowSize, conf->shadowSize);
 
     RenderPass(&rs, "Shadow Map Clear", {
@@ -353,12 +362,13 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glClear(GL_DEPTH_BUFFER_BIT);
     })
 
+    // Right now we only support one directional light.
     RenderableDirectionalLight* directional = NULL;
     if (rl.directionalLightCount > 0) {
         directional = &rl.directionalLights[0];
         // Update shadow camera:
         vec3 camPos;
-        // We integer-divide the player's position as seen by the camera in order to minimize shadow crawling.
+        // We discretize the player's position as seen by the camera in order to minimize shadow crawling.
         vec3 playerPos;
         static const int factor = 5;
         playerPos[0] = (float)((int)pos[0] / factor);
@@ -387,6 +397,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     glViewport(0, 0, conf->displayW, conf->displayH);
     
+    // The depth buffer needs to be cleared to 0 (since we use reverse depth). Other buffers can be ignored.
+    // We do have an option to clear them, but that's only really useful when debugging (e.g. with RenderDoc).
     if (conf->clearColorBuffers) {
         RenderPass(&rs, "GBuffer clear (color+depth)", {
             BindFramebuffer(FB_GBUFFER);
@@ -410,6 +422,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     for (size_t i = 0; i < rl.meshCount; i++) {
         glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
         glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+        // Timing every single mesh draw is probably a waste of time, despite being cool to look at in the profiler.
         #if 0
         static char blockName [128];
         int written = stbsp_snprintf(blockName, 128, "RenderMesh %u (%ju tris)",
@@ -463,6 +476,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // We do the binding manually to avoid PROG_GBUF_MAIN wiping out any data in gAux2.
     glBindFramebuffer(GL_FRAMEBUFFER, FB_ONLY_COLOR_HDR);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    // There should be a dedicated program for this kind of thing, but whatever, this works for now.
     SetRenderProgram(&rs, &PROG_GBUF_MAIN);
     SetCamera(&rs, &conf->camMain);
     for (int i = 0; i < rl.pointLightCount; i++) {
@@ -547,6 +561,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     });
 }
 
+// Actual entry point for the game. Doesn't do much, just dispatches to the other functions in this file.
 int main() {
     vxConfig conf = {0};
     GLFWwindow* window = NULL;

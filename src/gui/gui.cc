@@ -450,7 +450,9 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
 
 static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Begin("Engine Configuration");
-    ImGui::InputInt("Shadow map size", &conf->shadowSize, 1024, 1024);
+    ImGui::SliderInt("VSync", &conf->swapInterval, -1, 3, "swap interval %d");
+    ImGui::InputInt("Shadow map size", &conf->shadowSize, 256, 256);
+    conf->shadowSize = vxClamp(conf->shadowSize, 32, 8192); // framebuffer size limit on most machines
     ImGui::InputInt("Environment map size", &conf->envmapSize, 128, 128);
     ImGui::DragFloat("Shadow zoom", &conf->camShadow.zoom, 5.0f, 1.0f, 1000.0f);
     ImGui::DragFloat("Shadow near plane", &conf->camShadow.near, 10.0f, -1000.0f, +1000.0f);

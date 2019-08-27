@@ -21,7 +21,7 @@ typedef enum DebugVisMode {
 } DebugVisMode;
 
 typedef struct vxConfig {
-    int swapInterval;
+    int swapInterval; // passed to glfwSwapInterval, -1 is translated to 1 on machines without support for it
     int displayW;
     int displayH;
     int shadowSize;
