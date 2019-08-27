@@ -27,12 +27,13 @@ void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix) {
     {
         if (camera->projection == CAMERA_PERSPECTIVE) {
             // Convert HFOV to VFOV:
-            float vfov = 2.0f * atanf(tanf((float) vxRadians(camera->fov) / 2.0f) * hw);
+            // We assume HFOVs are given for the standard 4:3 aspect ratio rather than the current one. I don't know if
+            // this is standard or not, but it matches my intuition of what the FOV slider in a game does.
+            float vfov = 2.0f * atanf(tanf((float) vxRadians(camera->fov) / 2.0f) * (3.0f/4.0f));
             // See the following for info about pespective projection matrix generation:
             // * http://dev.theomader.com/depth-precision/ (NOTE: given matrices are transposed)
             // * https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/
-            // VX uses reverse depth. We used to support regular depth, but the existence of
-            // glDepthRangef as part of GL 4.1 means that's not needed anymore.
+            // VX also uses reverse depth, for increased precision on hardware that supports it.
             float f = 1.0f / tanf(vfov / 2.0f);
             if (camera->far > camera->near) {
                 // Non-infinite reverse-Z perspective projection:
