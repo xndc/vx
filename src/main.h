@@ -48,6 +48,8 @@ typedef struct vxConfig {
     int debugVisMode;
     float shadowBiasMin;
     float shadowBiasMax;
+    int shadowPcfTapsX;
+    int shadowPcfTapsY;
     bool shadowHoverFix; // render only backfaces into shadow map
     bool forceShaderRecompile;
 } vxConfig;

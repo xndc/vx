@@ -457,6 +457,7 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::DragFloat("Shadow far plane", &conf->camShadow.far, 10.0f, -1000.0f, +1000.0f);
     ImGui::DragFloat("Shadow min bias", &conf->shadowBiasMin, 0.000001f, 0.0f, 0.1f, "%.6f");
     ImGui::DragFloat("Shadow max bias", &conf->shadowBiasMax, 0.000001f, 0.0f, 0.1f, "%.6f");
+    ImGui::SliderInt2("Shadow PCF taps", &conf->shadowPcfTapsX /* HACK */, 1, 5);
     ImGui::Checkbox("Shadow hover (Peter Panning) fix", &conf->shadowHoverFix);
     ImGui::Checkbox("Pause on focus loss", &conf->pauseOnFocusLoss);
     

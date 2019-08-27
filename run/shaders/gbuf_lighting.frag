@@ -158,12 +158,25 @@ void main() {
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
     FragPosShadow /= FragPosShadow.w;
     vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
+    vec2 ShadowTexelSize = 1.0 / textureSize(gShadow, 0);
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
-        float zShadowMap = texture(gShadow, ShadowTexcoord).r;
-        if (zShadowMap > FragPosShadow.z + bias) {
-            shadow = 1.0;
+        for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
+            for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
+                vec2 offset = vec2(
+                    (ipcfX - (SHADOW_PCF_TAPS_X / 2)) * 1,
+                    (ipcfY - (SHADOW_PCF_TAPS_Y / 2)) * 1);
+                float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
+                // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
+                #ifndef DEPTH_ZERO_TO_ONE
+                    zShadowMap = zShadowMap * 2.0 - 1.0;
+                #endif
+                if (zShadowMap > FragPosShadow.z + bias) {
+                    shadow += 1.0;
+                }
+            }
         }
     }
+    shadow /= SHADOW_PCF_TAPS_X * SHADOW_PCF_TAPS_Y;
 
     // Directional lighting:
     // NOTE: uSunDirection is supposed to be the vector coming FROM the light, but for some reason

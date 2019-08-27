@@ -85,6 +85,8 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowBiasMin = 0.0002f;
     c->shadowBiasMax = 0.01f;
     c->shadowHoverFix = false;
+    c->shadowPcfTapsX = 2;
+    c->shadowPcfTapsY = 2;
     Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
 }
 

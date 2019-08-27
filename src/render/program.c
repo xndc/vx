@@ -27,13 +27,18 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
     static bool blockExists = false;
     static bool gpuSupportsClipControl;
     static int tonemapMode;
+    static int shadowPcfTapsX;
+    static int shadowPcfTapsY;
     static int debugVisMode;
     if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl || tonemapMode != conf->tonemapMode ||
+        shadowPcfTapsX != conf->shadowPcfTapsX || shadowPcfTapsY != conf->shadowPcfTapsY ||
         debugVisMode != conf->debugVisMode)
     {
         blockExists = true;
         gpuSupportsClipControl = conf->gpuSupportsClipControl;
         tonemapMode = conf->tonemapMode;
+        shadowPcfTapsX = conf->shadowPcfTapsX;
+        shadowPcfTapsY = conf->shadowPcfTapsY;
         debugVisMode = conf->debugVisMode;
 
         int i = 0;
@@ -84,6 +89,8 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
                 break;
             }
         }
+        i += stbsp_snprintf(&block[i], l-i, "#define SHADOW_PCF_TAPS_X %d\n", conf->shadowPcfTapsX);
+        i += stbsp_snprintf(&block[i], l-i, "#define SHADOW_PCF_TAPS_Y %d\n", conf->shadowPcfTapsY);
 
         block[i] = '\0';
         hash = stbds_hash_string(block, VX_SEED);
@@ -241,6 +248,7 @@ void UpdatePrograms (vxConfig* conf) {
     } step = STEP_UNMARK_SHADERS;
 
     if (conf->forceShaderRecompile) {
+        vxLog("Launching forced shader recompile.");
         for (int i = 0; i < gShaderCount; i++) {
             sUpdateShader(gShaders[i], sGenerateDefineBlock(conf));
         }
