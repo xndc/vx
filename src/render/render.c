@@ -163,7 +163,6 @@ void StartFrame (vxConfig* conf, GLFWwindow* window) {
     static bool lastClipControlState = false;
     if (conf->gpuSupportsClipControl != lastClipControlState) {
         lastClipControlState = conf->gpuSupportsClipControl;
-        conf->forceShaderRecompile = true;
         if (conf->gpuSupportsClipControl) {
             if (glfwExtensionSupported("GL_ARB_clip_control")) {
                 glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);

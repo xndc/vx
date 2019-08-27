@@ -51,7 +51,6 @@ typedef struct vxConfig {
     int shadowPcfTapsX;
     int shadowPcfTapsY;
     bool shadowHoverFix; // render only backfaces into shadow map
-    bool forceShaderRecompile;
 } vxConfig;
 
 void vxConfig_Init (vxConfig* c);

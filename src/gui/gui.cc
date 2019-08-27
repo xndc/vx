@@ -259,7 +259,6 @@ static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window) {
 }
 
 static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
-    int mode = conf->debugVisMode;
     ImGui::Begin("Buffer Viewer", NULL);
     ImGui::RadioButton("Final Output",    &conf->debugVisMode, DEBUG_VIS_NONE);
     ImGui::RadioButton("GBuffer Color",   &conf->debugVisMode, DEBUG_VIS_GBUF_COLOR);
@@ -270,9 +269,6 @@ static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
     ImGui::RadioButton("Depth (Linear)",  &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
     ImGui::RadioButton("Shadow Map",      &conf->debugVisMode, DEBUG_VIS_SHADOWMAP);
     ImGui::End();
-    if (mode != conf->debugVisMode) {
-        conf->forceShaderRecompile = true;
-    }
 }
 
 static const int SHOW_MODELS = 1 << 0;

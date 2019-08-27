@@ -247,15 +247,6 @@ void UpdatePrograms (vxConfig* conf) {
         STEP_UPDATE_PROGRAMS,
     } step = STEP_UNMARK_SHADERS;
 
-    if (conf->forceShaderRecompile) {
-        vxLog("Launching forced shader recompile.");
-        for (int i = 0; i < gShaderCount; i++) {
-            sUpdateShader(gShaders[i], sGenerateDefineBlock(conf));
-        }
-        step = STEP_UPDATE_PROGRAMS;
-        conf->forceShaderRecompile = false;
-    }
-
     if (step == STEP_UNMARK_SHADERS) {
         for (int i = 0; i < gShaderCount; i++) {
             Shader* s = gShaders[i];
