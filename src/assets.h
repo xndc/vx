@@ -73,6 +73,10 @@
     X(UNIF_LAST_VIEW_MATRIX,  "uLastViewMatrix") \
     X(UNIF_LAST_PROJ_MATRIX,  "uLastProjMatrix") \
 \
+    X(UNIF_SHADOW_BIAS_MIN,   "uShadowBiasMin") \
+    X(UNIF_SHADOW_BIAS_MAX,   "uShadowBiasMax") \
+    X(UNIF_SHADOW_VP_MATRIX,  "uShadowVPMatrix") \
+\
     X(UNIF_CONST_DIFFUSE,   "uDiffuse") \
     X(UNIF_CONST_OCCLUSION, "uOcclusion") \
     X(UNIF_CONST_METALLIC,  "uMetallic") \

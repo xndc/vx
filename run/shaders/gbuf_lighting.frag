@@ -16,6 +16,10 @@ uniform mat4 uInvProjMatrix;
 uniform mat4 uLastViewMatrix;
 uniform mat4 uLastProjMatrix;
 
+uniform mat4 uShadowVPMatrix;
+uniform float uShadowBiasMin;
+uniform float uShadowBiasMax;
+
 uniform vec3 uAmbientCube[6];
 uniform vec3 uSunPosition;
 uniform vec3 uSunColor;
@@ -147,6 +151,20 @@ void main() {
         + diffuse * Nsq.z * uAmbientCube[isNegative.z + 4];   // maps to [4] for Z+, [5] for Z-
     #endif
 
+    // Shadow:
+    // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
+    float shadow = 0.0;
+    float bias = max(uShadowBiasMax * (1.0 - dot(N, normalize(uSunPosition))), uShadowBiasMin);
+    vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
+    FragPosShadow /= FragPosShadow.w;
+    vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
+    if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
+        float zShadowMap = texture(gShadow, ShadowTexcoord).r;
+        if (zShadowMap > FragPosShadow.z + bias) {
+            shadow = 1.0;
+        }
+    }
+
     // Directional lighting:
     // NOTE: uSunDirection is supposed to be the vector coming FROM the light, but for some reason
     //   our DirectionalLightLo function is treating it as the sun's POSITION vector. I have no clue
@@ -154,7 +172,7 @@ void main() {
     // NOTE: Also, every vector we pass here needs to be normalized. The Fresnel term gets blown
     //   up when you look at the sun otherwise.
     #if 1
-    Lo += DirectionalLightLo(N, V, normalize(uSunPosition), uSunColor, diffuse, metal, rough);
+    Lo += mix(vec3(0), DirectionalLightLo(N, V, normalize(uSunPosition), uSunColor, diffuse, metal, rough), 1.0-shadow);
     #endif
 
     #if 1

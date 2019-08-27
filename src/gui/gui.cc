@@ -351,7 +351,7 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
                 ImGui::DragFloat3("Color", obj->directionalLight.color, 0.01f, 0.0f, 20.0f);
             }
             ImGui::Spacing(); ImGui::SameLine(sliderMarginLeft);
-            ImGui::DragFloat3("Position", obj->localPosition, 0.01f, -1.0f, 1.0f);
+            ImGui::DragFloat3("Position", obj->localPosition, 0.01f, -2.0f, 2.0f);
             PARENTED_VIEW();
             ImGui::Separator();
         }
@@ -450,12 +450,15 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
 
 static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Begin("Engine Configuration");
-    ImGui::InputInt("Shadow map size", &conf->shadowSize, 128, 512);
-    ImGui::InputInt("Environment map size", &conf->envmapSize, 32, 128);
-    ImGui::SliderFloat("Shadow zoom", &conf->camShadow.zoom, 1.0f, 1000.0f);
-    ImGui::SliderFloat("Shadow near plane", &conf->camShadow.near, -1000.0f, +1000.0f);
-    ImGui::SliderFloat("Shadow far plane", &conf->camShadow.far, -1000.0f, +1000.0f);
+    ImGui::InputInt("Shadow map size", &conf->shadowSize, 1024, 1024);
+    ImGui::InputInt("Environment map size", &conf->envmapSize, 128, 128);
+    ImGui::DragFloat("Shadow zoom", &conf->camShadow.zoom, 5.0f, 1.0f, 1000.0f);
+    ImGui::DragFloat("Shadow near plane", &conf->camShadow.near, 10.0f, -1000.0f, +1000.0f);
+    ImGui::DragFloat("Shadow far plane", &conf->camShadow.far, 10.0f, -1000.0f, +1000.0f);
+    ImGui::DragFloat("Shadow min bias", &conf->shadowBiasMin, 0.000001f, 0.0f, 0.1f, "%.6f");
+    ImGui::DragFloat("Shadow max bias", &conf->shadowBiasMax, 0.000001f, 0.0f, 0.1f, "%.6f");
     ImGui::Checkbox("Pause on focus loss", &conf->pauseOnFocusLoss);
+    
     ImGui::Checkbox("Clear GBuffer on redraw", &conf->clearColorBuffers);
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();

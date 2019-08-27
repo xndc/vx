@@ -51,11 +51,9 @@ void vxConfig_Init (vxConfig* c) {
 
     c->displayW = 1280;
     c->displayH = 1024;
-    c->shadowSize = 2048;
     c->envmapSize = 512;
     c->skyboxSize = 2048;
     Camera_InitPerspective(&c->camMain, 0.01f, 0.0f, 80.0f);
-    Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
     Camera_InitPerspective(&c->camEnvXp, 0.1f, 0.0f, 90.0f);
     Camera_InitPerspective(&c->camEnvXn, 0.1f, 0.0f, 90.0f);
     Camera_InitPerspective(&c->camEnvYp, 0.1f, 0.0f, 90.0f);
@@ -82,6 +80,11 @@ void vxConfig_Init (vxConfig* c) {
     c->tonemapACESParamE = 0.14f;
 
     c->debugVisMode = DEBUG_VIS_NONE;
+
+    c->shadowSize = 4096;
+    c->shadowBiasMin = 0.0002f;
+    c->shadowBiasMax = 0.01f;
+    Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
 }
 
 // Initializes the game. Should only be run once, at the start of its execution.
@@ -362,9 +365,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         SetRenderProgram(&rs, &PROG_SHADOW);
         SetCamera(&rs, &conf->camShadow);
         RenderState rsMesh = rs;
+        // This is supposed to mitigate the shadow "Peter Panning" effect, but I can't tell the difference.
+        rsMesh.forceCullFace = GL_FRONT;
         for (size_t i = 0; i < rl.meshCount; i++) {
             glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
-            glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
             RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
         }
         EndRenderPass();
@@ -414,6 +418,12 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     BindFramebuffer(FB_ONLY_COLOR_HDR);
     SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
     SetCamera(&rs, &conf->camMain);
+    // Send shadow uniforms:
+    mat4 shadowSpaceMatrix;
+    glm_mat4_mul(conf->camShadow.proj_matrix, conf->camShadow.view_matrix, shadowSpaceMatrix);
+    glUniformMatrix4fv(UNIF_SHADOW_VP_MATRIX, 1, false, (float*) shadowSpaceMatrix);
+    glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);
+    glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);
     // Extract light info from scene:
     RenderableLightProbe* ambient = NULL;
     vec3 pointPositions[4] = {0};

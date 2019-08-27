@@ -33,6 +33,7 @@ typedef struct RenderState {
     int nextFreeTextureUnit;
     bool forceNoDepthTest;
     bool forceNoDepthWrite;
+    GLenum forceCullFace;
 } RenderState;
 
 void StartRenderPass (RenderState* rs, const char* passName);

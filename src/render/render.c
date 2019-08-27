@@ -361,7 +361,11 @@ void SetRenderMaterial (RenderState* rs, Material* mat) {
 
         if (mat->cull) {
             glEnable(GL_CULL_FACE);
-            glCullFace(mat->cull_face);
+            if (rs->forceCullFace == 0) {
+                glCullFace(mat->cull_face);
+            } else {
+                glCullFace(rs->forceCullFace);
+            }
         } else {
             glDisable(GL_CULL_FACE);
         }
