@@ -27,8 +27,9 @@ typedef struct {
     float prev_zn;
     float prev_zf;
     float prev_hw;
+    float prev_zoom;
 } Camera;
 
 void Camera_InitPerspective (Camera* camera, float zn, float zf, float fov);
-void Camera_InitOrtho (Camera* camera, float zoom);
+void Camera_InitOrtho (Camera* camera, float zoom, float zn, float zf);
 void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix);

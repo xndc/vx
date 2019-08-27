@@ -37,7 +37,11 @@ vec3 TonemapHable (vec3 x) {
 
 void main() {
     #if defined(DEBUG_VIS)
-        outColor = texelFetch(gAux2, ivec2(gl_FragCoord.xy), 0);
+        #if defined(DEBUG_VIS_SHADOWMAP)
+            outColor = vec4(texture(gShadow, fragCoord01).r);
+        #else
+            outColor = texelFetch(gAux2, ivec2(gl_FragCoord.xy), 0);
+        #endif
     #else
         vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb * uTonemapExposure;
         vec3 ldr;

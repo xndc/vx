@@ -268,6 +268,7 @@ static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
     ImGui::RadioButton("World Position",  &conf->debugVisMode, DEBUG_VIS_WORLDPOS);
     ImGui::RadioButton("Depth (Raw)",     &conf->debugVisMode, DEBUG_VIS_DEPTH_RAW);
     ImGui::RadioButton("Depth (Linear)",  &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
+    ImGui::RadioButton("Shadow Map",      &conf->debugVisMode, DEBUG_VIS_SHADOWMAP);
     ImGui::End();
     if (mode != conf->debugVisMode) {
         conf->forceShaderRecompile = true;
@@ -449,8 +450,11 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
 
 static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Begin("Engine Configuration");
-    ImGui::InputInt("Shadow Map Size", &conf->shadowSize, 128, 512);
-    ImGui::InputInt("Environment Map Size", &conf->envmapSize, 32, 128);
+    ImGui::InputInt("Shadow map size", &conf->shadowSize, 128, 512);
+    ImGui::InputInt("Environment map size", &conf->envmapSize, 32, 128);
+    ImGui::SliderFloat("Shadow zoom", &conf->camShadow.zoom, 1.0f, 1000.0f);
+    ImGui::SliderFloat("Shadow near plane", &conf->camShadow.near, -1000.0f, +1000.0f);
+    ImGui::SliderFloat("Shadow far plane", &conf->camShadow.far, -1000.0f, +1000.0f);
     ImGui::Checkbox("Pause on focus loss", &conf->pauseOnFocusLoss);
     ImGui::Checkbox("Clear GBuffer on redraw", &conf->clearColorBuffers);
     if (ImGui::IsItemHovered()) {
@@ -460,31 +464,12 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
         ImGui::EndTooltip();
     }
 
-    static bool lastClipControlState = !conf->gpuSupportsClipControl;
     ImGui::Checkbox("Enable clip control", &conf->gpuSupportsClipControl);
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();
         ImGui::Text("Clip control allows mapping depth to the correct [0,1] range rather than [0.5,1].");
         ImGui::Text("Disabling this will significantly increase Z-fighting at medium to large distances.");
         ImGui::EndTooltip();
-    }
-    // TODO: Move this out of here! This should be done at the start of each frame.
-    if (conf->gpuSupportsClipControl != lastClipControlState) {
-        lastClipControlState = conf->gpuSupportsClipControl;
-        conf->forceShaderRecompile = true;
-        if (conf->gpuSupportsClipControl) {
-            if (glfwExtensionSupported("GL_ARB_clip_control")) {
-                glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-            } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
-                glDepthRangedNV(-1.0f, 1.0f);
-            }
-        } else {
-            if (glfwExtensionSupported("GL_ARB_clip_control")) {
-                glClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
-            } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
-                glDepthRangedNV(0.0f, 1.0f);
-            }
-        }
     }
     ImGui::End();
 }

@@ -7,9 +7,11 @@ void Camera_InitPerspective (Camera* camera, float zn, float zf, float fov) {
     camera->fov = fov;
 }
 
-void Camera_InitOrtho (Camera* camera, float zoom) {
+void Camera_InitOrtho (Camera* camera, float zoom, float zn, float zf) {
     camera->projection = CAMERA_ORTHOGRAPHIC;
     camera->zoom = zoom;
+    camera->zn = zn;
+    camera->zf = zf;
 }
 
 // Updates the camera, performing the following tasks:
@@ -23,7 +25,8 @@ void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix) {
     glm_mat4_inv(viewMatrix, camera->inv_view_matrix);
     float hw = camera->hw = (float)h / (float)w;
     if (camera->projection != camera->prev_projection || camera->fov != camera->prev_fov ||
-        camera->hw != camera->prev_hw || camera->zn != camera->prev_zn || camera->zf != camera->prev_zf)
+        camera->hw != camera->prev_hw || camera->zn != camera->prev_zn || camera->zf != camera->prev_zf ||
+        camera->zoom != camera->prev_zoom)
     {
         if (camera->projection == CAMERA_PERSPECTIVE) {
             // Convert HFOV to VFOV:
@@ -56,17 +59,12 @@ void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix) {
                 }, camera->proj_matrix);
             }
         } else if (camera->projection == CAMERA_ORTHOGRAPHIC) {
-            // Orthographic cameras are weird, probably even more so because we use reverse-Z.
-            // I don't fully understand what's going on, but doing the following lets us use
-            // "near" and "far" the same way we would for a perspective camera, by specifying
-            // plane distances relative to the current position of the camera (as determined by
-            // its view matrix). Negative near plane distances can be used to include objects
-            // behind the camera in its view.
-            float n = -camera->far;
-            float f = -camera->near;
+            // Orthographic cameras are weird.
+            float n = camera->near;
+            float f = camera->far;
             float zw = camera->zoom;
             float zh = camera->zoom * hw;
-            glm_ortho(zw/2.0f, zw/-2.0f, zh/-2.0f, zh/2.0f, n, f, camera->proj_matrix);
+            glm_ortho(-zw, zw, -zh, zh, n, f, camera->proj_matrix);
         }
         glm_mat4_inv(camera->proj_matrix, camera->inv_proj_matrix);
         camera->prev_projection = camera->projection;
@@ -74,6 +72,7 @@ void Camera_Update (Camera* camera, int w, int h, mat4 viewMatrix) {
         camera->prev_zn = camera->zn;
         camera->prev_zf = camera->zf;
         camera->prev_hw = hw;
+        camera->prev_zoom = camera->zoom;
     }
 }
 

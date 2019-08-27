@@ -40,15 +40,22 @@ static void sGladPostCallback (const char *name, void *funcptr, int len_args, ..
 void vxConfig_Init (vxConfig* c) {
     memset(c, 0, sizeof(vxConfig));
 
+    // HACK: 30 FPS lock for the MacBook
+    // Locking to 60FPS or not at all results in heavy stuttering. It seems like the macOS compositor expects one frame
+    // per VSync interval and just drops everything else. TODO: Try out triple buffering as an alternative solution.
+    #ifdef __APPLE__
+    c->swapInterval = 2;
+    #else
+    c->swapInterval = -1;
+    #endif
+
     c->displayW = 1280;
     c->displayH = 1024;
     c->shadowSize = 2048;
     c->envmapSize = 512;
     c->skyboxSize = 2048;
     Camera_InitPerspective(&c->camMain, 0.01f, 0.0f, 80.0f);
-    glm_lookat((vec3){3.0f, 3.0f, 3.0f}, GLM_VEC3_ZERO, VX_UP, c->camMain.view_matrix);
-    Camera_InitOrtho(&c->camShadow, 100.0f);
-    glm_lookat((vec3){-500.0f, 700.0f, -1000.0f}, GLM_VEC3_ZERO, VX_UP, c->camShadow.view_matrix);
+    Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
     Camera_InitPerspective(&c->camEnvXp, 0.1f, 0.0f, 90.0f);
     Camera_InitPerspective(&c->camEnvXn, 0.1f, 0.0f, 90.0f);
     Camera_InitPerspective(&c->camEnvYp, 0.1f, 0.0f, 90.0f);
@@ -100,16 +107,11 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     glad_set_post_callback(sGladPostCallback);
     #endif
 
-    // Reverse Z setup:
-    if (glfwExtensionSupported("GL_ARB_clip_control")) {
+    // Reverse depth/clip-control setup:
+    // This is now done in render.c (StartFrame).
+    if (glfwExtensionSupported("GL_ARB_clip_control") || glfwExtensionSupported("NV_depth_buffer_float")) {
         conf->gpuSupportsClipControl = true;
-        glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-    } else if (glfwExtensionSupported("NV_depth_buffer_float")) {
-        conf->gpuSupportsClipControl = true;
-        glDepthRangedNV(-1.0f, 1.0f);
     } else {
-        conf->gpuSupportsClipControl = false;
-        vxLog("Warning: This machine's graphics driver doesn't support reverse-Z mapping.");
         // Without modifying OpenGL's clip behaviour, our shaders and transform matrices will map depth to [1, 0.5]
         // rather than [1, 0]. This has two main caveats:
         // * Bad precision. The whole point of reverse Z is to exploit the increased precision around z=0.
@@ -117,27 +119,13 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
         // glDepthRangef is not a suitable alternative to glDepthRangedNV, despite some claims that it is. While the
         // OpenGL standard technically allows it to work with unclamped values (i.e. -1.0f), both the Nvidia and Apple
         // drivers I've tested this on will actually clamp values to [0,1].
-    }
-
-    // VSync setup:
-    if (glfwExtensionSupported("WGL_EXT_swap_control_tear") ||
-        glfwExtensionSupported("GLX_EXT_swap_control_tear")) {
-        glfwSwapInterval(-1);
-    } else {
-        glfwSwapInterval(1);
+        vxLog("Warning: This machine's graphics driver doesn't support reverse-Z mapping.");
     }
 
     // Window configuration:
     if (glfwRawMouseMotionSupported()) {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
-
-    // HACK: 30 FPS lock for the MacBook
-    // Locking to 60FPS or not at all results in heavy stuttering. It seems like the macOS compositor expects one frame
-    // per VSync interval and just drops everything else. TODO: Try out triple buffering as an alternative solution.
-    #ifdef __APPLE__
-    glfwSwapInterval(2);
-    #endif
 
     // Initialize game subsystems:
     InitTextureSystem();
@@ -229,6 +217,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // Update:
 
     StartBlock("Frame Update");
+    StartFrame(conf, window);
 
     // Retrieve new framebuffer size and update framebuffers if required:
     int w, h;
@@ -266,6 +255,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // FPS-style camera movement & mouse-look:
     double mx, my, dmx, dmy;
+    static vec3 pos = {3, 4, 3};
     StartBlock("FPS Camera Control");
     {
         static float lmx = 0;
@@ -294,7 +284,6 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glm_quat(qx, rx, 1, 0, 0);
         glm_quat_mul(qx, qy, q);
 
-        static vec3 pos = {3, 4, 3};
         vec3 spd = {8.0f * frame->dt, 8.0f * frame->dt, 8.0f * frame->dt};
         vec3 dpos = GLM_VEC3_ZERO_INIT;
         if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
@@ -320,7 +309,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     frame->mouseY = (float) my;
     frame->mouseDx = (float) dmx;
     frame->mouseDy = (float) dmy;
-    
+
     EndBlock();
     
     // *****************************************************************************************************************
@@ -330,7 +319,6 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     double tRenderStart = glfwGetTime();
     static RenderState rs;
-    glViewport(0, 0, conf->displayW, conf->displayH);
 
     // tRenderStart to tSwapStart will just be the CPU time taken up by drawcall submission. To monitor GPU time we need
     // to use an OpenGL query object: https://www.khronos.org/opengl/wiki/Query_Object
@@ -350,6 +338,39 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     if (updatedTargets & UPDATED_ENVMAP_TARGETS) {
         // TODO: generate environment maps
     }
+
+    glViewport(0, 0, conf->shadowSize, conf->shadowSize);
+
+    RenderPass(&rs, "Shadow Map Clear", {
+        BindFramebuffer(FB_SHADOW);
+        glClearDepth(0.0f);
+        glClear(GL_DEPTH_BUFFER_BIT);
+    })
+
+    RenderableDirectionalLight* directional = NULL;
+    if (rl.directionalLightCount > 0) {
+        directional = &rl.directionalLights[0];
+        // Update shadow camera:
+        vec3 camPos;
+        glm_vec3_sub(pos, directional->position, camPos);
+        mat4 vmat;
+        glm_lookat(camPos, pos, VX_UP, vmat);
+        Camera_Update(&conf->camShadow, conf->shadowSize, conf->shadowSize, vmat);
+        // Render shadowmap:
+        StartRenderPass(&rs, "Shadow Map");
+        BindFramebuffer(FB_SHADOW);
+        SetRenderProgram(&rs, &PROG_SHADOW);
+        SetCamera(&rs, &conf->camShadow);
+        RenderState rsMesh = rs;
+        for (size_t i = 0; i < rl.meshCount; i++) {
+            glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
+            glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+            RenderMesh(&rsMesh, conf, frame, &rl.meshes[i].mesh, rl.meshes[i].material);
+        }
+        EndRenderPass();
+    }
+
+    glViewport(0, 0, conf->displayW, conf->displayH);
     
     if (conf->clearColorBuffers) {
         RenderPass(&rs, "GBuffer clear (color+depth)", {
@@ -395,14 +416,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     SetCamera(&rs, &conf->camMain);
     // Extract light info from scene:
     RenderableLightProbe* ambient = NULL;
-    RenderableDirectionalLight* directional = NULL;
     vec3 pointPositions[4] = {0};
     vec3 pointColors[4]    = {0};
     if (rl.lightProbeCount > 0) {
         ambient = &rl.lightProbes[0];
-    }
-    if (rl.directionalLightCount > 0) {
-        directional = &rl.directionalLights[0];
     }
     for (int i = 0; i < vxMin(4, rl.pointLightCount); i++) {
         glm_vec3_copy(rl.pointLights[i].position, pointPositions[i]);

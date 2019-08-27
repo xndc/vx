@@ -6,6 +6,8 @@
 #include "data/camera.h"
 #include "render/program.h"
 
+typedef struct GLFWwindow GLFWwindow;
+
 extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
 extern int vxglMaxTextureUnits;
 
@@ -15,6 +17,7 @@ extern Mesh MESH_QUAD;
 extern Mesh MESH_CUBE;
 
 void InitRenderSystem();
+void StartFrame (vxConfig* conf, GLFWwindow* window);
 
 typedef struct RenderState {
     GLuint program;

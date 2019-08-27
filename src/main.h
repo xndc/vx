@@ -17,9 +17,11 @@ typedef enum DebugVisMode {
     DEBUG_VIS_WORLDPOS,
     DEBUG_VIS_DEPTH_RAW,
     DEBUG_VIS_DEPTH_LINEAR,
+    DEBUG_VIS_SHADOWMAP,
 } DebugVisMode;
 
 typedef struct vxConfig {
+    int swapInterval;
     int displayW;
     int displayH;
     int shadowSize;

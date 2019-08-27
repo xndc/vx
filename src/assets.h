@@ -10,12 +10,15 @@
     X(GL_FRAGMENT_SHADER, FSH_GEN_CUBEMAP,      "shaders/gen_cubemap.frag") \
     X(GL_VERTEX_SHADER,   VSH_SKYBOX,           "shaders/skybox.vert") \
     X(GL_FRAGMENT_SHADER, FSH_SKYBOX,           "shaders/skybox.frag") \
+    X(GL_VERTEX_SHADER,   VSH_SHADOW,           "shaders/shadow.vert") \
+    X(GL_FRAGMENT_SHADER, FSH_SHADOW,           "shaders/shadow.frag") \
 
 #define XM_PROGRAMS \
     X(PROG_GBUF_MAIN,       VSH_DEFAULT,         FSH_GBUF_MAIN) \
+    X(PROG_SHADOW,          VSH_SHADOW,          FSH_SHADOW) \
     X(PROG_GBUF_LIGHTING,   VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING) \
     X(PROG_FX_DITHER,       VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
-    X(PROG_FINAL,           VSH_FULLSCREEN_PASS, FSH_FINAL)
+    X(PROG_FINAL,           VSH_FULLSCREEN_PASS, FSH_FINAL) \
 
 // Syntax for attributes:
 // X(location global name, layout location index, GLSL name, GLTF name)

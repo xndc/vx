@@ -78,6 +78,11 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
                 i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_DEPTH_LINEAR\n");
                 break;
             }
+            case DEBUG_VIS_SHADOWMAP: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_SHADOWMAP\n");
+                break;
+            }
         }
 
         block[i] = '\0';
