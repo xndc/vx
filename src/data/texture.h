@@ -48,4 +48,19 @@ static const int UPDATED_SHADOW_TARGETS = 1 << 1;
 static const int UPDATED_ENVMAP_TARGETS = 1 << 2;
 static const int UPDATED_SKYBOX_TARGETS = 1 << 3;
 
+// This is used to decide how a texture will be stored on the GPU. The GLTF format doesn't have any kind of usage info
+// on the texture object, so we have to fill it in while parsing the scene graph.
+typedef enum TextureUsageHint {
+    TEXTURE_USAGE_NONE,         // maps to COLOR, but we need a separate for the "unknown usage" case
+    TEXTURE_USAGE_COLOR,        // store texture as DXT1-compressed RGB(A) (1-bit alpha)
+    TEXTURE_USAGE_COLOR_ALPHA,  // store texture as DXT5-compressed RGB(A) (full alpha)
+    TEXTURE_USAGE_COLOR_SRGB,   // store texture as compressed sRGB (allowing hardware colour conversion)
+    TEXTURE_USAGE_NORMALMAP,    // store texture with no compression
+    TEXTURE_USAGE_UNCOMPRESSED, // store texture with no compression (but is not a normalmap)
+} TextureUsageHint;
+
+typedef struct Texture {
+    TextureUsageHint usage;
+} Texture;
+
 GLuint LoadTextureFromDisk (const char* path, bool mips);
