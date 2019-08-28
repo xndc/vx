@@ -447,6 +447,7 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
 
 static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Begin("Engine Configuration");
+    ImGui::Checkbox("Enable TAA", &conf->enableTAA);
     ImGui::SliderInt("VSync", &conf->swapInterval, -1, 3, "swap interval %d");
     ImGui::InputInt("Shadow map size", &conf->shadowSize, 256, 256);
     conf->shadowSize = vxClamp(conf->shadowSize, 32, 8192); // framebuffer size limit on most machines

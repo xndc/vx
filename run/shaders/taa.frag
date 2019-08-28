@@ -34,8 +34,8 @@ uniform vec2 uJitterLast;
 
 void main() {
     // Retrieve (unjittered) input fragment colour:
-    vec2 uv = fragCoordClip * 0.5 + 0.5 + 0.5*uJitter;
-    vec3 inputColor = texture(gColorHDR, uv).rgb;
+    vec2 uv = fragCoordClip * 0.5 + 0.5;
+    vec3 inputColor = texture(gColorHDR, uv + 0.5*uJitter).rgb;
 
     // Find closest-to-camera fragment in 3x3 region around input fragment:
     // This apparently results in nicer results around edges. Some materials call this "velocity dilation".
@@ -58,6 +58,7 @@ void main() {
 
     // Reproject fragment into history buffer (gAuxHDR11) and retrieve accumulated value for it:
     vec3 accumColor = texture(gAuxHDR11, uvhist).rgb;
+        
     // Compensate for bad accumulation buffer values:
     if (closestDepth == 0 || uvhist.x < 0 || uvhist.y < 0 || uvhist.x > 1 || uvhist.y > 1 ||
         isnan(accumColor) != bvec3(false)) {
@@ -68,19 +69,23 @@ void main() {
     // We sample some fragments around the current one to figure out what the correct historical value might reasonably
     // be, assuming the history buffer contains correct fragments and not garbage, and then we clamp the historical
     // value to this range.
-    // References:
-    // * "Temporal Reprojection Anti-Aliasing in INSIDE" (GDC 2016) -- the explanation I used
-    // *  -- referenced as the original source
-    const float kClampSampleDist = 0.5;
-    vec3 nb1 = texture(gColorHDR, uv + vec2(+kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
-    vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
-    vec3 nb3 = texture(gColorHDR, uv + vec2(-kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
-    vec3 nb4 = texture(gColorHDR, uv + vec2(-kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
-    vec3 nbMin = min(min(min(nb1, nb2), nb3), nb4); // per-component min
-    vec3 nbMax = max(max(max(nb1, nb2), nb3), nb4); // per-component max
-    vec3 accumColorClamped = clamp(accumColor, nbMin, nbMax);
+    // In order to get TAA on surfaces (e.g. for our noisy shadows), we only perform depth clamping for fragments that
+    // have actually moved this frame. This doesn't take into account depth change -- we can't, with the data we're
+    // currently giving this shader -- but works find if you don't clip into any solid objects.
+    // Unfortunately this only has a visible effect on shadows if you use an absurdly high feedback factor, and it
+    // also only really works if the camera isn't moving.
+    if (abs(vel.x) > 0.001 || abs(vel.y) > 0.001) {
+        const float kClampSampleDist = 0.5;
+        vec3 nb1 = texture(gColorHDR, uv + vec2(+kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
+        vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
+        vec3 nb3 = texture(gColorHDR, uv + vec2(-kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
+        vec3 nb4 = texture(gColorHDR, uv + vec2(-kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
+        vec3 nbMin = min(min(min(nb1, nb2), nb3), nb4); // per-component min
+        vec3 nbMax = max(max(max(nb1, nb2), nb3), nb4); // per-component max
+        accumColor = clamp(accumColor, nbMin, nbMax);
+    }
 
     // Final blend:
-    const float kFeedbackFactor = 0.75; // higher values => more sample retention, smoother image
-    outColorHDR = vec4(mix(inputColor, accumColorClamped, vec3(kFeedbackFactor)), 0);
+    const float kFeedbackFactor = 0.8; // higher values => more sample retention, blurrier but smoother image
+    outColorHDR = vec4(mix(inputColor, accumColor, vec3(kFeedbackFactor)), 0);
 }

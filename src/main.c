@@ -52,6 +52,8 @@ void vxConfig_Init (vxConfig* c) {
     c->swapInterval = -1;
     #endif
 
+    c->enableTAA = true;
+
     c->displayW = 1280;
     c->displayH = 1024;
     c->envmapSize = 512;
@@ -468,16 +470,19 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     //     case 6: { jitterLastX = -jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
     //     case 7: { jitterLastX = -jitterScale / (float) w; jitterLastY = 0;                        } break;
     // }
-    float jitterX     = Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
-    float jitterY     = Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
-    float jitterLastX = Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
-    float jitterLastY = Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
-    static mat4 jitter, jitterLast;
-    glm_translate_make(jitter,     (vec3){jitterX,     jitterY,     0.0});
-    glm_translate_make(jitterLast, (vec3){jitterLastX, jitterLastY, 0.0});
-    glm_mat4_mul(jitter,     camMainJittered.proj_matrix,      camMainJittered.proj_matrix);
-    glm_mat4_mul(jitterLast, camMainJittered.last_proj_matrix, camMainJittered.last_proj_matrix);
-    glm_mat4_inv(camMainJittered.proj_matrix, camMainJittered.inv_proj_matrix);
+    float jitterX = 0, jitterY = 0, jitterLastX = 0, jitterLastY = 0;
+    if (conf->enableTAA) {
+        jitterX     = Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
+        jitterY     = Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
+        jitterLastX = Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
+        jitterLastY = Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+        static mat4 jitter, jitterLast;
+        glm_translate_make(jitter,     (vec3){jitterX,     jitterY,     0.0});
+        glm_translate_make(jitterLast, (vec3){jitterLastX, jitterLastY, 0.0});
+        glm_mat4_mul(jitter,     camMainJittered.proj_matrix,      camMainJittered.proj_matrix);
+        glm_mat4_mul(jitterLast, camMainJittered.last_proj_matrix, camMainJittered.last_proj_matrix);
+        glm_mat4_inv(camMainJittered.proj_matrix, camMainJittered.inv_proj_matrix);
+    }
 
     StartRenderPass(&rs, "GBuffer main (opaque objects)");
     BindFramebuffer(FB_GBUFFER);
@@ -537,25 +542,27 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     EndRenderPass();
 
-    StartRenderPass(&rs, "Temporal AA");
-    BindFramebuffer(FB_TAA);
-    SetRenderProgram(&rs, &PROG_TAA);
-    SetCamera(&rs, &camMainJittered);
-    glUniform2f(UNIF_JITTER, jitterX, jitterY);
-    glUniform2f(UNIF_JITTER_LAST, jitterLastX, jitterLastY);
-    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
-    EndRenderPass();
+    if (conf->enableTAA) {
+        StartRenderPass(&rs, "Temporal AA");
+        BindFramebuffer(FB_TAA);
+        SetRenderProgram(&rs, &PROG_TAA);
+        SetCamera(&rs, &camMainJittered);
+        glUniform2f(UNIF_JITTER, jitterX, jitterY);
+        glUniform2f(UNIF_JITTER_LAST, jitterLastX, jitterLastY);
+        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+        EndRenderPass();
 
-    // I stopped writing to RT_AUX_HDR11 in the TAA shader due to some tearing artifacts, but the TAA shader has been
-    // completely overhauled since, so having this as a separate step might not be needed anymore.
-    StartRenderPass(&rs, "Temporal AA Accumulation Buffer Copy");
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_TAA);
-    glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_COLOR_HDR
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_TAA_COPY);
-    glDrawBuffer(GL_COLOR_ATTACHMENT0); // to RT_AUX_HDR11
-    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // I stopped writing to RT_AUX_HDR11 in the TAA shader due to some tearing artifacts, but the TAA shader has been
+        // completely overhauled since, so having this as a separate step might not be needed anymore.
+        StartRenderPass(&rs, "Temporal AA Accumulation Buffer Copy");
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_TAA);
+        glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_COLOR_HDR
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_TAA_COPY);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0); // to RT_AUX_HDR11
+        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    }
 
     StartRenderPass(&rs, "Debug: Point Light Positions");
     // We do the binding manually to avoid PROG_GBUF_MAIN wiping out any data in gAux2.
