@@ -260,14 +260,15 @@ static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window) {
 
 static void sDrawBufferViewer (vxConfig* conf, GLFWwindow* window) {
     ImGui::Begin("Buffer Viewer", NULL);
-    ImGui::RadioButton("Final Output",    &conf->debugVisMode, DEBUG_VIS_NONE);
-    ImGui::RadioButton("GBuffer Color",   &conf->debugVisMode, DEBUG_VIS_GBUF_COLOR);
-    ImGui::RadioButton("GBuffer Normal",  &conf->debugVisMode, DEBUG_VIS_GBUF_NORMAL);
-    ImGui::RadioButton("GBuffer O/R/M",   &conf->debugVisMode, DEBUG_VIS_GBUF_ORM);
-    ImGui::RadioButton("World Position",  &conf->debugVisMode, DEBUG_VIS_WORLDPOS);
-    ImGui::RadioButton("Depth (Raw)",     &conf->debugVisMode, DEBUG_VIS_DEPTH_RAW);
-    ImGui::RadioButton("Depth (Linear)",  &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
-    ImGui::RadioButton("Shadow Map",      &conf->debugVisMode, DEBUG_VIS_SHADOWMAP);
+    ImGui::RadioButton("Final Output",     &conf->debugVisMode, DEBUG_VIS_NONE);
+    ImGui::RadioButton("GBuffer Color",    &conf->debugVisMode, DEBUG_VIS_GBUF_COLOR);
+    ImGui::RadioButton("GBuffer Normal",   &conf->debugVisMode, DEBUG_VIS_GBUF_NORMAL);
+    ImGui::RadioButton("GBuffer O/R/M",    &conf->debugVisMode, DEBUG_VIS_GBUF_ORM);
+    ImGui::RadioButton("GBuffer Velocity", &conf->debugVisMode, DEBUG_VIS_GBUF_VELOCITY);
+    ImGui::RadioButton("World Position",   &conf->debugVisMode, DEBUG_VIS_WORLDPOS);
+    ImGui::RadioButton("Depth (Raw)",      &conf->debugVisMode, DEBUG_VIS_DEPTH_RAW);
+    ImGui::RadioButton("Depth (Linear)",   &conf->debugVisMode, DEBUG_VIS_DEPTH_LINEAR);
+    ImGui::RadioButton("Shadow Map",       &conf->debugVisMode, DEBUG_VIS_SHADOWMAP);
     ImGui::End();
 }
 

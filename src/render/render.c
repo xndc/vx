@@ -342,12 +342,12 @@ void SetRenderProgram (RenderState* rs, Program* p) {
         // NOTE: Envmap render targets are only used when rendering the envmap and should never be bound as textures.
         #define X(name, format) SetUniformTextureSampler2D(rs, UNIF_ ## name, name, SMP_LINEAR);
         XM_RENDERTARGETS_SCREEN
+        XM_RENDERTARGETS_SHADOW
         #undef X
         // Sample shadows in nearest-neighbour mode.
         // This is probably not the smartest idea and should be revisited, but sampling in linear mode leads to
         // incorrect shadows for objects with stippled transparency.
         #define X(name, format) SetUniformTextureSampler2D(rs, UNIF_ ## name, name, SMP_NEAREST);
-        XM_RENDERTARGETS_SHADOW
         #undef X
     } else {
         vxLog("Warning: program (%s, %s) is not available", p->vsh->path, p->fsh->path);
@@ -423,9 +423,9 @@ void RenderMesh (RenderState* rs, vxConfig* conf, vxFrame* frame, Mesh* mesh, Ma
     glUniformMatrix4fv(UNIF_VIEW_MATRIX,       1, false, (float*) rs->matView);
     glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX,   1, false, (float*) rs->matViewInv);
     glUniformMatrix4fv(UNIF_LAST_VIEW_MATRIX,  1, false, (float*) rs->matViewLast);
-    glUniform2f(UNIF_IRESOLUTION, (float) conf->displayW, (float) conf->displayH);
-    glUniform1f(UNIF_ITIME,   frame->t);
-    glUniform1ui(UNIF_IFRAME, frame->n);
+    glUniform2i(UNIF_IRESOLUTION, conf->displayW, conf->displayH);
+    glUniform1f(UNIF_ITIME,  frame->t);
+    glUniform1i(UNIF_IFRAME, (int) frame->n);
 
     glBindVertexArray(mesh->gl_vertex_array);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->gl_element_array);

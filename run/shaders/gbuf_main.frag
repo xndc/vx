@@ -190,10 +190,12 @@ void main() {
         outNormal = normalize(TBN * normalize(Ntexture * 2.0 - 1.0));
     }
 
+    // Compute velocity in UV space:
     // https://john-chapman-graphics.blogspot.com/2013/01/per-object-motion-blur.html
-    vec2 PclipThis = (FragPos.xy / FragPos.w) * 0.5 + 0.5;
-    vec2 PclipLast = (LastFragPos.xy / LastFragPos.w) * 0.5 + 0.5;
-    vec2 Velocity = PclipThis - PclipLast;
+    // GDC 2016, Temporal Reprojection Antialiasing in INSIDE
+    vec2 uvThis = (FragPos.xy / FragPos.w) * 0.5 + 0.5;
+    vec2 uvLast = (LastFragPos.xy / LastFragPos.w) * 0.5 + 0.5;
+    vec2 Velocity = uvThis - uvLast;
 
     outColorLDR = diffuse;
     outAux1 = vec4(occlusion, roughness, metallic, 0);

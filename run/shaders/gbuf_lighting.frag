@@ -7,7 +7,7 @@ layout(location = 1) out vec4 outAux2;
 
 uniform vec2 iResolution;
 uniform float iTime;
-uniform uint iFrame;
+uniform int iFrame;
 
 uniform mat4 uViewMatrix;
 uniform mat4 uProjMatrix;
@@ -116,13 +116,22 @@ float Random01 (vec4 seed) {
     return fract(sin(dot_product) * 43758.5453);
 }
 
+highp float rand (vec2 co) {
+    highp float a = 12.9898;
+    highp float b = 78.233;
+    highp float c = 43758.5453;
+    highp float dt = dot(co.xy, vec2(a,b));
+    highp float sn = mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
 void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
 
     // Don't do lighting calculations for missing fragments (e.g. sky):
     float z = texelFetch(gDepth, fc, 0).r;
     if (z == 0) {
-        outColorHDR = vec4(0.0);
+        outColorHDR = texelFetch(gColorLDR, fc, 0);
         return;
     }
 
@@ -131,9 +140,10 @@ void main() {
         z = z * 2.0 - 1.0;
     #endif
 
-    vec3 diffuse = texelFetch(gColorLDR, fc, 0).rgb;
-    vec3 normal  = texelFetch(gNormal,   fc, 0).rgb;
-    vec3 aux1    = texelFetch(gAux1,     fc, 0).rgb;
+    vec3 diffuse  = texelFetch(gColorLDR, fc, 0).rgb;
+    vec3 normal   = texelFetch(gNormal,   fc, 0).rgb;
+    vec3 aux1     = texelFetch(gAux1,     fc, 0).rgb;
+    vec2 velocity = texelFetch(gAuxHDR16, fc, 0).rg;
     float rough = max(aux1.g, 0.05); // lighting looks wrong around 0
     float metal = aux1.b;
 
@@ -164,14 +174,16 @@ void main() {
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
     FragPosShadow /= FragPosShadow.w;
     vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
-    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.5; /* tunable constant */
+    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.0; /* tunable constant */
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
         for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
             for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
-                // This spreads samples fairly well, but is obviously very noisy. TAA is required.
-                vec2 offset = vec2(
-                    (ipcfX - (SHADOW_PCF_TAPS_X / 2)) + mix(-1, 1, Random01(iTime*1.0 * FragPosWorld4)),
-                    (ipcfY - (SHADOW_PCF_TAPS_Y / 2)) + mix(-1, 1, Random01(iTime*2.0 * FragPosWorld4)));
+                // FIXME: This spreads samples fairly well, but is obviously very noisy.
+                //   A separate TAA pass for shadows is required. The regular TAA pass doesn't smooth these out,
+                //   seemingly due to the way we've implemented neighbourhood clamping,
+                vec2 offset = vec2((ipcfX - (SHADOW_PCF_TAPS_X / 2)), (ipcfY - (SHADOW_PCF_TAPS_Y / 2)));
+                offset.y += rand(V.xy + float((iFrame + 2) % 2)) * 3.0 - 1.5;
+                offset.x += rand(V.xy + float((iFrame + 1) % 2)) * 3.0 - 1.5;
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
                 // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
                 #ifndef DEPTH_ZERO_TO_ONE
@@ -204,10 +216,16 @@ void main() {
 
     outColorHDR = vec4(Lo, 1.0);
 
+    // For debug visualization, we write values into the aux2 buffer and read them out in the final shader.
+    // See main.h for details - that's where the enum containing all of the debug vis modes is.
     #if defined(DEBUG_VIS_GBUF_COLOR)
         outAux2 = vec4(diffuse, 1.0);
     #elif defined(DEBUG_VIS_GBUF_NORMAL)
         outAux2 = vec4(normal, 1.0);
+    #elif defined(DEBUG_VIS_GBUF_ORM)
+        outAux2 = vec4(aux1, 1.0);
+    #elif defined(DEBUG_VIS_GBUF_VELOCITY)
+        outAux2 = vec4(0.05 + velocity * 4.0, 0.0, 1.0);
     #elif defined(DEBUG_VIS_GBUF_ORM)
         outAux2 = vec4(aux1, 1.0);
     #elif defined(DEBUG_VIS_WORLDPOS)

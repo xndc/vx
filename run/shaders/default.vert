@@ -20,13 +20,16 @@ out mat3 TBN;
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjMatrix;
-uniform mat4 uLastModelMatrix;
+// FIXME: If we actually use the last model matrix, there's a bug where the computed velocity of each object is
+//   completely bogus. It's probably because we're not updating the last model matrix correctly, but I wasted half an
+//   hour tracking it down and completely failed. Let's just assume objects never move, for now.
+// uniform mat4 uLastModelMatrix;
 uniform mat4 uLastViewMatrix;
 uniform mat4 uLastProjMatrix;
 
 void main() {
     vec4 PclipThis = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
-    vec4 PclipLast = uLastProjMatrix * uLastViewMatrix * uLastModelMatrix * vec4(aPosition, 1.0);
+    vec4 PclipLast = uLastProjMatrix * uLastViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
     gl_Position = PclipThis;
     FragPos     = PclipThis;
     LastFragPos = PclipLast;

@@ -75,7 +75,7 @@ void vxConfig_Init (vxConfig* c) {
     glm_lookat(GLM_VEC3_ZERO, (vec3){-0.0f, -0.0f, -1.0f}, VX_UP, c->camEnvZn.view_matrix);
 
     c->pauseOnFocusLoss = false;
-    c->clearColorBuffers = false;
+    c->clearColorBuffers = true;
 
     // We use glClipControl/glDepthRangedNV when possible to tell OpenGL that the clip-space depth values we generate
     // are in the [0,1] range rather than the default [-1,1] range.
@@ -101,6 +101,23 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowPcfTapsX = 2;
     c->shadowPcfTapsY = 2;
     Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
+}
+
+// Halton(2,3) 8-sample offset sequence used for TAA. Initialized by GameLoad.
+typedef float Halton2x3x8T [2*8];
+Halton2x3x8T Halton2x3x8;
+
+// See https://github.com/playdeadgames/temporal/blob/master/Assets/Scripts/FrustumJitter.cs (HaltonSeq)
+static float HaltonSeq (int prime, int index) {
+    float r = 0.0f;
+    float f = 1.0f;
+    int i = index;
+    while (i > 0) {
+        f /= prime;
+        r += f * (i % prime);
+        i = (int) floorf((float)i / (float)prime);
+    }
+    return r;
 }
 
 // Initializes the game. Should only be run once, at the start of its execution.
@@ -137,6 +154,12 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     // Window configuration:
     if (glfwRawMouseMotionSupported()) {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+
+    // Generate Halton(2,3) sequence:
+    for (int i = 0; i < vxSize(Halton2x3x8) / 2; i++) {
+        Halton2x3x8[2*i+0] = HaltonSeq(2, i+1) - 0.5f;
+        Halton2x3x8[2*i+1] = HaltonSeq(3, i+1) - 0.5f;
     }
 
     // Initialize game subsystems:
@@ -230,6 +253,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // Print the last frame's log:
     vxAdvanceFrame();
+    frame->n = vxFrameNumber;
 
     // *****************************************************************************************************************
     // Update:
@@ -406,7 +430,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     if (conf->clearColorBuffers) {
         RenderPass(&rs, "GBuffer clear (color+depth)", {
             BindFramebuffer(FB_GBUFFER);
-            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClearColor(0.1f, 0.2f, 0.5f, 1.0f); // HDR
             glClearDepth(0.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         });
@@ -418,13 +442,50 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         });
     }
 
+    // Compute main camera jitter, for TAA:
+    static Camera camMainJittered;
+    memcpy(&camMainJittered, &conf->camMain, sizeof(Camera));
+    // float jitterScale = 0.5;
+    // float jitterX, jitterY;
+    // switch ((frame->n + 1) % 8) {
+    //     case 0: { jitterX = +jitterScale / (float) w; jitterY = +jitterScale / (float) h; } break;
+    //     case 1: { jitterX = +jitterScale / (float) w; jitterY = -jitterScale / (float) h; } break;
+    //     case 2: { jitterX = -jitterScale / (float) w; jitterY = +jitterScale / (float) h; } break;
+    //     case 3: { jitterX = -jitterScale / (float) w; jitterY = -jitterScale / (float) h; } break;
+    //     case 4: { jitterX = 0;                        jitterY = +jitterScale / (float) h; } break;
+    //     case 5: { jitterX = 0;                        jitterY = 0;                        } break;
+    //     case 6: { jitterX = -jitterScale / (float) w; jitterY = +jitterScale / (float) h; } break;
+    //     case 7: { jitterX = -jitterScale / (float) w; jitterY = 0;                        } break;
+    // }
+    // float jitterLastX, jitterLastY;
+    // switch (frame->n % 8) {
+    //     case 0: { jitterLastX = +jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
+    //     case 1: { jitterLastX = +jitterScale / (float) w; jitterLastY = -jitterScale / (float) h; } break;
+    //     case 2: { jitterLastX = -jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
+    //     case 3: { jitterLastX = -jitterScale / (float) w; jitterLastY = -jitterScale / (float) h; } break;
+    //     case 4: { jitterLastX = 0;                        jitterLastY = +jitterScale / (float) h; } break;
+    //     case 5: { jitterLastX = 0;                        jitterLastY = 0;                        } break;
+    //     case 6: { jitterLastX = -jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
+    //     case 7: { jitterLastX = -jitterScale / (float) w; jitterLastY = 0;                        } break;
+    // }
+    float jitterX     = Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
+    float jitterY     = Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
+    float jitterLastX = Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
+    float jitterLastY = Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+    static mat4 jitter, jitterLast;
+    glm_translate_make(jitter,     (vec3){jitterX,     jitterY,     0.0});
+    glm_translate_make(jitterLast, (vec3){jitterLastX, jitterLastY, 0.0});
+    glm_mat4_mul(jitter,     camMainJittered.proj_matrix,      camMainJittered.proj_matrix);
+    glm_mat4_mul(jitterLast, camMainJittered.last_proj_matrix, camMainJittered.last_proj_matrix);
+    glm_mat4_inv(camMainJittered.proj_matrix, camMainJittered.inv_proj_matrix);
+
     StartRenderPass(&rs, "GBuffer main (opaque objects)");
     BindFramebuffer(FB_GBUFFER);
     SetRenderProgram(&rs, &PROG_GBUF_MAIN);
-    SetCamera(&rs, &conf->camMain);
     RenderState rsMesh = rs;
+    SetCamera(&rsMesh, &camMainJittered);
     for (size_t i = 0; i < rl.meshCount; i++) {
-        glm_mat4_copy(rl.meshes[i].worldMatrix, rsMesh.matModel);
+        glm_mat4_copy(rl.meshes[i].worldMatrix,     rsMesh.matModel);
         glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
         // Timing every single mesh draw is probably a waste of time, despite being cool to look at in the profiler.
         #if 0
@@ -475,6 +536,26 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float*) pointColors);
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     EndRenderPass();
+
+    StartRenderPass(&rs, "Temporal AA");
+    BindFramebuffer(FB_TAA);
+    SetRenderProgram(&rs, &PROG_TAA);
+    SetCamera(&rs, &camMainJittered);
+    glUniform2f(UNIF_JITTER, jitterX, jitterY);
+    glUniform2f(UNIF_JITTER_LAST, jitterLastX, jitterLastY);
+    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    EndRenderPass();
+
+    // I stopped writing to RT_AUX_HDR11 in the TAA shader due to some tearing artifacts, but the TAA shader has been
+    // completely overhauled since, so having this as a separate step might not be needed anymore.
+    StartRenderPass(&rs, "Temporal AA Accumulation Buffer Copy");
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_TAA);
+    glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_COLOR_HDR
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_TAA_COPY);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0); // to RT_AUX_HDR11
+    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
     StartRenderPass(&rs, "Debug: Point Light Positions");
     // We do the binding manually to avoid PROG_GBUF_MAIN wiping out any data in gAux2.
@@ -554,7 +635,6 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         frame->tRender = (float)(dtOpenGLRender) / 1000000000.0f; // nanoseconds
         frame->tSwap   = (float)(tPollStart - tSwapStart);
         frame->tPoll   = (float)(glfwGetTime() - tPollStart);
-        frame->n++;
 
         // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
         // window is moving. Ignore the frame for timing purposes if this happens.
@@ -592,6 +672,6 @@ int main() {
     }
 
     rmt_UnbindOpenGL();
-    rmt_DestroyGlobalInstance(rmt);
+    // rmt_DestroyGlobalInstance(rmt); // crashes for some reason
     return 0;
 }

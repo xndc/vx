@@ -1,17 +1,18 @@
 #pragma once
 
 #define XM_SHADERS \
-    X(GL_VERTEX_SHADER,   VSH_DEFAULT,          "shaders/default.vert") \
-    X(GL_VERTEX_SHADER,   VSH_FULLSCREEN_PASS,  "shaders/fullscreen.vert") \
-    X(GL_FRAGMENT_SHADER, FSH_GBUF_MAIN,        "shaders/gbuf_main.frag") \
-    X(GL_FRAGMENT_SHADER, FSH_GBUF_LIGHTING,    "shaders/gbuf_lighting.frag") \
-    X(GL_FRAGMENT_SHADER, FSH_FX_DITHER,        "shaders/fx_dither.frag") \
-    X(GL_FRAGMENT_SHADER, FSH_FINAL,            "shaders/final.frag") \
-    X(GL_FRAGMENT_SHADER, FSH_GEN_CUBEMAP,      "shaders/gen_cubemap.frag") \
-    X(GL_VERTEX_SHADER,   VSH_SKYBOX,           "shaders/skybox.vert") \
-    X(GL_FRAGMENT_SHADER, FSH_SKYBOX,           "shaders/skybox.frag") \
-    X(GL_VERTEX_SHADER,   VSH_SHADOW,           "shaders/shadow.vert") \
-    X(GL_FRAGMENT_SHADER, FSH_SHADOW,           "shaders/shadow.frag") \
+    X(GL_VERTEX_SHADER,     VSH_DEFAULT,            "shaders/default.vert") \
+    X(GL_VERTEX_SHADER,     VSH_FULLSCREEN_PASS,    "shaders/fullscreen.vert") \
+    X(GL_FRAGMENT_SHADER,   FSH_GBUF_MAIN,          "shaders/gbuf_main.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_GBUF_LIGHTING,      "shaders/gbuf_lighting.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_FX_DITHER,          "shaders/fx_dither.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_FINAL,              "shaders/final.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_GEN_CUBEMAP,        "shaders/gen_cubemap.frag") \
+    X(GL_VERTEX_SHADER,     VSH_SKYBOX,             "shaders/skybox.vert") \
+    X(GL_FRAGMENT_SHADER,   FSH_SKYBOX,             "shaders/skybox.frag") \
+    X(GL_VERTEX_SHADER,     VSH_SHADOW,             "shaders/shadow.vert") \
+    X(GL_FRAGMENT_SHADER,   FSH_SHADOW,             "shaders/shadow.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_TAA,                "shaders/taa.frag") \
 
 #define XM_PROGRAMS \
     X(PROG_GBUF_MAIN,       VSH_DEFAULT,         FSH_GBUF_MAIN) \
@@ -19,6 +20,7 @@
     X(PROG_GBUF_LIGHTING,   VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING) \
     X(PROG_FX_DITHER,       VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
     X(PROG_FINAL,           VSH_FULLSCREEN_PASS, FSH_FINAL) \
+    X(PROG_TAA,             VSH_FULLSCREEN_PASS, FSH_TAA) \
 
 // Syntax for attributes:
 // X(location global name, layout location index, GLSL name, GLTF name)
@@ -72,6 +74,13 @@
     X(UNIF_LAST_MODEL_MATRIX, "uLastModelMatrix") \
     X(UNIF_LAST_VIEW_MATRIX,  "uLastViewMatrix") \
     X(UNIF_LAST_PROJ_MATRIX,  "uLastProjMatrix") \
+\
+    X(UNIF_JITTER,               "uJitter") \
+    X(UNIF_JITTER_LAST,          "uJitterLast") \
+    X(UNIF_JITTER_MATRIX,        "uJitterMatrix") \
+    X(UNIF_LAST_JITTER_MATRIX,   "uLastJitterMatrix") \
+    X(UNIF_UNJITTER_MATRIX,      "uUnjitterMatrix") \
+    X(UNIF_LAST_UNJITTER_MATRIX, "uLastUnjitterMatrix") \
 \
     X(UNIF_SHADOW_BIAS_MIN,   "uShadowBiasMin") \
     X(UNIF_SHADOW_BIAS_MAX,   "uShadowBiasMax") \
@@ -190,6 +199,15 @@
         COLOR(GL_COLOR_ATTACHMENT0, RT_COLOR_LDR) \
         COLOR(GL_COLOR_ATTACHMENT1, RT_AUX2) \
     END(FB_ONLY_COLOR_LDR) \
+\
+    BEGIN(FB_TAA) \
+        DEPTH(GL_DEPTH_ATTACHMENT, RT_DEPTH) \
+        COLOR(GL_COLOR_ATTACHMENT0, RT_COLOR_HDR) \
+    END(FB_TAA) \
+\
+    BEGIN(FB_TAA_COPY) \
+        COLOR(GL_COLOR_ATTACHMENT0, RT_AUX_HDR11) \
+    END(FB_TAA_COPY) \
 \
     BEGIN(FB_SHADOW) \
         DEPTH(GL_DEPTH_ATTACHMENT, RT_SHADOW_DEPTH) \

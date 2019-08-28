@@ -68,6 +68,11 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
                 i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_ORM\n");
                 break;
             }
+            case DEBUG_VIS_GBUF_VELOCITY: {
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
+                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_VELOCITY\n");
+                break;
+            }
             case DEBUG_VIS_WORLDPOS: {
                 i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
                 i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_WORLDPOS\n");

@@ -9,11 +9,19 @@ typedef enum TonemapMode {
     TONEMAP_ACES,
 } TonemapMode;
 
+// For debug visualization, we write values into the aux2 buffer and read them out in the final shader.
+// To add a new visualization:
+// * Add a new enum to DebugVisMode here
+// * Add a shader define for it in sGenerateDefineBlock (program.c)
+// * Add a UI option for it in sDrawBufferViewer (gui.cc)
+// * In the appropriate shader (gbuf_lighting.frag, usually), write the visualized data out to aux2
+// The final shader (final.frag) will read from aux2 if DEBUG_VIS is defined.
 typedef enum DebugVisMode {
     DEBUG_VIS_NONE,
     DEBUG_VIS_GBUF_COLOR,
     DEBUG_VIS_GBUF_NORMAL,
     DEBUG_VIS_GBUF_ORM,
+    DEBUG_VIS_GBUF_VELOCITY,
     DEBUG_VIS_WORLDPOS,
     DEBUG_VIS_DEPTH_RAW,
     DEBUG_VIS_DEPTH_LINEAR,
