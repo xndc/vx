@@ -164,14 +164,14 @@ void main() {
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
     FragPosShadow /= FragPosShadow.w;
     vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
-    vec2 ShadowTexelSize = 1.0 / textureSize(gShadow, 0);
+    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.5; /* tunable constant */
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
         for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
             for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
                 // This spreads samples fairly well, but is obviously very noisy. TAA is required.
                 vec2 offset = vec2(
-                    (ipcfX - (SHADOW_PCF_TAPS_X / 2)) + mix(-1, 1, Random01(iTime * FragPosWorld4)),
-                    (ipcfY - (SHADOW_PCF_TAPS_Y / 2)) + mix(-1, 1, Random01(iTime * FragPosWorld4)));
+                    (ipcfX - (SHADOW_PCF_TAPS_X / 2)) + mix(-1, 1, Random01(iTime*1.0 * FragPosWorld4)),
+                    (ipcfY - (SHADOW_PCF_TAPS_Y / 2)) + mix(-1, 1, Random01(iTime*2.0 * FragPosWorld4)));
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
                 // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
                 #ifndef DEPTH_ZERO_TO_ONE

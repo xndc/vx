@@ -174,6 +174,10 @@ void GameLoadScene (Scene* scene) {
     duck->localScale[0] = 1/sponza->localScale[0];
     duck->localScale[1] = 1/sponza->localScale[1];
     duck->localScale[2] = 1/sponza->localScale[2];
+    MDL_DUCK.materials[0].stipple = true;
+    MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
+    MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
+    MDL_DUCK.materials[0].const_diffuse[3] = 0.6f;
 
     GameObject* sunlight = AddObject(scene, NULL, GAMEOBJECT_DIRECTIONAL_LIGHT);
     sunlight->localPosition[0] = +1.0f;

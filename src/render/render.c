@@ -342,6 +342,11 @@ void SetRenderProgram (RenderState* rs, Program* p) {
         // NOTE: Envmap render targets are only used when rendering the envmap and should never be bound as textures.
         #define X(name, format) SetUniformTextureSampler2D(rs, UNIF_ ## name, name, SMP_LINEAR);
         XM_RENDERTARGETS_SCREEN
+        #undef X
+        // Sample shadows in nearest-neighbour mode.
+        // This is probably not the smartest idea and should be revisited, but sampling in linear mode leads to
+        // incorrect shadows for objects with stippled transparency.
+        #define X(name, format) SetUniformTextureSampler2D(rs, UNIF_ ## name, name, SMP_NEAREST);
         XM_RENDERTARGETS_SHADOW
         #undef X
     } else {
