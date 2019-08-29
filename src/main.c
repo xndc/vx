@@ -101,10 +101,12 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowPcfTapsX = 2;
     c->shadowPcfTapsY = 2;
     Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
+    c->shadowTAA = false;
+    c->shadowNoise = false;
 
     c->enableTAA = true;
     c->taaSampleOffsetMul = 0.2f;
-    c->taaClampSampleDist = 0.3f;
+    c->taaClampSampleDist = 0.5f;
     c->taaFeedbackFactor = 0.95;
     c->sharpenStrength = 0.05;
 }
@@ -203,10 +205,10 @@ void GameLoadScene (Scene* scene) {
     duck->localScale[0] = 1/sponza->localScale[0];
     duck->localScale[1] = 1/sponza->localScale[1];
     duck->localScale[2] = 1/sponza->localScale[2];
-    MDL_DUCK.materials[0].stipple = true;
-    MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
-    MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
-    MDL_DUCK.materials[0].const_diffuse[3] = 0.6f;
+    // MDL_DUCK.materials[0].stipple = true;
+    // MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
+    // MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
+    // MDL_DUCK.materials[0].const_diffuse[3] = 0.6f;
 
     GameObject* sunlight = AddObject(scene, NULL, GAMEOBJECT_DIRECTIONAL_LIGHT);
     sunlight->localPosition[0] = +1.0f;
@@ -495,20 +497,24 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     mat4 shadowSpaceMatrix;
     glm_mat4_mul(conf->camShadow.proj_matrix, conf->camShadow.view_matrix, shadowSpaceMatrix);
 
-    StartRenderPass(&rs, "Shadow TAA buffer copy");
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_AUX1_ONLY);
-    glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_AUX1
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_AUX2_ONLY);
-    glDrawBuffer(GL_COLOR_ATTACHMENT0); // to RT_AUX2
-    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    EndRenderPass();
+    if (conf->shadowTAA) {
+        StartRenderPass(&rs, "Shadow TAA buffer copy");
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_AUX1_ONLY);
+        glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_AUX1
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_AUX2_ONLY);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0); // to RT_AUX2
+        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        EndRenderPass();
+    }
 
     StartRenderPass(&rs, "GBuffer shadow resolve");
     BindFramebuffer(FB_AUX1_ONLY);
     SetRenderProgram(&rs, &PROG_SHADOW_RESOLVE);
     SetCamera(&rs, &conf->camMain);
+    glUniform2f(UNIF_JITTER, jitterX, jitterY);
+    glUniform2f(UNIF_JITTER_LAST, jitterLastX, jitterLastY);
     // Send shadow uniforms:
     glUniformMatrix4fv(UNIF_SHADOW_VP_MATRIX, 1, false, (float*) shadowSpaceMatrix);
     glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);

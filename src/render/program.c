@@ -25,81 +25,69 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
     static size_t hash = 0;
     static char block [4096];
     static bool blockExists = false;
-    static bool gpuSupportsClipControl;
-    static int tonemapMode;
-    static int shadowPcfTapsX;
-    static int shadowPcfTapsY;
-    static int debugVisMode;
-    if (!blockExists || gpuSupportsClipControl != conf->gpuSupportsClipControl || tonemapMode != conf->tonemapMode ||
-        shadowPcfTapsX != conf->shadowPcfTapsX || shadowPcfTapsY != conf->shadowPcfTapsY ||
-        debugVisMode != conf->debugVisMode)
-    {
-        blockExists = true;
-        gpuSupportsClipControl = conf->gpuSupportsClipControl;
-        tonemapMode = conf->tonemapMode;
-        shadowPcfTapsX = conf->shadowPcfTapsX;
-        shadowPcfTapsY = conf->shadowPcfTapsY;
-        debugVisMode = conf->debugVisMode;
 
-        int i = 0;
-        int l = vxSize(block);
-        if (gpuSupportsClipControl) {
-            i += stbsp_snprintf(&block[i], l-i, "#define DEPTH_ZERO_TO_ONE\n");
-        }
+    int i = 0;
+    const int l = vxSize(block);
+    bool fieldsChanged = false;
+
+    #define DEFINE(type, field, block) \
+        static type field; \
+        if (!blockExists || field != conf->field) { fieldsChanged = true; field = conf->field; block; }
+    #define WRITE(...) i += stbsp_snprintf(&block[i], l-i, __VA_ARGS__)
+    
+    DEFINE(bool, gpuSupportsClipControl, {
+        if (gpuSupportsClipControl) { WRITE("#define DEPTH_ZERO_TO_ONE\n"); }
+    });
+    
+    DEFINE(int, tonemapMode, {
         switch (tonemapMode) {
-            case TONEMAP_LINEAR:   { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_LINEAR\n");   break; }
-            case TONEMAP_REINHARD: { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_REINHARD\n"); break; }
-            case TONEMAP_HABLE:    { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_HABLE\n");    break; }
-            case TONEMAP_ACES:     { i += stbsp_snprintf(&block[i], l-i, "#define TONEMAP_ACES\n");     break; }
+            case TONEMAP_LINEAR:   { WRITE("#define TONEMAP_LINEAR\n");   break; }
+            case TONEMAP_REINHARD: { WRITE("#define TONEMAP_REINHARD\n"); break; }
+            case TONEMAP_HABLE:    { WRITE("#define TONEMAP_HABLE\n");    break; }
+            case TONEMAP_ACES:     { WRITE("#define TONEMAP_ACES\n");     break; }
         }
-        switch (debugVisMode) {
-            case DEBUG_VIS_GBUF_COLOR: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_COLOR\n");
-                break;
-            }
-            case DEBUG_VIS_GBUF_NORMAL: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_NORMAL\n");
-                break;
-            }
-            case DEBUG_VIS_GBUF_ORM: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_ORM\n");
-                break;
-            }
-            case DEBUG_VIS_GBUF_VELOCITY: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_GBUF_VELOCITY\n");
-                break;
-            }
-            case DEBUG_VIS_WORLDPOS: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_WORLDPOS\n");
-                break;
-            }
-            case DEBUG_VIS_DEPTH_RAW: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_DEPTH_RAW\n");
-                break;
-            }
-            case DEBUG_VIS_DEPTH_LINEAR: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_DEPTH_LINEAR\n");
-                break;
-            }
-            case DEBUG_VIS_SHADOWMAP: {
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS\n");
-                i += stbsp_snprintf(&block[i], l-i, "#define DEBUG_VIS_SHADOWMAP\n");
-                break;
-            }
-        }
-        i += stbsp_snprintf(&block[i], l-i, "#define SHADOW_PCF_TAPS_X %d\n", conf->shadowPcfTapsX);
-        i += stbsp_snprintf(&block[i], l-i, "#define SHADOW_PCF_TAPS_Y %d\n", conf->shadowPcfTapsY);
+    });
 
+    #define CASE(name) case name: { WRITE("#define DEBUG_VIS\n"); WRITE("#define " #name "\n"); } break;
+    DEFINE(int, debugVisMode, {
+        switch (debugVisMode) {
+            CASE(DEBUG_VIS_GBUF_COLOR)
+            CASE(DEBUG_VIS_GBUF_NORMAL)
+            CASE(DEBUG_VIS_GBUF_ORM)
+            CASE(DEBUG_VIS_GBUF_VELOCITY)
+            CASE(DEBUG_VIS_WORLDPOS)
+            CASE(DEBUG_VIS_DEPTH_RAW)
+            CASE(DEBUG_VIS_DEPTH_LINEAR)
+            CASE(DEBUG_VIS_SHADOWMAP)
+        }
+    });
+    #undef CASE
+
+    DEFINE(int, shadowPcfTapsX, { WRITE("#define SHADOW_PCF_TAPS_X %d\n", conf->shadowPcfTapsX); });
+    DEFINE(int, shadowPcfTapsY, { WRITE("#define SHADOW_PCF_TAPS_Y %d\n", conf->shadowPcfTapsY); });
+
+    DEFINE(bool, shadowTAA, {
+        if (shadowTAA) { WRITE("#define SHADOW_TAA\n"); }
+    });
+
+    DEFINE(bool, shadowNoise, {
+        if (shadowNoise) { WRITE("#define SHADOW_NOISE\n"); }
+    });
+
+    #undef DEFINE
+    #undef WRITE
+
+    if (fieldsChanged) {
+        // If one of the defines has changed, we obviously have to write all of them out. Doing a recursive call lets
+        // us do that while having the relatively straightforward code structure you see above.
+        if (blockExists) {
+            blockExists = false;
+            return sGenerateDefineBlock(conf);
+        } else {
+            blockExists = true;
+        }
         block[i] = '\0';
         hash = stbds_hash_string(block, VX_SEED);
-
         vxLog("Generated new program define block:\n%s", block);
     }
     return (DefineBlock){hash, block};

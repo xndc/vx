@@ -35,6 +35,7 @@ typedef struct vxConfig {
     int shadowSize;
     int envmapSize;
     int skyboxSize;
+
     Camera camMain;
     Camera camShadow;
     Camera camEnvXp;
@@ -43,9 +44,11 @@ typedef struct vxConfig {
     Camera camEnvYn;
     Camera camEnvZp;
     Camera camEnvZn;
+    
     bool pauseOnFocusLoss;
     bool clearColorBuffers;
     bool gpuSupportsClipControl;
+    
     int tonemapMode;
     float tonemapExposure;
     float tonemapACESParamA;
@@ -53,12 +56,16 @@ typedef struct vxConfig {
     float tonemapACESParamC;
     float tonemapACESParamD;
     float tonemapACESParamE;
+    
     int debugVisMode;
+
     float shadowBiasMin;
     float shadowBiasMax;
     int shadowPcfTapsX;
     int shadowPcfTapsY;
     bool shadowHoverFix; // render only backfaces into shadow map
+    bool shadowTAA;
+    bool shadowNoise;
 
     // Enable the Temporal Anti-Aliasing filter. Smooths the image at the cost of some blur.
     bool enableTAA;
