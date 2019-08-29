@@ -59,7 +59,21 @@ typedef struct vxConfig {
     int shadowPcfTapsX;
     int shadowPcfTapsY;
     bool shadowHoverFix; // render only backfaces into shadow map
+
+    // Enable the Temporal Anti-Aliasing filter. Smooths the image at the cost of some blur.
     bool enableTAA;
+    // Multiplier for TAA sampling jitter offsets. Original offsets are between [-1,1].
+    // Higher multipliers increase both blur and visible jitter on specular surfaces.
+    // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
+    float taaSampleOffsetMul;
+    // Offset from current sample to use in neighbourhood clamping. Relevant range is [0,1]. Higher values result in
+    // slightly more effective TAA at the cost of extra blur.
+    float taaClampSampleDist;
+    // Lerp factor for blending between the historical buffer and the current frame. Higher values assign more weight
+    // to the historical buffer, resulting in better TAA at the cost of extra blur and more resolve time.
+    float taaFeedbackFactor;
+    // Strength for the sharpening post-filter. Relevant range is [0, 0.1], with 0.05 being a decent choice.
+    float sharpenStrength;
 } vxConfig;
 
 void vxConfig_Init (vxConfig* c);

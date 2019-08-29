@@ -448,6 +448,11 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
 static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Begin("Engine Configuration");
     ImGui::Checkbox("Enable TAA", &conf->enableTAA);
+    ImGui::SliderFloat("TAA sample offset multiplier", &conf->taaSampleOffsetMul, 0.0, 4.0);
+    ImGui::SliderFloat("TAA neighbourhood clamping distance", &conf->taaClampSampleDist, 0.0, 4.0);
+    ImGui::SliderFloat("TAA feedback factor", &conf->taaFeedbackFactor, 0.0, 1.0);
+    ImGui::SliderFloat("Sharpen filter strength", &conf->sharpenStrength, 0.0, 0.2);
+
     ImGui::SliderInt("VSync", &conf->swapInterval, -1, 3, "swap interval %d");
     ImGui::InputInt("Shadow map size", &conf->shadowSize, 256, 256);
     conf->shadowSize = vxClamp(conf->shadowSize, 32, 8192); // framebuffer size limit on most machines
@@ -457,7 +462,7 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::DragFloat("Shadow far plane", &conf->camShadow.far, 10.0f, -1000.0f, +1000.0f);
     ImGui::DragFloat("Shadow min bias", &conf->shadowBiasMin, 0.000001f, 0.0f, 0.1f, "%.6f");
     ImGui::DragFloat("Shadow max bias", &conf->shadowBiasMax, 0.000001f, 0.0f, 0.1f, "%.6f");
-    ImGui::SliderInt2("Shadow PCF taps", &conf->shadowPcfTapsX /* HACK */, 1, 5);
+    ImGui::SliderInt2("Shadow PCF taps", &conf->shadowPcfTapsX /* will get both X and Y */, 1, 5);
     ImGui::Checkbox("Shadow hover (Peter Panning) fix", &conf->shadowHoverFix);
     ImGui::Checkbox("Pause on focus loss", &conf->pauseOnFocusLoss);
     

@@ -52,8 +52,6 @@ void vxConfig_Init (vxConfig* c) {
     c->swapInterval = -1;
     #endif
 
-    c->enableTAA = true;
-
     c->displayW = 1280;
     c->displayH = 1024;
     c->envmapSize = 512;
@@ -103,6 +101,12 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowPcfTapsX = 2;
     c->shadowPcfTapsY = 2;
     Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
+
+    c->enableTAA = true;
+    c->taaSampleOffsetMul = 0.2f;
+    c->taaClampSampleDist = 0.3f;
+    c->taaFeedbackFactor = 0.95;
+    c->sharpenStrength = 0.05;
 }
 
 // Halton(2,3) 8-sample offset sequence used for TAA. Initialized by GameLoad.
@@ -447,37 +451,14 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // Compute main camera jitter, for TAA:
     static Camera camMainJittered;
     memcpy(&camMainJittered, &conf->camMain, sizeof(Camera));
-    // float jitterScale = 0.5;
-    // float jitterX, jitterY;
-    // switch ((frame->n + 1) % 8) {
-    //     case 0: { jitterX = +jitterScale / (float) w; jitterY = +jitterScale / (float) h; } break;
-    //     case 1: { jitterX = +jitterScale / (float) w; jitterY = -jitterScale / (float) h; } break;
-    //     case 2: { jitterX = -jitterScale / (float) w; jitterY = +jitterScale / (float) h; } break;
-    //     case 3: { jitterX = -jitterScale / (float) w; jitterY = -jitterScale / (float) h; } break;
-    //     case 4: { jitterX = 0;                        jitterY = +jitterScale / (float) h; } break;
-    //     case 5: { jitterX = 0;                        jitterY = 0;                        } break;
-    //     case 6: { jitterX = -jitterScale / (float) w; jitterY = +jitterScale / (float) h; } break;
-    //     case 7: { jitterX = -jitterScale / (float) w; jitterY = 0;                        } break;
-    // }
-    // float jitterLastX, jitterLastY;
-    // switch (frame->n % 8) {
-    //     case 0: { jitterLastX = +jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
-    //     case 1: { jitterLastX = +jitterScale / (float) w; jitterLastY = -jitterScale / (float) h; } break;
-    //     case 2: { jitterLastX = -jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
-    //     case 3: { jitterLastX = -jitterScale / (float) w; jitterLastY = -jitterScale / (float) h; } break;
-    //     case 4: { jitterLastX = 0;                        jitterLastY = +jitterScale / (float) h; } break;
-    //     case 5: { jitterLastX = 0;                        jitterLastY = 0;                        } break;
-    //     case 6: { jitterLastX = -jitterScale / (float) w; jitterLastY = +jitterScale / (float) h; } break;
-    //     case 7: { jitterLastX = -jitterScale / (float) w; jitterLastY = 0;                        } break;
-    // }
     float jitterX = 0, jitterY = 0, jitterLastX = 0, jitterLastY = 0;
     if (conf->enableTAA) {
         // Higher multipliers increase both blur and visible jitter on specular surfaces.
         // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
-        jitterX     = 0.25 * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
-        jitterY     = 0.25 * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
-        jitterLastX = 0.25 * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
-        jitterLastY = 0.25 * Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+        jitterX     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
+        jitterY     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
+        jitterLastX = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
+        jitterLastY = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
         static mat4 jitter, jitterLast;
         glm_translate_make(jitter,     (vec3){jitterX,     jitterY,     0.0});
         glm_translate_make(jitterLast, (vec3){jitterLastX, jitterLastY, 0.0});
@@ -551,6 +532,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         SetCamera(&rs, &camMainJittered);
         glUniform2f(UNIF_JITTER, jitterX, jitterY);
         glUniform2f(UNIF_JITTER_LAST, jitterLastX, jitterLastY);
+        glUniform1f(UNIF_TAA_FEEDBACK_FACTOR, conf->taaFeedbackFactor);
+        glUniform1f(UNIF_TAA_CLAMP_SAMPLE_DIST, conf->taaClampSampleDist);
         RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
         EndRenderPass();
 
@@ -596,6 +579,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glUniform1f(UNIF_TONEMAP_ACES_PARAM_D, conf->tonemapACESParamD);
         glUniform1f(UNIF_TONEMAP_ACES_PARAM_E, conf->tonemapACESParamE);
     }
+    glUniform1f(UNIF_SHARPEN_STRENGTH, conf->sharpenStrength);
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     glDisable(GL_FRAMEBUFFER_SRGB);
     EndRenderPass();

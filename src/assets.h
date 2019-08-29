@@ -106,6 +106,10 @@
     X(UNIF_TONEMAP_ACES_PARAM_C, "uTonemapACESParamC") \
     X(UNIF_TONEMAP_ACES_PARAM_D, "uTonemapACESParamD") \
     X(UNIF_TONEMAP_ACES_PARAM_E, "uTonemapACESParamE") \
+\
+    X(UNIF_TAA_CLAMP_SAMPLE_DIST, "kClampSampleDist") \
+    X(UNIF_TAA_FEEDBACK_FACTOR,   "kFeedbackFactor") \
+    X(UNIF_SHARPEN_STRENGTH,      "kSharpenStrength") \
 
 // Syntax for textures:
 // X(name, target (GL_TEXTURE_*), needs mipmaps, path)

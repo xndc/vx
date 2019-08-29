@@ -24,6 +24,9 @@ uniform mat4 uLastProjMatrix;
 uniform vec2 uJitter;
 uniform vec2 uJitterLast;
 
+uniform float kClampSampleDist;
+uniform float kFeedbackFactor;
+
 // This is largely based on "Temporal Reprojection Anti-Aliasing in INSIDE".
 // References:
 // * "Temporal Reprojection Anti-Aliasing in INSIDE" (GDC 2016)
@@ -69,7 +72,6 @@ void main() {
     // We sample some fragments around the current one to figure out what the correct historical value might reasonably
     // be, assuming the history buffer contains correct fragments and not garbage, and then we clamp the historical
     // value to this range.
-    const float kClampSampleDist = 0.3; // increase for better AA at the cost of more blur
     vec3 nb1 = texture(gColorHDR, uv + vec2(+kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
     vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
     vec3 nb3 = texture(gColorHDR, uv + vec2(-kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
@@ -79,6 +81,5 @@ void main() {
     accumColor = clamp(accumColor, nbMin, nbMax);
 
     // Final blend:
-    const float kFeedbackFactor = 0.95; // higher values => more sample retention, blurrier but smoother image
     outColorHDR = vec4(mix(inputColor, accumColor, vec3(kFeedbackFactor)), 0);
 }
