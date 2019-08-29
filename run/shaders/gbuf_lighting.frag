@@ -46,7 +46,8 @@ vec3 SurfaceF0 (vec3 diffuse, float metallic) {
 }
 
 vec3 FresnelSchlick (float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+    // We keep the power over 0 to avoid black spots at random points in the scene.
+    return F0 + (1.0 - F0) * max(pow(1.0 - cosTheta, 5.0), 0.001);
 }
 
 float DistributionGGX (vec3 N, vec3 H, float roughness) {
@@ -110,12 +111,8 @@ vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met,
     return (kD * Diffuse / PI + Specular) * Radiance * NdotL;
 }
 
-// https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
-float Random01 (vec4 seed) {
-    float dot_product = dot(seed, vec4(12.9898,78.233,45.164,94.673));
-    return fract(sin(dot_product) * 43758.5453);
-}
-
+// More or less "standard" random function.
+// http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
 highp float rand (vec2 co) {
     highp float a = 12.9898;
     highp float b = 78.233;
@@ -174,7 +171,7 @@ void main() {
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
     FragPosShadow /= FragPosShadow.w;
     vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
-    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 3.0; // tunable, increase for more spread
+    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.0; // tunable, increase for more spread
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
         for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
             for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {

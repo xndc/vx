@@ -472,6 +472,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // }
     float jitterX = 0, jitterY = 0, jitterLastX = 0, jitterLastY = 0;
     if (conf->enableTAA) {
+        // Higher multipliers increase both blur and visible jitter on specular surfaces.
+        // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
         jitterX     = 0.25 * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
         jitterY     = 0.25 * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
         jitterLastX = 0.25 * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;

@@ -45,14 +45,20 @@ void main() {
     #else
         vec3 hdr = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy), 0).rgb * uTonemapExposure;
 
-        #if 0
-        // Sharpening filter:
-        // See "Temporal Antialiasing in Uncharted 4" (Ke Xu, SIGGRAPH 2016)
-        vec3 nb1 = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+1, +1), 0).rgb * uTonemapExposure;
-        vec3 nb2 = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+1, -1), 0).rgb * uTonemapExposure;
-        vec3 nb3 = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(-1, +1), 0).rgb * uTonemapExposure;
-        vec3 nb4 = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(-1, -1), 0).rgb * uTonemapExposure;
-        hdr = 5 * hdr - nb1 - nb2 - nb3 - nb4;
+        #if 1
+        // "Shock" sharpening filter.
+        // See https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter27.html (Example 27-3)
+        const float kSharpenStrength = 0.05; // values between 0 and 0.1 are relevant
+        vec3 nbU = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+0, +1), 0).rgb * uTonemapExposure;
+        vec3 nbD = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+0, -1), 0).rgb * uTonemapExposure;
+        vec3 nbR = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+1, +0), 0).rgb * uTonemapExposure;
+        vec3 nbL = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(-1, +0), 0).rgb * uTonemapExposure;
+        vec3 convexity = 4.0 * hdr - nbU - nbD - nbR - nbL;
+        vec2 diffusion = vec2(dot((nbR - nbL) * convexity, vec3(1)), dot((nbU - nbD) * convexity, vec3(1)));
+        diffusion *= kSharpenStrength / (length(diffusion) + 0.00001);
+        hdr += ((diffusion.x > 0) ? (diffusion.x * nbR) : (diffusion.x * nbL)) +
+               ((diffusion.y > 0) ? (diffusion.y * nbU) : (diffusion.y * nbD));
+        hdr /= 1 + dot(abs(diffusion), vec2(1));
         #endif
 
         vec3 ldr;

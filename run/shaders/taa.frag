@@ -69,9 +69,9 @@ void main() {
     // We sample some fragments around the current one to figure out what the correct historical value might reasonably
     // be, assuming the history buffer contains correct fragments and not garbage, and then we clamp the historical
     // value to this range.
-    const float kClampSampleDist = 0.3;
-    vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
+    const float kClampSampleDist = 0.3; // increase for better AA at the cost of more blur
     vec3 nb1 = texture(gColorHDR, uv + vec2(+kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
+    vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
     vec3 nb3 = texture(gColorHDR, uv + vec2(-kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
     vec3 nb4 = texture(gColorHDR, uv + vec2(-kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
     vec3 nbMin = min(min(min(nb1, nb2), nb3), nb4); // per-component min
