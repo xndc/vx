@@ -434,8 +434,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // The depth buffer needs to be cleared to 0 (since we use reverse depth). Other buffers can be ignored.
     // We do have an option to clear them, but that's only really useful when debugging (e.g. with RenderDoc).
     if (conf->clearColorBuffers) {
-        RenderPass(&rs, "GBuffer clear (color+depth)", {
-            BindFramebuffer(FB_GBUFFER);
+        RenderPass(&rs, "GBuffer clear (LDR color+depth)", {
+            BindFramebuffer(FB_ONLY_COLOR_LDR);
             glClearColor(0.1f, 0.2f, 0.5f, 1.0f); // HDR
             glClearDepth(0.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -491,13 +491,37 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     }
     EndRenderPass();
 
+    // Generate shadow VP matrix:
+    mat4 shadowSpaceMatrix;
+    glm_mat4_mul(conf->camShadow.proj_matrix, conf->camShadow.view_matrix, shadowSpaceMatrix);
+
+    StartRenderPass(&rs, "Shadow TAA buffer copy");
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_AUX1_ONLY);
+    glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_AUX1
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB_AUX2_ONLY);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0); // to RT_AUX2
+    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    EndRenderPass();
+
+    StartRenderPass(&rs, "GBuffer shadow resolve");
+    BindFramebuffer(FB_AUX1_ONLY);
+    SetRenderProgram(&rs, &PROG_SHADOW_RESOLVE);
+    SetCamera(&rs, &conf->camMain);
+    // Send shadow uniforms:
+    glUniformMatrix4fv(UNIF_SHADOW_VP_MATRIX, 1, false, (float*) shadowSpaceMatrix);
+    glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);
+    glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);
+    glUniform3fv(UNIF_SUN_POSITION, 1, directional->position);
+    RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    EndRenderPass();
+
     StartRenderPass(&rs, "GBuffer lighting");
     BindFramebuffer(FB_ONLY_COLOR_HDR);
     SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
     SetCamera(&rs, &conf->camMain);
     // Send shadow uniforms:
-    mat4 shadowSpaceMatrix;
-    glm_mat4_mul(conf->camShadow.proj_matrix, conf->camShadow.view_matrix, shadowSpaceMatrix);
     glUniformMatrix4fv(UNIF_SHADOW_VP_MATRIX, 1, false, (float*) shadowSpaceMatrix);
     glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);
     glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);

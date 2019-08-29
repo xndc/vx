@@ -164,12 +164,14 @@ void main() {
         + diffuse * Nsq.z * uAmbientCube[isNegative.z + 4];   // maps to [4] for Z+, [5] for Z-
     #endif
 
+    #if 0
     // Shadow:
     // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
     float shadow = 0.0;
     float bias = max(uShadowBiasMax * (1.0 - dot(N, normalize(uSunPosition))), uShadowBiasMin);
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
     FragPosShadow /= FragPosShadow.w;
+    // outColorHDR = FragPosWorld4; return;
     vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
     vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.0; // tunable, increase for more spread
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
@@ -195,13 +197,14 @@ void main() {
         }
     }
     shadow /= SHADOW_PCF_TAPS_X * SHADOW_PCF_TAPS_Y;
+    #endif
+
+    // Filled in by shadow_resolve. 0 = fragment is fully sunlit, 1 = fragment is fully shadowed.
+    float shadow = aux1.r;
 
     // Directional lighting:
-    // NOTE: uSunDirection is supposed to be the vector coming FROM the light, but for some reason
-    //   our DirectionalLightLo function is treating it as the sun's POSITION vector. I have no clue
-    //   what we're doing wrong.
-    // NOTE: Also, every vector we pass here needs to be normalized. The Fresnel term gets blown
-    //   up when you look at the sun otherwise.
+    // NOTE: Every vector we pass here needs to be normalized. The Fresnel term gets blown up when
+    //   you look at the sun otherwise.
     #if 1
     Lo += mix(vec3(0), DirectionalLightLo(N, V, normalize(uSunPosition), uSunColor, diffuse, metal, rough), 1.0-shadow);
     #endif

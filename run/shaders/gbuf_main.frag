@@ -198,6 +198,6 @@ void main() {
     vec2 Velocity = uvThis - uvLast;
 
     outColorLDR = diffuse;
-    outAux1 = vec4(occlusion, roughness, metallic, 0);
+    outAux1 = vec4(texelFetch(gAux1, ivec2(gl_FragCoord.xy), 0).r, roughness, metallic, 0);
     outAuxHDR16 = vec3(Velocity, 0);
 }

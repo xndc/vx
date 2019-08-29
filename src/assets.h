@@ -12,12 +12,14 @@
     X(GL_FRAGMENT_SHADER,   FSH_SKYBOX,             "shaders/skybox.frag") \
     X(GL_VERTEX_SHADER,     VSH_SHADOW,             "shaders/shadow.vert") \
     X(GL_FRAGMENT_SHADER,   FSH_SHADOW,             "shaders/shadow.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_SHADOW_RESOLVE,     "shaders/shadow_resolve.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_TAA,                "shaders/taa.frag") \
 
 #define XM_PROGRAMS \
     X(PROG_GBUF_MAIN,       VSH_DEFAULT,         FSH_GBUF_MAIN) \
     X(PROG_SHADOW,          VSH_SHADOW,          FSH_SHADOW) \
     X(PROG_GBUF_LIGHTING,   VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING) \
+    X(PROG_SHADOW_RESOLVE,  VSH_FULLSCREEN_PASS, FSH_SHADOW_RESOLVE) \
     X(PROG_FX_DITHER,       VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
     X(PROG_FINAL,           VSH_FULLSCREEN_PASS, FSH_FINAL) \
     X(PROG_TAA,             VSH_FULLSCREEN_PASS, FSH_TAA) \
@@ -191,6 +193,14 @@
         COLOR(GL_COLOR_ATTACHMENT3, RT_AUX2) \
         COLOR(GL_COLOR_ATTACHMENT4, RT_AUX_HDR16) \
     END(FB_GBUFFER) \
+\
+    BEGIN(FB_AUX1_ONLY) \
+        COLOR(GL_COLOR_ATTACHMENT0, RT_AUX1) \
+    END(FB_AUX1_ONLY) \
+\
+    BEGIN(FB_AUX2_ONLY) \
+        COLOR(GL_COLOR_ATTACHMENT0, RT_AUX2) \
+    END(FB_AUX2_ONLY) \
 \
     BEGIN(FB_ONLY_COLOR_HDR) \
         DEPTH(GL_DEPTH_ATTACHMENT, RT_DEPTH) \

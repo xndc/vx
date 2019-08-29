@@ -2,7 +2,6 @@
 out vec4 outColor;
 in vec2 fragCoord;
 in vec2 fragCoord01;
-in vec2 fragCoordPx;
 uniform ivec2 iResolution;
 
 uniform sampler2D gDepth;

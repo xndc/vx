@@ -344,11 +344,6 @@ void SetRenderProgram (RenderState* rs, Program* p) {
         XM_RENDERTARGETS_SCREEN
         XM_RENDERTARGETS_SHADOW
         #undef X
-        // Sample shadows in nearest-neighbour mode.
-        // This is probably not the smartest idea and should be revisited, but sampling in linear mode leads to
-        // incorrect shadows for objects with stippled transparency.
-        #define X(name, format) SetUniformTextureSampler2D(rs, UNIF_ ## name, name, SMP_NEAREST);
-        #undef X
     } else {
         vxLog("Warning: program (%s, %s) is not available", p->vsh->path, p->fsh->path);
     }

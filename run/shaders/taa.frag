@@ -1,6 +1,7 @@
 #version 330 core
 out vec4 outColorHDR;
 in vec2 fragCoordClip;
+in vec2 fragCoord01;
 
 uniform ivec2 iResolution;
 
@@ -48,6 +49,7 @@ void main() {
         for (int x = -2; x <= 2; x++) {
             ivec2 pixel = ivec2(gl_FragCoord.xy) + ivec2(x, y);
             float depth = texelFetch(gDepth, pixel, 0).r;
+            // float depth = texture(gDepth, (gl_FragCoord.xy + vec2(x, y)) / vec2(iResolution)).r;
             if (depth > closestDepth) {
                 closestDepth = depth;
                 closestPixel = pixel;
@@ -57,7 +59,7 @@ void main() {
 
     // Retrieve UV-space velocity of selected fragment (generated in gbuf_main):
     vec2 vel = texelFetch(gAuxHDR16, closestPixel, 0).rg;
-    vec2 uvhist = uv - vel + 0.5*uJitter; // unjittering here makes everything *slightly* less blurry
+    vec2 uvhist = uv - vel + 0.5*uJitterLast; // unjittering here makes everything *slightly* less blurry
 
     // Reproject fragment into history buffer (gAuxHDR11) and retrieve accumulated value for it:
     vec3 accumColor = texture(gAuxHDR11, uvhist).rgb;
