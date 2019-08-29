@@ -7,6 +7,7 @@ uniform ivec2 iResolution;
 uniform float iTime;
 uniform int iFrame;
 uniform vec2 uJitter;
+uniform vec2 uJitterLast;
 
 uniform sampler2D gColorLDR;
 uniform sampler2D gColorHDR;
@@ -20,6 +21,8 @@ uniform sampler2D gShadow;
 uniform vec3 uSunPosition;
 uniform mat4 uInvViewMatrix;
 uniform mat4 uInvProjMatrix;
+uniform mat4 uLastViewMatrix;
+uniform mat4 uLastProjMatrix;
 uniform mat4 uShadowVPMatrix;
 uniform float uShadowBiasMin;
 uniform float uShadowBiasMax;
@@ -54,7 +57,7 @@ void main() {
     vec3 FragPosWorld = FragPosWorld4.xyz / FragPosWorld4.w;
 
     // Used for bias and discard:
-    vec3 N = texture(gNormal, fragCoord01).rgb;
+    vec3 N = texture(gNormal, fragCoord01 - 0.5*uJitter).rgb;
 
     // Used as source of random noise:
     vec3 V = normalize(CameraPosition - FragPosWorld.xyz);
@@ -75,8 +78,8 @@ void main() {
                 // PCF + random noise offset:
                 vec2 offset = vec2((ipcfX - (SHADOW_PCF_TAPS_X / 2)), (ipcfY - (SHADOW_PCF_TAPS_Y / 2)));
                 #ifdef SHADOW_NOISE
-                    offset.y += rand(V.xy + float((iFrame + 2) % 4)) * 3.0 - 1.5;
-                    offset.x += rand(V.xy + float((iFrame + 1) % 4)) * 3.0 - 1.5;
+                    offset.y += rand(V.xy + float((iFrame + 2) % 100)) * 2.0 - 1.0;
+                    offset.x += rand(V.xy + float((iFrame + 1) % 100)) * 2.0 - 1.0;
                 #endif
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
                 // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
@@ -98,14 +101,7 @@ void main() {
         // Reproject fragment into shadow history buffer (RT_AUX2.r):
         vec2 vel = texture(gAuxHDR16, fragCoord01).rg;
         vec2 uvhist = fragCoord01 - vel;
-        // vec4 aux2 = texture(gAux2, uvhist);
-        // float accum = aux2.r;
         float accum = texture(gAux2, uvhist).r;
-
-        // Reproject fragment into the current frame's normal buffer:
-        // We don't need to smooth out the normal, just use it for comparison, so there's no need to keep history.
-        vec3 Nhist = texture(gNormal, uvhist + 0.5*uJitter).rgb;
-        float Ndist = distance(N, Nhist);
 
         // Discard sample based on a few heuristics, in an attempt to keep ghosting under control:
         // This is not "correct" or "standard" by any stretch of the imagination, but works well enough for a demo.
@@ -113,7 +109,7 @@ void main() {
         // if you want to see them just turn on stippled transparency for something and put it in direct light.
         // It also makes the filtering less efficient: (smoothed) noise will be more obvious in the final image.
         if (uvhist.x < 0 || uvhist.y < 0 || uvhist.x > 1 || uvhist.y > 1 || isnan(accum) ||
-            abs(accum - shadow) > 0.9 || Ndist > 0.05)
+            abs(accum - shadow) > 0.9 || abs(vel.x+vel.y) > 0.001)
         {
             accum = shadow;
         }
