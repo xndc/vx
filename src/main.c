@@ -369,15 +369,18 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     double tRenderStart = glfwGetTime();
     static RenderState rs;
 
-    // tRenderStart to tRenderEnd will just be the CPU time taken up by drawcall submission. To monitor GPU time we need
-    // to use an OpenGL query object: https://www.khronos.org/opengl/wiki/Query_Object
-    // We use multiple query objects in order to avoid stalling the renderer just to wait for a reply from the GPU.
-    static int rtqIndex = 0;
-    static GLuint rtq [4] = {0};
-    if (rtq[0] == 0) {
-        glGenQueries(4, &rtq);
-    }
-    glBeginQuery(GL_TIME_ELAPSED, rtq[rtqIndex]);
+    // We can't time OpenGL calls if Remotery is already doing it!
+    #if !RMT_USE_OPENGL
+        // tRenderStart to tRenderEnd will just be the CPU time taken up by drawcall submission. To monitor GPU time w
+        // need to use an OpenGL query object: https://www.khronos.org/opengl/wiki/Query_Object
+        // We use multiple query objects in order to avoid stalling the renderer just to wait for a reply from the GPU.
+        static int rtqIndex = 0;
+        static GLuint rtq [4] = {0};
+        if (rtq[0] == 0) {
+            glGenQueries(4, &rtq);
+        }
+        glBeginQuery(GL_TIME_ELAPSED, rtq[rtqIndex]);
+    #endif
 
     // Render lists contain abbreviated entries for game objects that affect the rendered image.
     static RenderList rl = {0};
@@ -577,6 +580,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        EndRenderPass();
     }
 
     StartRenderPass(&rs, "Debug: Point Light Positions");
@@ -623,20 +627,23 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     EndBlock();
 
     double tRenderEnd = glfwGetTime();
-    StartBlock("OpenGL render time query");
-    glEndQuery(GL_TIME_ELAPSED);
-    int64_t dtOpenGLRender = 0;
-    // glGetQueryObject will produce INVALID_OPERATION errors if called for queries that have never been started.
-    // During the first frames, we'll just query the current frame's render time (synchronously). After all query
-    // objects become valid, we can switch to asynchronous queries (N frames behind).
-    if (frame->n >= 4) {
-        rtqIndex = (rtqIndex + 1) % 4;
-        glGetQueryObjecti64v(rtq[rtqIndex], GL_QUERY_RESULT, &dtOpenGLRender);
-    } else {
-        glGetQueryObjecti64v(rtq[rtqIndex], GL_QUERY_RESULT, &dtOpenGLRender);
-        rtqIndex = (rtqIndex + 1) % 4;
-    }
-    EndBlock();
+    // We can't time OpenGL calls if Remotery is already doing it!
+    #if !RMT_USE_OPENGL
+        StartBlock("OpenGL render time query");
+        glEndQuery(GL_TIME_ELAPSED);
+        int64_t dtOpenGLRender = 0;
+        // glGetQueryObject will produce INVALID_OPERATION errors if called for queries that have never been started.
+        // During the first frames, we'll just query the current frame's render time (synchronously). After all query
+        // objects become valid, we can switch to asynchronous queries (N frames behind).
+        if (frame->n >= 4) {
+            rtqIndex = (rtqIndex + 1) % 4;
+            glGetQueryObjecti64v(rtq[rtqIndex], GL_QUERY_RESULT, &dtOpenGLRender);
+        } else {
+            glGetQueryObjecti64v(rtq[rtqIndex], GL_QUERY_RESULT, &dtOpenGLRender);
+            rtqIndex = (rtqIndex + 1) % 4;
+        }
+        EndBlock();
+    #endif
 
     // *****************************************************************************************************************
     // Swap & poll:
@@ -651,21 +658,25 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glfwPollEvents();
     });
 
-    TimedBlock("FrameTiming", {
-        // All of these values are supposed to be in seconds.
-        frame->tMain   = (float)(tRenderStart - frame->t);
-        frame->tSubmit = (float)(tRenderEnd - tRenderStart);
+    StartBlock("FrameTiming");
+    // All of these values are supposed to be in seconds.
+    frame->tMain   = (float)(tRenderStart - frame->t);
+    frame->tSubmit = (float)(tRenderEnd - tRenderStart);
+    #if !RMT_USE_OPENGL
         frame->tRender = (float)(dtOpenGLRender) / 1000000000.0f; // nanoseconds
-        frame->tSwap   = (float)(tPollStart - tSwapStart);
-        frame->tPoll   = (float)(glfwGetTime() - tPollStart);
+    #else
+        frame->tRender = 0.0f;
+    #endif
+    frame->tSwap   = (float)(tPollStart - tSwapStart);
+    frame->tPoll   = (float)(glfwGetTime() - tPollStart);
 
-        // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
-        // window is moving. Ignore the frame for timing purposes if this happens.
-        if (frame->tPoll > 0.1f) {
-            frame->tPoll = 0.0f;
-            glfwSetTime(tPollStart);
-        }
-    });
+    // PollEvents usually takes under 1ms, so if we exceed 100ms it's probably because the
+    // window is moving. Ignore the frame for timing purposes if this happens.
+    if (frame->tPoll > 0.1f) {
+        frame->tPoll = 0.0f;
+        glfwSetTime(tPollStart);
+    }
+    EndBlock();
 }
 
 // Actual entry point for the game. Doesn't do much, just dispatches to the other functions in this file.
@@ -695,6 +706,6 @@ int main() {
     }
 
     rmt_UnbindOpenGL();
-    // rmt_DestroyGlobalInstance(rmt); // crashes for some reason
+    rmt_DestroyGlobalInstance(rmt);
     return 0;
 }

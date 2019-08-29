@@ -25,7 +25,7 @@
 #undef RMT_ENABLED
 #undef RMT_USE_OPENGL
 #define RMT_ENABLED 1
-#define RMT_USE_OPENGL 0
+#define RMT_USE_OPENGL 1
 #include <Remotery.h>
 
 // stb_ds trips some warnings and has one bug that we have to fix:
