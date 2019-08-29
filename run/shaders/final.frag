@@ -47,7 +47,6 @@ void main() {
 
         #if 0
         // Sharpening filter:
-        // 
         // See "Temporal Antialiasing in Uncharted 4" (Ke Xu, SIGGRAPH 2016)
         vec3 nb1 = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+1, +1), 0).rgb * uTonemapExposure;
         vec3 nb2 = texelFetch(gColorHDR, ivec2(gl_FragCoord.xy) + ivec2(+1, -1), 0).rgb * uTonemapExposure;

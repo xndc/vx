@@ -54,7 +54,7 @@ void main() {
 
     // Retrieve UV-space velocity of selected fragment (generated in gbuf_main):
     vec2 vel = texelFetch(gAuxHDR16, closestPixel, 0).rg;
-    vec2 uvhist = uv - vel;
+    vec2 uvhist = uv - vel + 0.5*uJitter; // unjittering here makes everything *slightly* less blurry
 
     // Reproject fragment into history buffer (gAuxHDR11) and retrieve accumulated value for it:
     vec3 accumColor = texture(gAuxHDR11, uvhist).rgb;
@@ -69,23 +69,16 @@ void main() {
     // We sample some fragments around the current one to figure out what the correct historical value might reasonably
     // be, assuming the history buffer contains correct fragments and not garbage, and then we clamp the historical
     // value to this range.
-    // In order to get TAA on surfaces (e.g. for our noisy shadows), we only perform depth clamping for fragments that
-    // have actually moved this frame. This doesn't take into account depth change -- we can't, with the data we're
-    // currently giving this shader -- but works find if you don't clip into any solid objects.
-    // Unfortunately this only has a visible effect on shadows if you use an absurdly high feedback factor, and it
-    // also only really works if the camera isn't moving.
-    if (abs(vel.x) > 0.001 || abs(vel.y) > 0.001) {
-        const float kClampSampleDist = 0.5;
-        vec3 nb1 = texture(gColorHDR, uv + vec2(+kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
-        vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
-        vec3 nb3 = texture(gColorHDR, uv + vec2(-kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
-        vec3 nb4 = texture(gColorHDR, uv + vec2(-kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
-        vec3 nbMin = min(min(min(nb1, nb2), nb3), nb4); // per-component min
-        vec3 nbMax = max(max(max(nb1, nb2), nb3), nb4); // per-component max
-        accumColor = clamp(accumColor, nbMin, nbMax);
-    }
+    const float kClampSampleDist = 0.3;
+    vec3 nb2 = texture(gColorHDR, uv + vec2(+kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
+    vec3 nb1 = texture(gColorHDR, uv + vec2(+kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
+    vec3 nb3 = texture(gColorHDR, uv + vec2(-kClampSampleDist, +kClampSampleDist) / vec2(iResolution)).rgb;
+    vec3 nb4 = texture(gColorHDR, uv + vec2(-kClampSampleDist, -kClampSampleDist) / vec2(iResolution)).rgb;
+    vec3 nbMin = min(min(min(nb1, nb2), nb3), nb4); // per-component min
+    vec3 nbMax = max(max(max(nb1, nb2), nb3), nb4); // per-component max
+    accumColor = clamp(accumColor, nbMin, nbMax);
 
     // Final blend:
-    const float kFeedbackFactor = 0.8; // higher values => more sample retention, blurrier but smoother image
+    const float kFeedbackFactor = 0.95; // higher values => more sample retention, blurrier but smoother image
     outColorHDR = vec4(mix(inputColor, accumColor, vec3(kFeedbackFactor)), 0);
 }

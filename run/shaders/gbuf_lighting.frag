@@ -174,7 +174,7 @@ void main() {
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
     FragPosShadow /= FragPosShadow.w;
     vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
-    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.0; /* tunable constant */
+    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 3.0; // tunable, increase for more spread
     if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
         for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
             for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
@@ -182,8 +182,10 @@ void main() {
                 //   A separate TAA pass for shadows is required. The regular TAA pass doesn't smooth these out,
                 //   seemingly due to the way we've implemented neighbourhood clamping,
                 vec2 offset = vec2((ipcfX - (SHADOW_PCF_TAPS_X / 2)), (ipcfY - (SHADOW_PCF_TAPS_Y / 2)));
+                #if 0 // enable for noisy shadows
                 offset.y += rand(V.xy + float((iFrame + 2) % 4)) * 3.0 - 1.5;
                 offset.x += rand(V.xy + float((iFrame + 1) % 4)) * 3.0 - 1.5;
+                #endif
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
                 // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
                 #ifndef DEPTH_ZERO_TO_ONE

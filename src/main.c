@@ -472,10 +472,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     // }
     float jitterX = 0, jitterY = 0, jitterLastX = 0, jitterLastY = 0;
     if (conf->enableTAA) {
-        jitterX     = Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
-        jitterY     = Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
-        jitterLastX = Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
-        jitterLastY = Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+        jitterX     = 0.25 * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
+        jitterY     = 0.25 * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
+        jitterLastX = 0.25 * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
+        jitterLastY = 0.25 * Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
         static mat4 jitter, jitterLast;
         glm_translate_make(jitter,     (vec3){jitterX,     jitterY,     0.0});
         glm_translate_make(jitterLast, (vec3){jitterLastX, jitterLastY, 0.0});
