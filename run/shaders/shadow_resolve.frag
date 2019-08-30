@@ -103,13 +103,17 @@ void main() {
         vec2 uvhist = fragCoord01 - vel;
         float accum = texture(gAux2, uvhist).r;
 
+        // Same thing for normal:
+        vec3 Nhist = texture(gNormal, uvhist).rgb;
+        float Ndist = distance(N, Nhist);
+
         // Discard sample based on a few heuristics, in an attempt to keep ghosting under control:
         // This is not "correct" or "standard" by any stretch of the imagination, but works well enough for a demo.
         // The main issue is that it results in artifacts at dark-light transitions. It's not very obvious, usually, but
         // if you want to see them just turn on stippled transparency for something and put it in direct light.
         // It also makes the filtering less efficient: (smoothed) noise will be more obvious in the final image.
         if (uvhist.x < 0 || uvhist.y < 0 || uvhist.x > 1 || uvhist.y > 1 || isnan(accum) ||
-            abs(accum - shadow) > 0.9 || abs(vel.x+vel.y) > 0.001)
+            abs(accum - shadow) > 0.9 || abs(vel.x+vel.y) > 0.001 || Ndist > 0.001)
         {
             accum = shadow;
         }

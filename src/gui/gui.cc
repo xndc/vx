@@ -465,7 +465,7 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::DragFloat("Shadow far plane", &conf->camShadow.far, 10.0f, -1000.0f, +1000.0f);
     ImGui::DragFloat("Shadow min bias", &conf->shadowBiasMin, 0.000001f, 0.0f, 0.1f, "%.6f");
     ImGui::DragFloat("Shadow max bias", &conf->shadowBiasMax, 0.000001f, 0.0f, 0.1f, "%.6f");
-    ImGui::SliderInt2("Shadow PCF taps", &conf->shadowPcfTapsX /* will get both X and Y */, 1, 5);
+    ImGui::SliderInt2("Shadow PCF taps", &conf->shadowPcfTapsX /* will get both X and Y */, 1, 8);
     ImGui::Checkbox("Shadow TAA", &conf->shadowTAA);
     ImGui::SameLine(200);
     ImGui::Checkbox("Noisy sampling", &conf->shadowNoise);
