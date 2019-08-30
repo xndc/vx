@@ -33,6 +33,9 @@ uniform float uShadowBiasMax;
 // Shadow samples are offset using random noise to get a better distribution. The noise doesn't play well with our
 // standard TAA pass (I assume because we do neighbourhood clamping on RGB and not just chroma), so we have an extra TAA
 // pass just for the shadows that doesn't use clamping. We instead discard samples based on a few (hacky) heuristics.
+// This is awful, a complete waste of GPU time and doesn't even work well, but does result in *slightly* nicer shadows.
+// If you use it together with high PCF and don't look at objects too closely, that is. Otherwise it ends up being
+// super-noisy in motion. I haven't found a good way to accept samples 
 
 // More or less "standard" random function.
 // http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
@@ -77,6 +80,7 @@ void main() {
             for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
                 // PCF + random noise offset:
                 vec2 offset = vec2((ipcfX - (SHADOW_PCF_TAPS_X / 2)), (ipcfY - (SHADOW_PCF_TAPS_Y / 2)));
+                offset *= 1.0; // tunable, increase for larger penumbras
                 #ifdef SHADOW_NOISE
                     offset.y += rand(V.xy + float((iFrame + 2) % 100)) * 2.0 - 1.0;
                     offset.x += rand(V.xy + float((iFrame + 1) % 100)) * 2.0 - 1.0;
@@ -107,14 +111,19 @@ void main() {
         vec3 Nhist = texture(gNormal, uvhist).rgb;
         float Ndist = distance(N, Nhist);
 
+        // Get the last camera position, so we can skip the discard step if the camera hasn't moved at all. This helps
+        // prevent noise caused by motion 
+        // FIXME: This is incredibly wasteful. Just send the current and last camera positions in as uniforms.
+        vec3 LastCamPos = (inverse(uLastViewMatrix) * vec4(0, 0, 0, 1)).xyz;
+
         // Discard sample based on a few heuristics, in an attempt to keep ghosting under control:
-        // This is not "correct" or "standard" by any stretch of the imagination, but works well enough for a demo.
-        // The main issue is that it results in artifacts at dark-light transitions. It's not very obvious, usually, but
-        // if you want to see them just turn on stippled transparency for something and put it in direct light.
-        // It also makes the filtering less efficient: (smoothed) noise will be more obvious in the final image.
-        if (uvhist.x < 0 || uvhist.y < 0 || uvhist.x > 1 || uvhist.y > 1 || isnan(accum) ||
-            abs(accum - shadow) > 0.9 || abs(vel.x+vel.y) > 0.001 || Ndist > 0.001)
-        {
+        // If the camera is stationary, we only want to reject samples that fall outside of the history buffer.
+        if (uvhist.x < 0 || uvhist.y < 0 || uvhist.x > 1 || uvhist.y > 1 || isnan(accum)) {
+            accum = shadow;
+        }
+        // If the camera is moving, we want to be fairly aggressive when rejecting samples.
+        if (abs(distance(CameraPosition, LastCamPos)) > 0.01 && (
+            abs(accum - shadow) > 0.9 || abs(vel.x+vel.y) > 0.001 || Ndist > 0.001)) {
             accum = shadow;
         }
         outAux1 = vec4(mix(shadow, accum, 0.9), aux1.gba);
