@@ -42,8 +42,20 @@ void UpdateScene (Scene* scene) {
 }
 
 void InitScene (Scene* scene) {
+    vxCheck(scene != NULL);
+    DeleteScene(scene);
     scene->slots = 2048;
     scene->objects = vxAlloc(scene->slots, GameObject);
+}
+
+void DeleteScene (Scene* scene) {
+    if (scene == NULL) { return; }
+    if (scene->objects != NULL) {
+        vxFree(scene->objects);
+    }
+    scene->size = 0;
+    scene->slots = 0;
+    scene->objects = NULL;
 }
 
 GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type) {

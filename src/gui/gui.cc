@@ -1,6 +1,7 @@
 #include "gui.h"
 #include "main.h"
 #include "scene/core.h"
+#include "scene/save.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <imgui.h>
@@ -401,7 +402,8 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
 
 static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
     ImGui::Begin("Scene Viewer", NULL, ImGuiWindowFlags_MenuBar);
-    
+
+    bool openSavePopup = false;
     ImGui::BeginMenuBar();
     if (ImGui::BeginMenu("Add Object")) {
         for (size_t i = 0; i < ModelCount; i++) {
@@ -422,7 +424,45 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
         }
         ImGui::EndMenu();
     }
+    if (ImGui::BeginMenu("Save/Load Scene")) {
+        if (ImGui::MenuItem("Save Scene...")) {
+            // ImGui::OpenPopup("Save Scene");
+            openSavePopup = true;
+        }
+        ImGui::Separator();
+
+        char** files = vxListFiles("userdata/scenes", "vxscene");
+        while (files != NULL && files[0] != NULL) {
+            char* filename = files[0];
+            if (ImGui::MenuItem(filename, NULL)) {
+                static char filenameFull[192];
+                stbsp_snprintf(filenameFull, 192, "userdata/scenes/%s", filename);
+                LoadScene(scene, filenameFull);
+            }
+            files++;
+        }
+
+        ImGui::EndMenu();
+    }
     ImGui::EndMenuBar();
+
+    if (openSavePopup) {
+        ImGui::OpenPopup("Save Scene");
+    }
+
+    if (ImGui::BeginPopup("Save Scene")) {
+        static char filename[128];
+        ImGui::InputText("Name", filename, 127);
+        if (ImGui::Button("Save")) {
+            static char filenameFull[192];
+            stbsp_snprintf(filenameFull, 192, "userdata/scenes/%s.vxscene", filename);
+            vxCreateDirectory("userdata");
+            vxCreateDirectory("userdata/scenes");
+            SaveScene(scene, filenameFull);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
     
     ImGui::BeginTabBar("Object Types Tab Bar");
     if (ImGui::BeginTabItem("All Objects")) {

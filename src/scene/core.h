@@ -64,6 +64,7 @@ typedef struct Scene {
 } Scene;
 
 VX_EXPORT void InitScene (Scene* scene);
+VX_EXPORT void DeleteScene (Scene* scene);
 VX_EXPORT void UpdateScene (Scene* scene);
 VX_EXPORT GameObject* AddObject (Scene* scene, GameObject* parent, GameObjectType type);
 VX_EXPORT void DeleteObjectFromScene (Scene* scene, GameObject* object);
