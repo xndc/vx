@@ -403,7 +403,8 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
 static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
     ImGui::Begin("Scene Viewer", NULL, ImGuiWindowFlags_MenuBar);
 
-    bool openSavePopup = false;
+    static bool openSavePopup = false;
+
     ImGui::BeginMenuBar();
     if (ImGui::BeginMenu("Add Object")) {
         for (size_t i = 0; i < ModelCount; i++) {
@@ -426,7 +427,6 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
     }
     if (ImGui::BeginMenu("Save/Load Scene")) {
         if (ImGui::MenuItem("Save Scene...")) {
-            // ImGui::OpenPopup("Save Scene");
             openSavePopup = true;
         }
         ImGui::Separator();
@@ -446,20 +446,22 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
     }
     ImGui::EndMenuBar();
 
+    // We can't just set openSavePopup=true and have everything work. We have to do this for some reason.
     if (openSavePopup) {
         ImGui::OpenPopup("Save Scene");
     }
 
-    if (ImGui::BeginPopup("Save Scene")) {
+    if (ImGui::BeginPopupModal("Save Scene", &openSavePopup)) {
+        ImGui::SetWindowSize(ImVec2(400, 100));
         static char filename[128];
-        ImGui::InputText("Name", filename, 127);
-        if (ImGui::Button("Save")) {
+        bool save = ImGui::InputText("Scene Name", filename, 127, ImGuiInputTextFlags_EnterReturnsTrue);
+        if (ImGui::Button("Save") || save) {
             static char filenameFull[192];
             stbsp_snprintf(filenameFull, 192, "userdata/scenes/%s.vxscene", filename);
             vxCreateDirectory("userdata");
             vxCreateDirectory("userdata/scenes");
             SaveScene(scene, filenameFull);
-            ImGui::CloseCurrentPopup();
+            openSavePopup = false;
         }
         ImGui::EndPopup();
     }
