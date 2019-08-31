@@ -51,8 +51,13 @@ highp float rand (vec2 co) {
 void main() {
     float shadow = 0.0;
 
-    // Retrieve world-space position for fragment:
+    // Retrieve and, in NEGATIVE_ONE_TO_ONE mode, correct depth:
     float Z = texture(gDepth, fragCoord01).r;
+    #ifndef DEPTH_ZERO_TO_ONE
+        Z = Z * 2.0 - 1.0;
+    #endif
+
+    // Retrieve world-space position for fragment:
     vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
     vec4 FragPosClip = vec4(fragCoordClip, Z, 1.0);
     vec4 FragPosView4 = uInvProjMatrix * FragPosClip;
@@ -86,7 +91,7 @@ void main() {
                     offset.x += rand(V.xy + float((iFrame + 1) % 100)) * 2.0 - 1.0;
                 #endif
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
-                // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
+                // Correct shadow depth if required:
                 #ifndef DEPTH_ZERO_TO_ONE
                     zShadowMap = zShadowMap * 2.0 - 1.0;
                 #endif
