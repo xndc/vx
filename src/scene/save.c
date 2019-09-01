@@ -8,7 +8,6 @@ void LoadScene (Scene* scene, const char* filename) {
     static char buf[128]; // temporary storage used by various parts of this function
 
     vxCheck(scene != NULL);
-    InitScene(scene);
     vxLog("Reading into scene 0x%jx from file %s...", scene, filename);
 
     FILE* f = fopen(filename, "r");
@@ -48,6 +47,7 @@ void LoadScene (Scene* scene, const char* filename) {
     SCAN(1, "%d objects", &numObjects);
 
     // Preallocate:
+    InitScene(scene);
     for (int iobj = 0; iobj < numObjects; iobj++) {
         AddObject(scene, NULL, GAMEOBJECT_NULL);
     }
@@ -56,7 +56,7 @@ void LoadScene (Scene* scene, const char* filename) {
         GameObject* obj = &scene->objects[iobj];
         char type;
         int iparent; // -1 for none, index of parent otherwise
-        SCAN(12, "\n%c %d pos(%f %f %f) rot(%f %f %f %f) scl(%f %f %f)", &type, &iparent,
+        SCAN(12, "\n%c %d pos(%g %g %g) rot(%g %g %g %g) scl(%g %g %g)", &type, &iparent,
             &obj->localPosition[0], &obj->localPosition[1], &obj->localPosition[2],
             &obj->localRotation[0], &obj->localRotation[1], &obj->localRotation[2], &obj->localRotation[3],
             &obj->localScale[0], &obj->localScale[1], &obj->localScale[2]);
@@ -89,7 +89,7 @@ void LoadScene (Scene* scene, const char* filename) {
 
             case 'D': {
                 obj->type = GAMEOBJECT_DIRECTIONAL_LIGHT;
-                SCAN(3, " color(%f %f %f)",
+                SCAN(3, " color(%g %g %g)",
                     &obj->directionalLight.color[0],
                     &obj->directionalLight.color[1],
                     &obj->directionalLight.color[2]);
@@ -97,7 +97,7 @@ void LoadScene (Scene* scene, const char* filename) {
 
             case 'P': {
                 obj->type = GAMEOBJECT_POINT_LIGHT;
-                SCAN(3, " color(%f %f %f)",
+                SCAN(3, " color(%g %g %g)",
                     &obj->pointLight.color[0],
                     &obj->pointLight.color[1],
                     &obj->pointLight.color[2]);
@@ -111,12 +111,12 @@ void LoadScene (Scene* scene, const char* filename) {
                 float* yn = obj->lightProbe.colorYn;
                 float* zp = obj->lightProbe.colorZp;
                 float* zn = obj->lightProbe.colorZn;
-                SCAN(3, " xp(%f %f %f)", &xp[0], &xp[1], &xp[2]);
-                SCAN(3, " xn(%f %f %f)", &xn[0], &xn[1], &xn[2]);
-                SCAN(3, " yp(%f %f %f)", &yp[0], &yp[1], &yp[2]);
-                SCAN(3, " yn(%f %f %f)", &yn[0], &yn[1], &yn[2]);
-                SCAN(3, " zp(%f %f %f)", &zp[0], &zp[1], &zp[2]);
-                SCAN(3, " zn(%f %f %f)", &zn[0], &zn[1], &zn[2]);
+                SCAN(3, " xp(%g %g %g)", &xp[0], &xp[1], &xp[2]);
+                SCAN(3, " xn(%g %g %g)", &xn[0], &xn[1], &xn[2]);
+                SCAN(3, " yp(%g %g %g)", &yp[0], &yp[1], &yp[2]);
+                SCAN(3, " yn(%g %g %g)", &yn[0], &yn[1], &yn[2]);
+                SCAN(3, " zp(%g %g %g)", &zp[0], &zp[1], &zp[2]);
+                SCAN(3, " zn(%g %g %g)", &zn[0], &zn[1], &zn[2]);
             } break;
 
             default: {
@@ -174,7 +174,7 @@ void SaveScene (Scene* scene, const char* filename) {
                 continue;
             } break;
         }
-        fprintf(f, "\n%c %d pos(%f %f %f) rot(%f %f %f %f) scl(%f %f %f)", type, iparent,
+        fprintf(f, "\n%c %d pos(%g %g %g) rot(%g %g %g %g) scl(%g %g %g)", type, iparent,
             obj->localPosition[0], obj->localPosition[1], obj->localPosition[2],
             obj->localRotation[0], obj->localRotation[1], obj->localRotation[2], obj->localRotation[3],
             obj->localScale[0], obj->localScale[1], obj->localScale[2]);
@@ -184,13 +184,13 @@ void SaveScene (Scene* scene, const char* filename) {
                 fprintf(f, " %s", obj->model.model->name);
             } break;
             case GAMEOBJECT_DIRECTIONAL_LIGHT: {
-                fprintf(f, " color(%f %f %f)",
+                fprintf(f, " color(%g %g %g)",
                     obj->directionalLight.color[0],
                     obj->directionalLight.color[1],
                     obj->directionalLight.color[2]);
             } break;
             case GAMEOBJECT_POINT_LIGHT: {
-                fprintf(f, " color(%f %f %f)",
+                fprintf(f, " color(%g %g %g)",
                     obj->pointLight.color[0],
                     obj->pointLight.color[1],
                     obj->pointLight.color[2]);
@@ -202,12 +202,12 @@ void SaveScene (Scene* scene, const char* filename) {
                 float* yn = obj->lightProbe.colorYn;
                 float* zp = obj->lightProbe.colorZp;
                 float* zn = obj->lightProbe.colorZn;
-                fprintf(f, " xp(%f %f %f)", xp[0], xp[1], xp[2]);
-                fprintf(f, " xn(%f %f %f)", xn[0], xn[1], xn[2]);
-                fprintf(f, " yp(%f %f %f)", yp[0], yp[1], yp[2]);
-                fprintf(f, " yn(%f %f %f)", yn[0], yn[1], yn[2]);
-                fprintf(f, " zp(%f %f %f)", zp[0], zp[1], zp[2]);
-                fprintf(f, " zn(%f %f %f)", zn[0], zn[1], zn[2]);
+                fprintf(f, " xp(%g %g %g)", xp[0], xp[1], xp[2]);
+                fprintf(f, " xn(%g %g %g)", xn[0], xn[1], xn[2]);
+                fprintf(f, " yp(%g %g %g)", yp[0], yp[1], yp[2]);
+                fprintf(f, " yn(%g %g %g)", yn[0], yn[1], yn[2]);
+                fprintf(f, " zp(%g %g %g)", zp[0], zp[1], zp[2]);
+                fprintf(f, " zn(%g %g %g)", zn[0], zn[1], zn[2]);
             } break;
         }
     }

@@ -1,11 +1,14 @@
 # Project-specific
 build
 run/*
+run/userdata/*
 !run/fonts
 !run/models
 !run/shaders
 !run/terrain
 !run/textures
+!run/userdata
+!run/userdata/scenes
 tools/apitrace*
 
 # Backup and temporary files
