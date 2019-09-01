@@ -403,8 +403,6 @@ static void sDrawSceneViewerObjectList (vxConfig* conf, Scene* scene, int show) 
 static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) {
     ImGui::Begin("Scene Viewer", NULL, ImGuiWindowFlags_MenuBar);
 
-    static bool openSavePopup = false;
-
     ImGui::BeginMenuBar();
     if (ImGui::BeginMenu("Add Object")) {
         for (size_t i = 0; i < ModelCount; i++) {
@@ -425,10 +423,23 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
         }
         ImGui::EndMenu();
     }
+
+    static bool justSaved = false;
     if (ImGui::BeginMenu("Save/Load Scene")) {
-        if (ImGui::MenuItem("Save Scene...")) {
-            openSavePopup = true;
+        static char filename[128];
+        bool save = ImGui::InputTextWithHint("", "Scene Name", filename, 127, ImGuiInputTextFlags_EnterReturnsTrue);
+        if ((ImGui::Button("Save Scene") || save) && filename[0] != '\0') {
+            static char filenameFull[192];
+            stbsp_snprintf(filenameFull, 192, "userdata/scenes/%s.vxscene", filename);
+            vxCreateDirectory("userdata");
+            vxCreateDirectory("userdata/scenes");
+            SaveScene(scene, filenameFull);
+            justSaved = true;
         }
+        if (justSaved) {
+            ImGui::SameLine(220); ImGui::Text("Saved.");
+        }
+
         ImGui::Separator();
 
         char** files = vxListFiles("userdata/scenes", "vxscene");
@@ -443,28 +454,10 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
         }
 
         ImGui::EndMenu();
+    } else {
+        justSaved = false;
     }
     ImGui::EndMenuBar();
-
-    // We can't just set openSavePopup=true and have everything work. We have to do this for some reason.
-    if (openSavePopup) {
-        ImGui::OpenPopup("Save Scene");
-    }
-
-    if (ImGui::BeginPopupModal("Save Scene", &openSavePopup)) {
-        ImGui::SetWindowSize(ImVec2(400, 100));
-        static char filename[128];
-        bool save = ImGui::InputText("Scene Name", filename, 127, ImGuiInputTextFlags_EnterReturnsTrue);
-        if (ImGui::Button("Save") || save) {
-            static char filenameFull[192];
-            stbsp_snprintf(filenameFull, 192, "userdata/scenes/%s.vxscene", filename);
-            vxCreateDirectory("userdata");
-            vxCreateDirectory("userdata/scenes");
-            SaveScene(scene, filenameFull);
-            openSavePopup = false;
-        }
-        ImGui::EndPopup();
-    }
     
     ImGui::BeginTabBar("Object Types Tab Bar");
     if (ImGui::BeginTabItem("All Objects")) {
