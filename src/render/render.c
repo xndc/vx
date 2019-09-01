@@ -2,7 +2,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = NULL;
+void vxglDummyTextureBarrier() {}
+PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = vxglDummyTextureBarrier;
 int vxglMaxTextureUnits = 0;
 
 Material MAT_FULLSCREEN_QUAD;
@@ -20,7 +21,7 @@ void InitRenderSystem() {
     } else if (glfwExtensionSupported("GL_ARB_texture_barrier")) {
         vxglTextureBarrier = glTextureBarrier;
     } else {
-        vxPanic("This program requires the GL_*_texture_barrier extension.");
+        vxLog("Warning: this program requires the GL_*_texture_barrier extension.");
     }
 
     // Generate standard materials:

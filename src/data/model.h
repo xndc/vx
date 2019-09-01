@@ -61,8 +61,8 @@ typedef struct Model {
 XM_ASSETS_MODELS_GLTF
 #undef X
 
-VX_EXPORT extern size_t ModelCount;
-VX_EXPORT extern Model** Models;
+VX_EXPORT size_t ModelCount;
+VX_EXPORT Model** Models;
 
 VX_EXPORT void LoadModels();
 VX_EXPORT void ReadModelFromDisk (const char* name, Model* model, const char* dir, const char* file);

@@ -24,7 +24,7 @@
 // Note that Remotery's OpenGL support conflicts with our Unity-style stats display.
 #undef RMT_ENABLED
 #undef RMT_USE_OPENGL
-#define RMT_ENABLED 1
+#define RMT_ENABLED 0
 #define RMT_USE_OPENGL 0
 #include <Remotery.h>
 
