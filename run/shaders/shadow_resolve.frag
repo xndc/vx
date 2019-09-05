@@ -23,6 +23,12 @@ uniform mat4 uInvViewMatrix;
 uniform mat4 uInvProjMatrix;
 uniform mat4 uLastViewMatrix;
 uniform mat4 uLastProjMatrix;
+uniform mat4 uVP;
+uniform mat4 uVPInv;
+uniform mat4 uVPLast;
+uniform vec3 uCameraPos;
+uniform vec3 uCameraPosLast;
+
 uniform mat4 uShadowVPMatrix;
 uniform float uShadowBiasMin;
 uniform float uShadowBiasMax;
@@ -58,17 +64,15 @@ void main() {
     #endif
 
     // Retrieve world-space position for fragment:
-    vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
     vec4 FragPosClip = vec4(fragCoordClip, Z, 1.0);
-    vec4 FragPosView4 = uInvProjMatrix * FragPosClip;
-    vec4 FragPosWorld4 = uInvViewMatrix * FragPosView4;
+    vec4 FragPosWorld4 = uVPInv * FragPosClip;
     vec3 FragPosWorld = FragPosWorld4.xyz / FragPosWorld4.w;
 
     // Used for bias and discard:
     vec3 N = texture(gNormal, fragCoord01 - 0.5*uJitter).rgb;
 
     // Used as source of random noise:
-    vec3 V = normalize(CameraPosition - FragPosWorld.xyz);
+    vec3 V = normalize(uCameraPos - FragPosWorld.xyz);
 
     // Retrieve shadow-space position for fragment:
     vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
@@ -116,18 +120,16 @@ void main() {
         vec3 Nhist = texture(gNormal, uvhist).rgb;
         float Ndist = distance(N, Nhist);
 
-        // Get the last camera position, so we can skip the discard step if the camera hasn't moved at all. This helps
-        // prevent noise caused by motion 
-        // FIXME: This is incredibly wasteful. Just send the current and last camera positions in as uniforms.
-        vec3 LastCamPos = (inverse(uLastViewMatrix) * vec4(0, 0, 0, 1)).xyz;
-
         // Discard sample based on a few heuristics, in an attempt to keep ghosting under control:
         // If the camera is stationary, we only want to reject samples that fall outside of the history buffer.
         if (uvhist.x < 0 || uvhist.y < 0 || uvhist.x > 1 || uvhist.y > 1 || isnan(accum)) {
             accum = shadow;
         }
-        // If the camera is moving, we want to be fairly aggressive when rejecting samples.
-        if (abs(distance(CameraPosition, LastCamPos)) > 0.01 && (
+        // If the camera is moving, we want to be fairly aggressive when rejecting samples. Otherwise, we can skip the
+        // discard step entirely, to prevent very obvious noise caused by camera rotation. (Noise caused by camera
+        // motion is non-trivial to remove, but also isn't quite as obvious.)
+        // FIXME: Perform abs(distance(...)) on the CPU side and send it as a uniform.
+        if (abs(distance(uCameraPos, uCameraPosLast)) > 0.01 && (
             abs(accum - shadow) > 0.9 || abs(vel.x+vel.y) > 0.001 || Ndist > 0.001)) {
             accum = shadow;
         }

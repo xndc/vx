@@ -15,6 +15,10 @@ uniform mat4 uInvViewMatrix;
 uniform mat4 uInvProjMatrix;
 uniform mat4 uLastViewMatrix;
 uniform mat4 uLastProjMatrix;
+uniform mat4 uVP;
+uniform mat4 uVPInv;
+uniform mat4 uVPLast;
+uniform vec3 uCameraPos;
 
 uniform mat4 uShadowVPMatrix;
 uniform float uShadowBiasMin;
@@ -126,6 +130,7 @@ void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
 
     // Don't do lighting calculations for missing fragments (e.g. sky):
+    // FIXME: Replace this with a discard once we have an actual skybox shader.
     float z = texelFetch(gDepth, fc, 0).r;
     if (z == 0) {
         outColorHDR = texelFetch(gColorLDR, fc, 0);
@@ -138,20 +143,18 @@ void main() {
     #endif
 
     vec3 diffuse  = texelFetch(gColorLDR, fc, 0).rgb;
-    vec3 normal   = texelFetch(gNormal,   fc, 0).rgb;
     vec3 aux1     = texelFetch(gAux1,     fc, 0).rgb;
     vec2 velocity = texelFetch(gAuxHDR16, fc, 0).rg;
-    float rough = max(aux1.g, 0.05); // lighting looks wrong around 0
+    float rough = max(aux1.g, 0.05); // lighting looks wrong around 0 (specular highlight goes away entirely)
     float metal = aux1.b;
 
-    vec3 CameraPosition = (uInvViewMatrix * vec4(0, 0, 0, 1)).xyz;
+    // Retrieve world-space position of fragment:
     vec4 FragPosClip = vec4(fragCoordClip, z, 1.0);
-    // NOTE: Linearized depth is in FragPosView4.w (z is always 1, I think).
-    vec4 FragPosView4 = uInvProjMatrix * FragPosClip;
-    vec4 FragPosWorld4 = uInvViewMatrix * FragPosView4;
+    vec4 FragPosWorld4 = uVPInv * FragPosClip;
     vec3 FragPosWorld = FragPosWorld4.xyz / FragPosWorld4.w;
-    vec3 N = normal; // normals output by the gbuf_main pass should already be normalized
-    vec3 V = normalize(CameraPosition - FragPosWorld.xyz);
+
+    vec3 N = texelFetch(gNormal, fc, 0).rgb; // normals output by gbuf_main should already be normalized
+    vec3 V = normalize(uCameraPos - FragPosWorld.xyz);
 
     vec3 Lo = vec3(0.0);
     #if 1
@@ -162,41 +165,6 @@ void main() {
     Lo += diffuse * Nsq.x * uAmbientCube[isNegative.x + 0]    // maps to [0] for X+, [1] for X-
         + diffuse * Nsq.y * uAmbientCube[isNegative.y + 2]    // maps to [2] for Y+, [3] for Y-
         + diffuse * Nsq.z * uAmbientCube[isNegative.z + 4];   // maps to [4] for Z+, [5] for Z-
-    #endif
-
-    #if 0
-    // Shadow:
-    // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
-    float shadow = 0.0;
-    float bias = max(uShadowBiasMax * (1.0 - dot(N, normalize(uSunPosition))), uShadowBiasMin);
-    vec4 FragPosShadow = uShadowVPMatrix * FragPosWorld4;
-    FragPosShadow /= FragPosShadow.w;
-    // outColorHDR = FragPosWorld4; return;
-    vec2 ShadowTexcoord = FragPosShadow.xy * 0.5 + 0.5;
-    vec2 ShadowTexelSize = (1.0 / textureSize(gShadow, 0)) * 1.0; // tunable, increase for more spread
-    if (ShadowTexcoord.x >= 0.0 && ShadowTexcoord.y >= 0.0 && ShadowTexcoord.x <= 1.0 && ShadowTexcoord.y <= 1.0) {
-        for (int ipcfX = 0; ipcfX < SHADOW_PCF_TAPS_X; ipcfX++) {
-            for (int ipcfY = 0; ipcfY < SHADOW_PCF_TAPS_Y; ipcfY++) {
-                // FIXME: This spreads samples fairly well, but is obviously very noisy.
-                //   A separate TAA pass for shadows is required. The regular TAA pass doesn't smooth these out,
-                //   seemingly due to the way we've implemented neighbourhood clamping,
-                vec2 offset = vec2((ipcfX - (SHADOW_PCF_TAPS_X / 2)), (ipcfY - (SHADOW_PCF_TAPS_Y / 2)));
-                #if 0 // enable for noisy shadows
-                offset.y += rand(V.xy + float((iFrame + 2) % 4)) * 3.0 - 1.5;
-                offset.x += rand(V.xy + float((iFrame + 1) % 4)) * 3.0 - 1.5;
-                #endif
-                float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
-                // Same depth correction we do for the main depth buffer in NEGATIVE_ONE_TO_ONE mode:
-                #ifndef DEPTH_ZERO_TO_ONE
-                    zShadowMap = zShadowMap * 2.0 - 1.0;
-                #endif
-                if (zShadowMap > FragPosShadow.z + bias) {
-                    shadow += 1.0;
-                }
-            }
-        }
-    }
-    shadow /= SHADOW_PCF_TAPS_X * SHADOW_PCF_TAPS_Y;
     #endif
 
     // Filled in by shadow_resolve. 0 = fragment is fully sunlit, 1 = fragment is fully shadowed.
@@ -240,6 +208,7 @@ void main() {
         enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);
         outAux2 = enc;
     #elif defined(DEBUG_VIS_DEPTH_LINEAR)
+        vec4 FragPosView4 = uInvProjMatrix * FragPosClip;
         outAux2 = vec4(FragPosView4.w);
     #endif
 }

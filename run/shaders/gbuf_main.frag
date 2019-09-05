@@ -22,6 +22,11 @@ uniform mat4 uInvProjMatrix;
 uniform mat4 uLastModelMatrix;
 uniform mat4 uLastViewMatrix;
 uniform mat4 uLastProjMatrix;
+uniform mat4 uVP;
+uniform mat4 uVPInv;
+uniform mat4 uVPLast;
+uniform vec3 uCameraPos;
+uniform vec3 uCameraPosLast;
 
 uniform float uMetallic;
 uniform float uRoughness;

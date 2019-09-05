@@ -220,16 +220,25 @@ void SetProjMatrix (RenderState* rs, mat4 proj, mat4 projInv, mat4 projLast) {
 void SetCamera (RenderState* rs, Camera* cam) {
     SetViewMatrix(rs, cam->view_matrix, cam->inv_view_matrix, cam->last_view_matrix);
     SetProjMatrix(rs, cam->proj_matrix, cam->inv_proj_matrix, cam->last_proj_matrix);
+    // TODO: Compute these in Camera_Update() instead of here:
+    glm_mat4_mul(cam->proj_matrix,      cam->view_matrix,       rs->matVP);
+    glm_mat4_mul(cam->inv_view_matrix,  cam->inv_proj_matrix,   rs->matVPInv);
+    glm_mat4_mul(cam->last_proj_matrix, cam->last_view_matrix,  rs->matVPLast);
 }
 
 void ResetModelMatrix (RenderState* rs) {
     glm_mat4_identity(rs->matModel);
     glm_mat4_identity(rs->matModelLast);
+    glm_mat4_copy(rs->matVP,     rs->matMVP);
+    glm_mat4_copy(rs->matVPLast, rs->matMVPLast);
 }
 
+// WARNING: This should be run after SetCamera()!
 void SetModelMatrix (RenderState* rs, mat4 model, mat4 modelLast) {
     glm_mat4_copy(model,     rs->matModel);
     glm_mat4_copy(modelLast, rs->matModelLast);
+    glm_mat4_mul(model,     rs->matVP,     rs->matMVP);
+    glm_mat4_mul(modelLast, rs->matVPLast, rs->matMVPLast);
 }
 
 void MulModelMatrix (RenderState* rs, mat4 model, mat4 modelLast) {
@@ -419,6 +428,12 @@ void RenderMesh (RenderState* rs, vxConfig* conf, vxFrame* frame, Mesh* mesh, Ma
     glUniformMatrix4fv(UNIF_VIEW_MATRIX,       1, false, (float*) rs->matView);
     glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX,   1, false, (float*) rs->matViewInv);
     glUniformMatrix4fv(UNIF_LAST_VIEW_MATRIX,  1, false, (float*) rs->matViewLast);
+
+    glUniformMatrix4fv(UNIF_MVP,     1, false, (float*) rs->matMVP);
+    glUniformMatrix4fv(UNIF_VP,      1, false, (float*) rs->matVP);
+    glUniformMatrix4fv(UNIF_VP_INV,  1, false, (float*) rs->matVPInv);
+    glUniformMatrix4fv(UNIF_VP_LAST, 1, false, (float*) rs->matVPLast);
+
     glUniform2i(UNIF_IRESOLUTION, conf->displayW, conf->displayH);
     glUniform1f(UNIF_ITIME,  frame->t);
     glUniform1i(UNIF_IFRAME, (int) frame->n);

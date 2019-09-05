@@ -77,6 +77,14 @@
     X(UNIF_LAST_VIEW_MATRIX,  "uLastViewMatrix") \
     X(UNIF_LAST_PROJ_MATRIX,  "uLastProjMatrix") \
 \
+    X(UNIF_MVP,     "uMVP") \
+    X(UNIF_VP,      "uVP") \
+    X(UNIF_VP_INV,  "uVPInv") \
+    X(UNIF_VP_LAST, "uVPLast") \
+\
+    X(UNIF_CAMERA_POS,      "uCameraPos") \
+    X(UNIF_CAMERA_POS_LAST, "uCameraPosLast") \
+\
     X(UNIF_JITTER,               "uJitter") \
     X(UNIF_JITTER_LAST,          "uJitterLast") \
     X(UNIF_JITTER_MATRIX,        "uJitterMatrix") \
