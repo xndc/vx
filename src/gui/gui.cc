@@ -117,7 +117,50 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
     glfwPollEvents();
 }
 
-VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
+static void sDrawStats           (vxFrame* frame);
+static void sDrawImguiDemo       (vxConfig* conf, GLFWwindow* window);
+static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window);
+static void sDrawBufferViewer    (vxConfig* conf, GLFWwindow* window);
+static void sDrawSceneViewer     (vxConfig* conf, GLFWwindow* window, Scene* scene);
+static void sDrawConfigurator    (vxConfig* conf, GLFWwindow* window);
+
+VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene, vxFrame* lastFrame) {
+    static bool showStats           = false;
+    static bool showImguiDemo       = false;
+    static bool showTonemapSettings = false;
+    static bool showBufferViewer    = false;
+    static bool showSceneViewer     = false;
+    static bool showConfigurator    = false;
+
+    #define ToggleOnConditionOnce(boolean, cond) \
+        static bool boolean ## __triggered = false; \
+        if (cond) { \
+            if (!(boolean ## __triggered)) { \
+                boolean = !boolean; \
+                boolean ## __triggered = true; \
+            } \
+        } else { \
+            boolean ## __triggered = false; \
+        }
+    
+    #define KeyDown(key) glfwGetKey(window, key) == GLFW_PRESS
+    
+    ToggleOnConditionOnce(showStats,            KeyDown(GLFW_KEY_GRAVE_ACCENT));
+    ToggleOnConditionOnce(showImguiDemo,        KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_I));
+    ToggleOnConditionOnce(showTonemapSettings,  KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_T));
+    ToggleOnConditionOnce(showBufferViewer,     KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_B));
+    ToggleOnConditionOnce(showSceneViewer,      KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_O));
+    ToggleOnConditionOnce(showConfigurator,     KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_P));
+
+    if (showStats)           { sDrawStats           (lastFrame); }
+    if (showImguiDemo)       { sDrawImguiDemo       (conf, window); }
+    if (showTonemapSettings) { sDrawTonemapSettings (conf, window); }
+    if (showBufferViewer)    { sDrawBufferViewer    (conf, window); }
+    if (showSceneViewer)     { sDrawSceneViewer     (conf, window, scene); }
+    if (showConfigurator)    { sDrawConfigurator    (conf, window); }
+}
+
+static void sDrawStats (vxFrame* frame) {
     // NOTE: The point of keeping track of the frame number here is to avoid avgMs being computed
     //   by averaging N zeroes and one valid frame number. Since avgMs is static, we need the frame
     //   number to be static as well and can't rely on frame->n.
@@ -199,45 +242,6 @@ VX_EXPORT void GUI_DrawStatistics (vxFrame* frame) {
 
     ImGui::PopFont();
     ImGui::End();
-}
-
-static void sDrawImguiDemo       (vxConfig* conf, GLFWwindow* window);
-static void sDrawTonemapSettings (vxConfig* conf, GLFWwindow* window);
-static void sDrawBufferViewer    (vxConfig* conf, GLFWwindow* window);
-static void sDrawSceneViewer     (vxConfig* conf, GLFWwindow* window, Scene* scene);
-static void sDrawConfigurator    (vxConfig* conf, GLFWwindow* window);
-
-VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene) {
-    static bool showImguiDemo       = false;
-    static bool showTonemapSettings = false;
-    static bool showBufferViewer    = false;
-    static bool showSceneViewer     = false;
-    static bool showConfigurator    = false;
-
-    #define ToggleOnConditionOnce(boolean, cond) \
-        static bool boolean ## __triggered = false; \
-        if (cond) { \
-            if (!(boolean ## __triggered)) { \
-                boolean = !boolean; \
-                boolean ## __triggered = true; \
-            } \
-        } else { \
-            boolean ## __triggered = false; \
-        }
-    
-    #define KeyDown(key) glfwGetKey(window, key) == GLFW_PRESS
-    
-    ToggleOnConditionOnce(showImguiDemo,       KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_I));
-    ToggleOnConditionOnce(showTonemapSettings, KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_T));
-    ToggleOnConditionOnce(showBufferViewer,    KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_B));
-    ToggleOnConditionOnce(showSceneViewer,     KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_O));
-    ToggleOnConditionOnce(showConfigurator,    KeyDown(GLFW_KEY_LEFT_CONTROL) && KeyDown(GLFW_KEY_P));
-
-    if (showImguiDemo)       { sDrawImguiDemo       (conf, window); }
-    if (showTonemapSettings) { sDrawTonemapSettings (conf, window); }
-    if (showBufferViewer)    { sDrawBufferViewer    (conf, window); }
-    if (showSceneViewer)     { sDrawSceneViewer     (conf, window, scene); }
-    if (showConfigurator)    { sDrawConfigurator    (conf, window); }
 }
 
 static void sDrawImguiDemo (vxConfig* conf, GLFWwindow* window) {

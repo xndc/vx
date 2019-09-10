@@ -22,18 +22,4 @@ VX_EXPORT void GUI_RenderLoadingFrame (GLFWwindow* window,
 
 VX_EXPORT bool GUI_InterfaceWantsInput();
 
-typedef struct GUI_Statistics {
-    size_t frame;
-    double msFrame;
-    double msMainThread;
-    double msRenderThread;
-    double msSwapBuffers;
-    double msPollEvents;
-    size_t drawcalls;
-    size_t vertices;
-    size_t triangles;
-} GUI_Statistics;
-
-VX_EXPORT void GUI_DrawStatistics (vxFrame* frame);
-
-VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene);
+VX_EXPORT void GUI_DrawDebugUI (vxConfig* conf, GLFWwindow* window, Scene* scene, vxFrame* lastFrame);

@@ -285,8 +285,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // Debug user interface:
     StartBlock("GUI Update");
-    GUI_DrawStatistics(lastFrame);
-    GUI_DrawDebugUI(conf, window, scene);
+    GUI_DrawDebugUI(conf, window, scene, lastFrame);
     bool uiWantsInput = GUI_InterfaceWantsInput();
     EndBlock();
 
@@ -373,7 +372,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
 
     // We can't time OpenGL calls if Remotery is already doing it!
     #if !RMT_USE_OPENGL
-        // tRenderStart to tRenderEnd will just be the CPU time taken up by drawcall submission. To monitor GPU time w
+        // tRenderStart to tRenderEnd will just be the CPU time taken up by drawcall submission. To monitor GPU time we
         // need to use an OpenGL query object: https://www.khronos.org/opengl/wiki/Query_Object
         // We use multiple query objects in order to avoid stalling the renderer just to wait for a reply from the GPU.
         static int rtqIndex = 0;

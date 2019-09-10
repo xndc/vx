@@ -191,7 +191,7 @@ void main() {
     #if defined(DEBUG_VIS_GBUF_COLOR)
         outAux2 = vec4(diffuse, 1.0);
     #elif defined(DEBUG_VIS_GBUF_NORMAL)
-        outAux2 = vec4(normal, 1.0);
+        outAux2 = vec4(N, 1.0);
     #elif defined(DEBUG_VIS_GBUF_ORM)
         outAux2 = vec4(aux1, 1.0);
     #elif defined(DEBUG_VIS_GBUF_VELOCITY)
