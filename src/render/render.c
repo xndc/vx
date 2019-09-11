@@ -224,6 +224,15 @@ void SetCamera (RenderState* rs, Camera* cam) {
     glm_mat4_mul(cam->proj_matrix,      cam->view_matrix,       rs->matVP);
     glm_mat4_mul(cam->inv_view_matrix,  cam->inv_proj_matrix,   rs->matVPInv);
     glm_mat4_mul(cam->last_proj_matrix, cam->last_view_matrix,  rs->matVPLast);
+    // Determine camera position from the matrices, assuming a perspective projection.
+    mat4 viewInvLast;
+    glm_mat4_inv(cam->last_view_matrix, viewInvLast);
+    vec4 selector = {0, 0, 0, 1}; // selects translation
+    vec4 camPos, camPosLast;
+    glm_mat4_mulv(rs->matViewInv, selector, camPos);
+    glm_mat4_mulv(viewInvLast, selector, camPosLast);
+    glm_vec3_copy(camPos, rs->camPos);
+    glm_vec3_copy(camPosLast, rs->camPosLast);
 }
 
 void ResetModelMatrix (RenderState* rs) {
@@ -433,6 +442,9 @@ void RenderMesh (RenderState* rs, vxConfig* conf, vxFrame* frame, Mesh* mesh, Ma
     glUniformMatrix4fv(UNIF_VP,      1, false, (float*) rs->matVP);
     glUniformMatrix4fv(UNIF_VP_INV,  1, false, (float*) rs->matVPInv);
     glUniformMatrix4fv(UNIF_VP_LAST, 1, false, (float*) rs->matVPLast);
+
+    glUniform3fv(UNIF_CAMERA_POS,      1, (float*) rs->camPos);
+    glUniform3fv(UNIF_CAMERA_POS_LAST, 1, (float*) rs->camPosLast);
 
     glUniform2i(UNIF_IRESOLUTION, conf->displayW, conf->displayH);
     glUniform1f(UNIF_ITIME,  frame->t);

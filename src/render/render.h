@@ -35,6 +35,8 @@ typedef struct RenderState {
     mat4 matVP;
     mat4 matVPInv;
     mat4 matVPLast;
+    vec3 camPos;
+    vec3 camPosLast;
     int nextFreeTextureUnit;
     bool forceNoDepthTest;
     bool forceNoDepthWrite;
