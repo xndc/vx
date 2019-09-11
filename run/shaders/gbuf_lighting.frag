@@ -49,9 +49,16 @@ vec3 SurfaceF0 (vec3 diffuse, float metallic) {
     return mix(DielectricSpecular, diffuse, metallic);
 }
 
-vec3 FresnelSchlick (float cosTheta, vec3 F0) {
+vec3 FresnelSchlick (float HdotV, vec3 F0) {
+    #if 0
+    // Taken from LearnOpenGL, I think.
     // We keep the power over 0 to avoid black spots at random points in the scene.
-    return F0 + (1.0 - F0) * max(pow(1.0 - cosTheta, 5.0), 0.001);
+    return F0 + (1.0 - F0) * max(pow(1.0 - HdotV, 5.0), 0.001);
+    #else
+    // Taken from Real Shading in Unreal Engine 4.
+    // Black spots don't seem to be a problem with this one.
+    return F0 + (1.0 - F0) * pow(2.0, (-5.55473*HdotV - 6.98316) * HdotV);
+    #endif
 }
 
 float DistributionGGX (vec3 N, vec3 H, float roughness) {
