@@ -58,6 +58,7 @@ typedef struct vxConfig {
     float tonemapACESParamE;
     
     int debugVisMode;
+    bool debugShowPointLights;
 
     float shadowBiasMin;
     float shadowBiasMax;

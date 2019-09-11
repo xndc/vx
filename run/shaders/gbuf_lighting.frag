@@ -60,8 +60,7 @@ vec3 LambertDiffuse (vec3 diffuse) {
 
 vec3 FresnelSchlick (float HdotV, vec3 diffuse, float metallic) {
     // F0 estimation technique taken from https://learnopengl.com/PBR/Theory
-    const vec3 DielectricSpecular = vec3(0.04);
-    vec3 F0 = mix(DielectricSpecular, diffuse, metallic);
+    vec3 F0 = mix(vec3(0.04), diffuse, metallic);
     return F0 + (1.0 - F0) * pow(2.0, (-5.55473*HdotV - 6.98316) * HdotV);
 }
 
@@ -70,7 +69,7 @@ float DistributionGGX (float NdotH, float roughness) {
     float alpha2 = alpha * alpha;
     float NdotH2 = NdotH*NdotH;
     float x = (NdotH2 * (alpha2 - 1.0) + 1.0);
-    return alpha2 / PI * x * x;
+    return alpha2 / (PI * x * x);
 }
 
 float GeometrySchlickSmith (float NdotV, float NdotL, float Rgh) {
@@ -156,7 +155,7 @@ void main() {
     #if 1
     // Ambient lighting using HL2-style ambient cube:
     // https://drivers.amd.com/developer/gdc/D3DTutorial10_Half-Life2_Shading.pdf page 59
-    vec3 Nsq = N * N;
+    vec3 Nsq = max(N * N, 0.001); // not clamping causes black spots in some areas
     ivec3 isNegative = ivec3(N.x < 0.0, N.y < 0.0, N.z < 0.0);
     Lo += diffuse * Nsq.x * uAmbientCube[isNegative.x + 0]    // maps to [0] for X+, [1] for X-
         + diffuse * Nsq.y * uAmbientCube[isNegative.y + 2]    // maps to [2] for Y+, [3] for Y-

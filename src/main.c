@@ -93,6 +93,7 @@ void vxConfig_Init (vxConfig* c) {
     c->tonemapACESParamE = 0.14f;
 
     c->debugVisMode = DEBUG_VIS_NONE;
+    c->debugShowPointLights = false;
 
     c->shadowSize = 4096;
     c->shadowBiasMin = 0.0002f;
@@ -584,21 +585,23 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         EndRenderPass();
     }
 
-    StartRenderPass(&rs, "Debug: Point Light Positions");
-    // We do the binding manually to avoid PROG_GBUF_MAIN wiping out any data in gAux2.
-    glBindFramebuffer(GL_FRAMEBUFFER, FB_ONLY_COLOR_HDR);
-    glDrawBuffer(GL_COLOR_ATTACHMENT0);
-    // There should be a dedicated program for this kind of thing, but whatever, this works for now.
-    SetRenderProgram(&rs, &PROG_GBUF_MAIN);
-    SetCamera(&rs, &conf->camMain);
-    for (int i = 0; i < rl.pointLightCount; i++) {
-        const float scale = 0.2f;
-        RenderState cubeRs = rs;
-        MulModelPosition(&cubeRs, rl.pointLights[i].position, rl.pointLights[i].position);
-        MulModelScale(&cubeRs, (vec3){scale, scale, scale}, (vec3){scale, scale, scale});
-        RenderMesh(&cubeRs, conf, frame, &MESH_CUBE, &MAT_DIFFUSE_WHITE);
+    if (conf->debugShowPointLights) {
+        StartRenderPass(&rs, "Debug: Point Light Positions");
+        // We do the binding manually to avoid PROG_GBUF_MAIN wiping out any data in gAux2.
+        glBindFramebuffer(GL_FRAMEBUFFER, FB_ONLY_COLOR_HDR);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        // There should be a dedicated program for this kind of thing, but whatever, this works for now.
+        SetRenderProgram(&rs, &PROG_GBUF_MAIN);
+        SetCamera(&rs, &conf->camMain);
+        for (int i = 0; i < rl.pointLightCount; i++) {
+            const float scale = 0.2f;
+            RenderState cubeRs = rs;
+            MulModelPosition(&cubeRs, rl.pointLights[i].position, rl.pointLights[i].position);
+            MulModelScale(&cubeRs, (vec3){scale, scale, scale}, (vec3){scale, scale, scale});
+            RenderMesh(&cubeRs, conf, frame, &MESH_CUBE, &MAT_DIFFUSE_WHITE);
+        }
+        EndRenderPass();
     }
-    EndRenderPass();
 
     StartRenderPass(&rs, "Final output");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

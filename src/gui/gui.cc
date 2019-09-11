@@ -508,6 +508,8 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Checkbox("Shadow TAA", &conf->shadowTAA);
     ImGui::SameLine(200);
     ImGui::Checkbox("Noisy sampling", &conf->shadowNoise);
+
+    ImGui::Checkbox("Visualize point lights", &conf->debugShowPointLights);
     
     ImGui::Checkbox("Clear GBuffer on redraw", &conf->clearColorBuffers);
     if (ImGui::IsItemHovered()) {
