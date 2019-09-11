@@ -41,53 +41,43 @@ uniform sampler2D gAux2;
 uniform sampler2D gAuxDepth;
 uniform sampler2D gShadow;
 
+// Evaluates the Unreal Engine 4 variant of the Cook-Torrance BRDF:
+// * Lambertian diffuse term.
+// * Specular D: Trowbridge-Reitz (GGX) normal distribution function.
+// * Specular F: Schlick's approximation of the Fresnel term.
+// * Specular G: Schlick's approximation of Bruce G. Smith's geometric occlusion function.
+// References:
+// * Real Shading in Unreal Engine 4:
+//   - https://blog.selfshadow.com/publications/s2013-shading-course/
+//   - https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+// * https://learnopengl.com/PBR/Theory
+
 #define PI 3.14159265358979323846
 
-const vec3 DielectricSpecular = vec3(0.04);
-
-vec3 SurfaceF0 (vec3 diffuse, float metallic) {
-    return mix(DielectricSpecular, diffuse, metallic);
+vec3 LambertDiffuse (vec3 diffuse) {
+    return diffuse / PI;
 }
 
-vec3 FresnelSchlick (float HdotV, vec3 F0) {
-    #if 0
-    // Taken from LearnOpenGL, I think.
-    // We keep the power over 0 to avoid black spots at random points in the scene.
-    return F0 + (1.0 - F0) * max(pow(1.0 - HdotV, 5.0), 0.001);
-    #else
-    // Taken from Real Shading in Unreal Engine 4.
-    // Black spots don't seem to be a problem with this one.
+vec3 FresnelSchlick (float HdotV, vec3 diffuse, float metallic) {
+    // F0 estimation technique taken from https://learnopengl.com/PBR/Theory
+    const vec3 DielectricSpecular = vec3(0.04);
+    vec3 F0 = mix(DielectricSpecular, diffuse, metallic);
     return F0 + (1.0 - F0) * pow(2.0, (-5.55473*HdotV - 6.98316) * HdotV);
-    #endif
 }
 
-float DistributionGGX (vec3 N, vec3 H, float roughness) {
-    float a      = roughness*roughness;
-    float a2     = a*a;
-    float NdotH  = max(dot(N, H), 0.0);
+float DistributionGGX (float NdotH, float roughness) {
+    float alpha = roughness * roughness; // Disney remapping
+    float alpha2 = alpha * alpha;
     float NdotH2 = NdotH*NdotH;
-
-    float num   = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-
-    return num / denom;
+    float x = (NdotH2 * (alpha2 - 1.0) + 1.0);
+    return alpha2 / PI * x * x;
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness) {
-    float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
-
-    float num   = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-
-    return num / denom;
-}
-
-float GeometrySmith(float NdotV, float NdotL, float Rgh) {
-    float ggx1 = GeometrySchlickGGX(NdotL, Rgh);
-    float ggx2 = GeometrySchlickGGX(NdotV, Rgh);
-    return ggx1 * ggx2;
+float GeometrySchlickSmith (float NdotV, float NdotL, float Rgh) {
+    float k = (Rgh+1)*(Rgh+1) / 8.0; // Disney + Unreal remapping
+    float g1 = NdotL / ((NdotL * (1 - k)) + k);
+    float g2 = NdotV / ((NdotV * (1 - k)) + k);
+    return g1 * g2;
 }
 
 vec3 DirectionalLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
@@ -95,31 +85,30 @@ vec3 DirectionalLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, floa
     float NdotL = max(dot(N, L), 0.0);
     float NdotV = max(dot(N, V), 0.0);
     float HdotV = max(dot(H, V), 0.0);
-    vec3 F = FresnelSchlick(HdotV, SurfaceF0(Diffuse, Met));
-    float NDF = DistributionGGX(N, H, Rgh);
-    float G = GeometrySmith(NdotV, NdotL, Rgh);
-    vec3 Specular = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.001);
-    vec3 kS = F;
-    vec3 kD = (vec3(1.0) - kS) * (1.0 - Met);
-    return (kD * Diffuse / PI + Specular) * Lcolor * NdotL;
+    float NdotH = max(dot(N, H), 0.0);
+    float SpecD = DistributionGGX(NdotH, Rgh);
+    vec3  SpecF = FresnelSchlick(HdotV, Diffuse, Met);
+    float SpecG = GeometrySchlickSmith(NdotV, NdotL, Rgh);
+    vec3 Diff = (vec3(1) - SpecF) * (1.0 - Met) * LambertDiffuse(Diffuse);
+    vec3 BRDF = Diff + (SpecD * SpecF * SpecG) / max(4 * NdotL * NdotV, 0.001);
+    return BRDF * Lcolor * NdotL;
 }
 
 vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
-    vec3 Lnorm = normalize(L);
-    vec3 H = normalize(V + Lnorm);
     float Distance = length(L);
+    L = normalize(L);
+    vec3 H = normalize(V + L);
     float Attenuation = 1.0 / (Distance * Distance);
-    vec3 Radiance = Lcolor * Attenuation;
-    float NdotL = max(dot(N, Lnorm), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
     float NdotV = max(dot(N, V), 0.0);
     float HdotV = max(dot(H, V), 0.0);
-    vec3 F = FresnelSchlick(HdotV, SurfaceF0(Diffuse, Met));
-    float NDF = DistributionGGX(N, H, Rgh);
-    float G = GeometrySmith(NdotV, NdotL, Rgh);
-    vec3 Specular = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.001);
-    vec3 kS = F;
-    vec3 kD = (vec3(1.0) - kS) * (1.0 - Met);
-    return (kD * Diffuse / PI + Specular) * Radiance * NdotL;
+    float NdotH = max(dot(N, H), 0.0);
+    float SpecD = DistributionGGX(NdotH, Rgh);
+    vec3  SpecF = FresnelSchlick(HdotV, Diffuse, Met);
+    float SpecG = GeometrySchlickSmith(NdotV, NdotL, Rgh);
+    vec3 Diff = (vec3(1) - SpecF) * (1.0 - Met) * LambertDiffuse(Diffuse);
+    vec3 BRDF = Diff + (SpecD * SpecF * SpecG) / max(4 * NdotL * NdotV, 0.001);
+    return BRDF * Lcolor * Attenuation * NdotL;
 }
 
 // More or less "standard" random function.
