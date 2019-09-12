@@ -489,6 +489,9 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Checkbox("Pause on focus loss", &conf->pauseOnFocusLoss);
 
     ImGui::Checkbox("Enable TAA", &conf->enableTAA);
+    ImGui::SameLine(200);
+    ImGui::Checkbox("Use Halton pattern for jitter", &conf->taaHaltonJitter);
+    
     ImGui::SliderFloat("TAA sample offset multiplier", &conf->taaSampleOffsetMul, 0.0, 4.0);
     ImGui::SliderFloat("TAA neighbourhood clamping distance", &conf->taaClampSampleDist, 0.0, 4.0);
     ImGui::SliderFloat("TAA feedback factor", &conf->taaFeedbackFactor, 0.0, 1.0);

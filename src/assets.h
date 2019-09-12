@@ -142,10 +142,13 @@
 // X(name, base directory, main GLTF file name)
 
 #define XM_ASSETS_MODELS_GLTF \
-    X(MDL_SPONZA,   "models/Sponza",    "Sponza.gltf") \
-    X(MDL_DUCK,     "models/Duck",      "Duck.gltf") \
-    X(MDL_BOX_MR,   "models/BoxTextured-MetallicRoughness", "BoxTextured.gltf") \
-    X(MDL_SPHERES,  "models/MetalRoughSpheres/glTF", "MetalRoughSpheres.gltf") \
+    X(MDL_SPONZA,           "models/Sponza",                    "Sponza.gltf") \
+    X(MDL_DUCK,             "models/Duck",                      "Duck.gltf") \
+    X(MDL_BOX,              "models/BoxTextured",               "BoxTextured.gltf") \
+    X(MDL_SPHERES,          "models/MetalRoughSpheres/glTF",    "MetalRoughSpheres.gltf") \
+    X(MDL_RIGGED_FIGURE,    "models/RiggedFigure",              "RiggedFigure.gltf") \
+    X(MDL_ALPHA_BLEND_TEST, "models/AlphaBlendModeTest",        "AlphaBlendModeTest.gltf") \
+    X(MDL_LANDSCAPE_1,      "models/Landscape 1",               "scene.gltf") \
 
 #define XM_ASSETS_MODELS_GLTF_IGNORED \
 

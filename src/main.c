@@ -106,6 +106,7 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowNoise = false;
 
     c->enableTAA = true;
+    c->taaHaltonJitter = true;
     c->taaSampleOffsetMul = 0.2f;
     c->taaClampSampleDist = 0.5f;
     c->taaFeedbackFactor = 0.95;
@@ -460,12 +461,19 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     memcpy(&camMainJittered, &conf->camMain, sizeof(Camera));
     float jitterX = 0, jitterY = 0, jitterLastX = 0, jitterLastY = 0;
     if (conf->enableTAA) {
-        // Higher multipliers increase both blur and visible jitter on specular surfaces.
-        // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
-        jitterX     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
-        jitterY     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
-        jitterLastX = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
-        jitterLastY = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+        if (conf->taaHaltonJitter) {
+            // Higher multipliers increase both blur and visible jitter on specular surfaces.
+            // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
+            jitterX     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
+            jitterY     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
+            jitterLastX = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
+            jitterLastY = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+        } else {
+            jitterX     = conf->taaSampleOffsetMul * ((-1) * (frame->n+1) % 2) / (float) w;
+            jitterY     = conf->taaSampleOffsetMul * ((-1) * (frame->n+1) % 2) / (float) h;
+            jitterLastX = conf->taaSampleOffsetMul * ((-1) * (frame->n+0) % 2) / (float) w;
+            jitterLastY = conf->taaSampleOffsetMul * ((-1) * (frame->n+0) % 2) / (float) h;
+        }
         static mat4 jitter, jitterLast;
         glm_translate_make(jitter,     (vec3){jitterX,     jitterY,     0.0});
         glm_translate_make(jitterLast, (vec3){jitterLastX, jitterLastY, 0.0});

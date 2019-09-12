@@ -70,6 +70,8 @@ typedef struct vxConfig {
 
     // Enable the Temporal Anti-Aliasing filter. Smooths the image at the cost of some blur.
     bool enableTAA;
+    // If enabled, use a Halton pattern for the jitter. If disabled, use a simple 2-sample pattern.
+    bool taaHaltonJitter;
     // Multiplier for TAA sampling jitter offsets. Original offsets are between [-1,1].
     // Higher multipliers increase both blur and visible jitter on specular surfaces.
     // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
