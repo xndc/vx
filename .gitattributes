@@ -20,6 +20,7 @@
 *.glsl          text
 *.vert          text
 *.frag          text
+*.vxscene       text
 *.ini           text
 *.ps1           text eol=crlf
 *.bat           text eol=crlf
