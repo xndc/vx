@@ -110,7 +110,7 @@ void vxConfig_Init (vxConfig* c) {
     c->taaSampleOffsetMul = 0.2f;
     c->taaClampSampleDist = 0.5f;
     c->taaFeedbackFactor = 0.95;
-    c->sharpenStrength = 0.05;
+    c->sharpenStrength = 0.0; // our current filter is very bad
 }
 
 // Halton(2,3) 8-sample offset sequence used for TAA. Initialized by GameLoad.

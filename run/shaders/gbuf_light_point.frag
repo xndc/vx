@@ -47,16 +47,10 @@ uniform sampler2D gShadow;
 
 #define PI 3.14159265358979323846
 
-vec3 LambertDiffuse (vec3 diffuse, vec3 specularF, float metallic) {
-    #if 1
-        // Version used by LearnOpenGL. Darkens diffuse reflections from metallic objects.
-        // Looks more physically correct, at least for our use case (no IBL support yet).
-        return (vec3(1) - specularF) * (1.0 - metallic) * diffuse / PI;
-    #else
-        // Version used by Unreal, or at least the one described by Brian Karis.
-        // Probably works better when you actually have IBL support.
-        return diffuse/PI;
-    #endif
+vec3 LambertDiffuse (vec3 diffuse, float metallic) {
+    // Lambertian diffuse used by Unreal (Cdiff/PI) with remapping as per the glTF standard.
+    // Indistinguishable from the LearnOpenGL diffuse factor (which depends on specular F).
+    return mix(diffuse * 0.96, vec3(0), vec3(metallic))/PI;
 }
 
 vec3 FresnelSchlick (float HdotV, vec3 diffuse, float metallic) {
@@ -80,6 +74,9 @@ float GeometrySchlickSmith (float NdotV, float NdotL, float Rgh) {
     return g1 * g2;
 }
 
+// Computes the contribution of a point light to a particular fragment's colour.
+// Uses inverse square falloff/attenuation.
+// TODO: Switch to Unreal's model (inverse square + light radius) at some point.
 vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
     float Distance = length(L);
     L = normalize(L);
@@ -92,7 +89,7 @@ vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met,
     float SpecD = DistributionGGX(NdotH, Rgh);
     vec3  SpecF = FresnelSchlick(HdotV, Diffuse, Met);
     float SpecG = GeometrySchlickSmith(NdotV, NdotL, Rgh);
-    vec3 Diff = LambertDiffuse(Diffuse, SpecF, Met);
+    vec3 Diff = LambertDiffuse(Diffuse, Met);
     vec3 BRDF = Diff + (SpecD * SpecF * SpecG) / max(4 * NdotL * NdotV, 0.001);
     return BRDF * Lcolor * Attenuation * NdotL;
 }

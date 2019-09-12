@@ -54,26 +54,23 @@ uniform sampler2D gShadow;
 
 #define PI 3.14159265358979323846
 
-vec3 LambertDiffuse (vec3 diffuse, vec3 specularF, float metallic) {
-    #if 1
-        // Version used by LearnOpenGL. Darkens diffuse reflections from metallic objects.
-        // Looks more physically correct, at least for our use case (no IBL support yet).
-        return (vec3(1) - specularF) * (1.0 - metallic) * diffuse / PI;
-    #else
-        // Version used by Unreal, or at least the one described by Brian Karis.
-        // Probably works better when you actually have IBL support.
-        return diffuse/PI;
-    #endif
+vec3 LambertDiffuse (vec3 diffuse, float metallic) {
+    // Lambertian diffuse used by Unreal (Cdiff/PI) with remapping as per the glTF standard.
+    // Indistinguishable from the LearnOpenGL diffuse factor (which depends on specular F).
+    return mix(diffuse * 0.96, vec3(0), vec3(metallic))/PI;
 }
 
 vec3 FresnelSchlick (float HdotV, vec3 diffuse, float metallic) {
-    // F0 estimation technique taken from https://learnopengl.com/PBR/Theory
+    // F0 computation as per the glTF standard:
     vec3 F0 = mix(vec3(0.04), diffuse, metallic);
+    // Unreal's modified version of the Schlick Frenel approximation:
     return F0 + (1.0 - F0) * pow(2.0, (-5.55473*HdotV - 6.98316) * HdotV);
 }
 
 float DistributionGGX (float NdotH, float roughness) {
-    float alpha = roughness * roughness; // Disney remapping
+    // Roughness remapping as per the glTF standard (originally from Disney's PBR model):
+    float alpha = roughness * roughness;
+    // Trowbridge-Reitz (GGX) normal distribution function:
     float alpha2 = alpha * alpha;
     float NdotH2 = NdotH*NdotH;
     float x = (NdotH2 * (alpha2 - 1.0) + 1.0);
@@ -81,12 +78,15 @@ float DistributionGGX (float NdotH, float roughness) {
 }
 
 float GeometrySchlickSmith (float NdotV, float NdotL, float Rgh) {
-    float k = (Rgh+1)*(Rgh+1) / 8.0; // Disney + Unreal remapping
+    // Disney remapping (Rgh = (Rgh+1)/2) plus Unreal's remapping (k = Rgh/2):
+    float k = (Rgh+1)*(Rgh+1) / 8.0;
+    // Schlick's approximation of Bruce Smith's geometric attenuation term:
     float g1 = NdotL / ((NdotL * (1 - k)) + k);
     float g2 = NdotV / ((NdotV * (1 - k)) + k);
     return g1 * g2;
 }
 
+// Computes the contribution of a directional light to a particular fragment's colour.
 vec3 DirectionalLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
     vec3 H = normalize(V + L);
     float NdotL = max(dot(N, L), 0.0);
@@ -96,26 +96,9 @@ vec3 DirectionalLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, floa
     float SpecD = DistributionGGX(NdotH, Rgh);
     vec3  SpecF = FresnelSchlick(HdotV, Diffuse, Met);
     float SpecG = GeometrySchlickSmith(NdotV, NdotL, Rgh);
-    vec3 Diff = LambertDiffuse(Diffuse, SpecF, Met);
+    vec3 Diff = LambertDiffuse(Diffuse, Met);
     vec3 BRDF = Diff + (SpecD * SpecF * SpecG) / max(4 * NdotL * NdotV, 0.001);
     return BRDF * Lcolor * NdotL;
-}
-
-vec3 PointLightLo (vec3 N, vec3 V, vec3 L, vec3 Lcolor, vec3 Diffuse, float Met, float Rgh) {
-    float Distance = length(L);
-    L = normalize(L);
-    vec3 H = normalize(V + L);
-    float Attenuation = 1.0 / (Distance * Distance);
-    float NdotL = max(dot(N, L), 0.0);
-    float NdotV = max(dot(N, V), 0.0);
-    float HdotV = max(dot(H, V), 0.0);
-    float NdotH = max(dot(N, H), 0.0);
-    float SpecD = DistributionGGX(NdotH, Rgh);
-    vec3  SpecF = FresnelSchlick(HdotV, Diffuse, Met);
-    float SpecG = GeometrySchlickSmith(NdotV, NdotL, Rgh);
-    vec3 Diff = LambertDiffuse(Diffuse, SpecF, Met);
-    vec3 BRDF = Diff + (SpecD * SpecF * SpecG) / max(4 * NdotL * NdotV, 0.001);
-    return BRDF * Lcolor * Attenuation * NdotL;
 }
 
 // More or less "standard" random function.
