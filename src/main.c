@@ -173,10 +173,10 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     }
 
     // Initialize game subsystems:
-    InitTextureSystem();
-    InitProgramSystem(conf);
-    InitRenderSystem();
     GUI_Init(window);
+    GUI_RenderLoadingFrame(window, "Loading...", "", 0.2f, 0.3f, 0.4f, 0.9f, 0.9f, 0.9f);
+    InitTextureSystem();
+    InitRenderSystem();
 
     *pwindow = window;
 }
@@ -184,6 +184,7 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
 // Reloads the game's assets. Can be run multiple times.
 void GameReload (vxConfig* conf, GLFWwindow* window) {
     GUI_RenderLoadingFrame(window, "Loading...", "", 0.2f, 0.3f, 0.4f, 0.9f, 0.9f, 0.9f);
+    InitProgramSystem(conf);
     LoadTextures();
     LoadModels();
 }
