@@ -328,6 +328,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         lmy = (float) my;
 
         vec3 spd = {8.0f * frame->dt, 8.0f * frame->dt, 8.0f * frame->dt}; // player movement speed
+        if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+            glm_vec3_mul(spd, (vec3){10.0f, 10.0f, 10.0f}, spd);
+        }
         vec3 dpos = GLM_VEC3_ZERO_INIT;
         if (cursorLocked || !GUI_InterfaceWantsInput()) {
             if (glfwGetKey(window, GLFW_KEY_SPACE)      == GLFW_PRESS) { pos[1] += spd[1]; }
