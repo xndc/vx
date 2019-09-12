@@ -4,7 +4,8 @@
     X(GL_VERTEX_SHADER,     VSH_DEFAULT,            "shaders/default.vert") \
     X(GL_VERTEX_SHADER,     VSH_FULLSCREEN_PASS,    "shaders/fullscreen.vert") \
     X(GL_FRAGMENT_SHADER,   FSH_GBUF_MAIN,          "shaders/gbuf_main.frag") \
-    X(GL_FRAGMENT_SHADER,   FSH_GBUF_LIGHTING,      "shaders/gbuf_lighting.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_GBUF_LIGHT_MAIN,    "shaders/gbuf_light_main.frag") \
+    X(GL_FRAGMENT_SHADER,   FSH_GBUF_LIGHT_POINT,   "shaders/gbuf_light_point.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_FX_DITHER,          "shaders/fx_dither.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_FINAL,              "shaders/final.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_GEN_CUBEMAP,        "shaders/gen_cubemap.frag") \
@@ -16,13 +17,14 @@
     X(GL_FRAGMENT_SHADER,   FSH_TAA,                "shaders/taa.frag") \
 
 #define XM_PROGRAMS \
-    X(PROG_GBUF_MAIN,       VSH_DEFAULT,         FSH_GBUF_MAIN) \
-    X(PROG_SHADOW,          VSH_SHADOW,          FSH_SHADOW) \
-    X(PROG_GBUF_LIGHTING,   VSH_FULLSCREEN_PASS, FSH_GBUF_LIGHTING) \
-    X(PROG_SHADOW_RESOLVE,  VSH_FULLSCREEN_PASS, FSH_SHADOW_RESOLVE) \
-    X(PROG_FX_DITHER,       VSH_FULLSCREEN_PASS, FSH_FX_DITHER) \
-    X(PROG_FINAL,           VSH_FULLSCREEN_PASS, FSH_FINAL) \
-    X(PROG_TAA,             VSH_FULLSCREEN_PASS, FSH_TAA) \
+    X(PROG_GBUF_MAIN,           VSH_DEFAULT,            FSH_GBUF_MAIN) \
+    X(PROG_SHADOW,              VSH_SHADOW,             FSH_SHADOW) \
+    X(PROG_GBUF_LIGHT_MAIN,     VSH_FULLSCREEN_PASS,    FSH_GBUF_LIGHT_MAIN) \
+    X(PROG_GBUF_LIGHT_POINT,    VSH_FULLSCREEN_PASS,    FSH_GBUF_LIGHT_POINT) \
+    X(PROG_SHADOW_RESOLVE,      VSH_FULLSCREEN_PASS,    FSH_SHADOW_RESOLVE) \
+    X(PROG_FX_DITHER,           VSH_FULLSCREEN_PASS,    FSH_FX_DITHER) \
+    X(PROG_FINAL,               VSH_FULLSCREEN_PASS,    FSH_FINAL) \
+    X(PROG_TAA,                 VSH_FULLSCREEN_PASS,    FSH_TAA) \
 
 // Syntax for attributes:
 // X(location global name, layout location index, GLSL name, GLTF name)
@@ -65,8 +67,8 @@
     X(UNIF_AMBIENT_CUBE,         "uAmbientCube") \
     X(UNIF_SUN_POSITION,         "uSunPosition") \
     X(UNIF_SUN_COLOR,            "uSunColor") \
-    X(UNIF_POINTLIGHT_POSITIONS, "uPointLightPositions") \
-    X(UNIF_POINTLIGHT_COLORS,    "uPointLightColors") \
+    X(UNIF_POINTLIGHT_POSITION,  "uPointLightPosition") \
+    X(UNIF_POINTLIGHT_COLOR,     "uPointLightColor") \
 \
     X(UNIF_MODEL_MATRIX,    "uModelMatrix") \
     X(UNIF_VIEW_MATRIX,     "uViewMatrix") \

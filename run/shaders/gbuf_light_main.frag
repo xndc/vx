@@ -180,13 +180,6 @@ void main() {
     Lo += mix(vec3(0), DirectionalLightLo(N, V, normalize(uSunPosition), uSunColor, diffuse, metal, rough), 1.0-shadow);
     #endif
 
-    #if 1
-    for (int i = 0; i < 4; i++) {
-        vec3 L = uPointLightPositions[i] - FragPosWorld;
-        Lo += PointLightLo(N, V, L, uPointLightColors[i], diffuse, metal, rough);
-    }
-    #endif
-
     outColorHDR = vec4(Lo, 1.0);
 
     // For debug visualization, we write values into the aux2 buffer and read them out in the final shader.

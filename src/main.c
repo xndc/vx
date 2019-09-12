@@ -536,9 +536,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
     EndRenderPass();
 
-    StartRenderPass(&rs, "GBuffer lighting");
+    StartRenderPass(&rs, "GBuffer main lighting");
     BindFramebuffer(FB_ONLY_COLOR_HDR);
-    SetRenderProgram(&rs, &PROG_GBUF_LIGHTING);
+    SetRenderProgram(&rs, &PROG_GBUF_LIGHT_MAIN);
     SetCamera(&rs, &conf->camMain);
     // Send shadow uniforms:
     glUniformMatrix4fv(UNIF_SHADOW_VP_MATRIX, 1, false, (float*) shadowSpaceMatrix);
@@ -546,14 +546,8 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     glUniform1f(UNIF_SHADOW_BIAS_MIN, conf->shadowBiasMin);
     // Extract light info from scene:
     RenderableLightProbe* ambient = NULL;
-    vec3 pointPositions[4] = {0};
-    vec3 pointColors[4]    = {0};
     if (rl.lightProbeCount > 0) {
         ambient = &rl.lightProbes[0];
-    }
-    for (int i = 0; i < vxMin(4, rl.pointLightCount); i++) {
-        glm_vec3_copy(rl.pointLights[i].position, pointPositions[i]);
-        glm_vec3_copy(rl.pointLights[i].color, pointColors[i]);
     }
     // Send light uniforms:
     if (ambient) {
@@ -563,9 +557,19 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         glUniform3fv(UNIF_SUN_POSITION, 1, directional->position);
         glUniform3fv(UNIF_SUN_COLOR, 1, directional->color);
     }
-    glUniform3fv(UNIF_POINTLIGHT_POSITIONS, 4, (float*) pointPositions);
-    glUniform3fv(UNIF_POINTLIGHT_COLORS, 4, (float*) pointColors);
     RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    EndRenderPass();
+
+    StartRenderPass(&rs, "GBuffer point lighting");
+    BindFramebuffer(FB_ONLY_COLOR_HDR);
+    SetRenderProgram(&rs, &PROG_GBUF_LIGHT_POINT);
+    SetCamera(&rs, &conf->camMain);
+    // Render a cube for each light:
+    for (int i = 0; i < rl.pointLightCount; i++) {
+        glUniform3fv(UNIF_POINTLIGHT_POSITION, 1, (float*) rl.pointLights[i].position);
+        glUniform3fv(UNIF_POINTLIGHT_COLOR,    1, (float*) rl.pointLights[i].color);
+        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+    }
     EndRenderPass();
 
     if (conf->enableTAA) {
