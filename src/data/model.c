@@ -80,6 +80,8 @@ typedef struct GLTFNode {
 } GLTFNode;
 
 void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirectory, const char* gltfFilename) {
+    model->meshCount = 0; // mark as invalid
+
     double tStart = glfwGetTime();
     static char gltfPath [4096]; // path to GLTF file
     static char filePath [4096]; // buffer for storing other filenames
@@ -89,6 +91,7 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
     JSON_Value* rootval = json_parse_file_with_comments(gltfPath);
     if (rootval == NULL) {
         vxLog("Failed to parse JSON file (unknown error in parson - does file exist?)");
+        return;
     }
     JSON_Object* root = json_value_get_object(rootval);
 

@@ -44,6 +44,7 @@ typedef struct Mesh {
     size_t gl_vertex_count;
 } Mesh;
 
+// NOTE: Models with mesh count 0 are considered invalid and should not be displayed in the UI.
 typedef struct Model {
     char* name;
     char* sourceFilePath;

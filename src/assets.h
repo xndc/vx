@@ -149,11 +149,13 @@
     X(MDL_DUCK,             "models/Duck",                      "Duck.gltf") \
     X(MDL_BOX,              "models/BoxTextured",               "BoxTextured.gltf") \
     X(MDL_SPHERES,          "models/MetalRoughSpheres/glTF",    "MetalRoughSpheres.gltf") \
-    X(MDL_RIGGED_FIGURE,    "models/RiggedFigure",              "RiggedFigure.gltf") \
     X(MDL_ALPHA_BLEND_TEST, "models/AlphaBlendModeTest",        "AlphaBlendModeTest.gltf") \
+    X(MDL_RIGGED_FIGURE,    "models/RiggedFigure",              "RiggedFigure.gltf") \
     X(MDL_LANDSCAPE_1,      "models/Landscape 1",               "scene.gltf") \
-
-#define XM_ASSETS_MODELS_GLTF_IGNORED \
+    X(MDL_GEARBOX_ASSY,     "models/GearboxAssy",               "GearboxAssy.gltf") \
+    X(MDL_FLIGHT_HELMET,    "models/FlightHelmet",              "FlightHelmet.gltf") \
+    X(MDL_SUZANNE,          "models/Suzanne",                   "Suzanne.gltf") \
+    X(MDL_DAMAGED_HELMET,   "models/DamagedHelmet",             "DamagedHelmet.gltf") \
 
 #define XM_ASSETS_FONTS \
     X(FONT_DEFAULT,       "fonts/Roboto-Medium.ttf", 16) \

@@ -410,14 +410,16 @@ static void sDrawSceneViewer (vxConfig* conf, GLFWwindow* window, Scene* scene) 
     ImGui::BeginMenuBar();
     if (ImGui::BeginMenu("Add Object")) {
         for (size_t i = 0; i < ModelCount; i++) {
-            if (ImGui::MenuItem(Models[i]->name, NULL)) {
-                GameObject* obj = AddObject(scene, NULL, GAMEOBJECT_MODEL);
-                obj->model.model = Models[i];
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::BeginTooltip();
-                ImGui::Text("%s", Models[i]->sourceFilePath);
-                ImGui::EndTooltip();
+            if (Models[i]->meshCount != 0) {
+                if (ImGui::MenuItem(Models[i]->name, NULL)) {
+                    GameObject* obj = AddObject(scene, NULL, GAMEOBJECT_MODEL);
+                    obj->model.model = Models[i];
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("%s", Models[i]->sourceFilePath);
+                    ImGui::EndTooltip();
+                }
             }
         }
         ImGui::Separator();
