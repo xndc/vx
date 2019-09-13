@@ -63,8 +63,8 @@ void InitMaterial (Material* m) {
     m->smp_diffuse = SMP_NEAREST;
     m->tex_normal = TEX_WHITE_1x1;
     m->smp_normal = TEX_WHITE_1x1;
-    m->tex_occ_met_rgh = TEX_WHITE_1x1;
-    m->smp_occ_met_rgh = SMP_NEAREST;
+    m->tex_occ_rgh_met = TEX_WHITE_1x1;
+    m->smp_occ_rgh_met = SMP_NEAREST;
     m->tex_occlusion = TEX_WHITE_1x1;
     m->smp_occlusion = SMP_NEAREST;
     m->tex_metallic = TEX_WHITE_1x1;
@@ -275,8 +275,8 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
             if (jtex && json_object_has_value(jtex, "source") && json_object_has_value(jtex, "sampler")) {
                 int iimg = (int) json_object_get_number(jtex, "source");
                 int ismp = (int) json_object_get_number(jtex, "sampler");
-                m->tex_occ_met_rgh = textures[iimg];
-                m->smp_occ_met_rgh = samplers[ismp];
+                m->tex_occ_rgh_met = textures[iimg];
+                m->smp_occ_rgh_met = samplers[ismp];
             }
         }
         if (jnormaltex) {

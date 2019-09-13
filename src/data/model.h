@@ -21,8 +21,8 @@ typedef struct Material {
     float const_roughness;
     GLuint tex_diffuse;
     GLuint smp_diffuse;
-    GLuint tex_occ_met_rgh;
-    GLuint smp_occ_met_rgh;
+    GLuint tex_occ_rgh_met;
+    GLuint smp_occ_rgh_met;
     GLuint tex_occlusion;
     GLuint smp_occlusion;
     GLuint tex_metallic;

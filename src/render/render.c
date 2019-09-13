@@ -419,7 +419,7 @@ void SetRenderMaterial (RenderState* rs, Material* mat) {
         glUniform1f(UNIF_CONST_METALLIC,   mat->const_metallic);
         glUniform1f(UNIF_CONST_ROUGHNESS,  mat->const_roughness);
         SetUniformTextureSampler2D(rs, UNIF_TEX_DIFFUSE,      mat->tex_diffuse,       mat->smp_diffuse);
-        SetUniformTextureSampler2D(rs, UNIF_TEX_OCC_MET_RGH,  mat->tex_occ_met_rgh,   mat->smp_occ_met_rgh);
+        SetUniformTextureSampler2D(rs, UNIF_TEX_OCC_RGH_MET,  mat->tex_occ_rgh_met,   mat->smp_occ_rgh_met);
         SetUniformTextureSampler2D(rs, UNIF_TEX_OCCLUSION,    mat->tex_occlusion,     mat->smp_occlusion);
         SetUniformTextureSampler2D(rs, UNIF_TEX_METALLIC,     mat->tex_metallic,      mat->smp_metallic);
         SetUniformTextureSampler2D(rs, UNIF_TEX_ROUGHNESS,    mat->tex_roughness,     mat->smp_roughness);

@@ -104,7 +104,7 @@
     X(UNIF_CONST_METALLIC,  "uMetallic") \
     X(UNIF_CONST_ROUGHNESS, "uRoughness") \
     X(UNIF_TEX_DIFFUSE,     "texDiffuse") \
-    X(UNIF_TEX_OCC_MET_RGH, "texOccMetRgh") \
+    X(UNIF_TEX_OCC_RGH_MET, "texOccRghMet") \
     X(UNIF_TEX_OCCLUSION,   "texOcclusion") \
     X(UNIF_TEX_METALLIC,    "texMetallic") \
     X(UNIF_TEX_ROUGHNESS,   "texRoughness") \

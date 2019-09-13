@@ -20,7 +20,7 @@ out mat3 TBN;
 // FIXME: If we actually use the last model matrix, there's a bug where the computed velocity of each object is
 //   completely bogus. It's probably because we're not updating the last model matrix correctly, but I wasted half an
 //   hour tracking it down and completely failed. Let's just assume objects never move, for now.
-// uniform mat4 uLastModelMatrix;
+// uniform mat4 uMVPLast;
 uniform mat4 uModelMatrix;
 uniform mat4 uMVP;
 uniform mat4 uVPLast;

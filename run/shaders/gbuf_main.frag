@@ -33,7 +33,7 @@ uniform float uRoughness;
 uniform float uOcclusion;
 uniform sampler2D texDiffuse;
 uniform sampler2D texNormal;
-uniform sampler2D texOccMetRgh;
+uniform sampler2D texOccRghMet;
 uniform sampler2D texOcclusion;
 uniform sampler2D texMetallic;
 uniform sampler2D texRoughness;
@@ -179,9 +179,12 @@ void main() {
             // diffuse = vec4(treshold);
         }
     }
-    float occlusion = uOcclusion * texture(texOccMetRgh, TexCoord0).r * texture(texOcclusion, TexCoord0).r;
-    float roughness = uRoughness * texture(texOccMetRgh, TexCoord0).g * texture(texRoughness, TexCoord0).r;
-    float metallic  = uMetallic  * texture(texOccMetRgh, TexCoord0).b * texture(texMetallic,  TexCoord0).r;
+
+    // We don't support occlusion yet.
+    // float occlusion = uOcclusion * texture(texOccRghMet, TexCoord0).r * texture(texOcclusion, TexCoord0).r;
+    
+    float roughness = uRoughness * texture(texOccRghMet, TexCoord0).g * texture(texRoughness, TexCoord0).r;
+    float metallic  = uMetallic  * texture(texOccRghMet, TexCoord0).b * texture(texMetallic,  TexCoord0).r;
 
     vec3 Nvertex = TBN[2];
     vec3 Ntexture = texture(texNormal, TexCoord0).rgb;
