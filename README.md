@@ -15,6 +15,12 @@ Keyboard shortcuts:
 * **Ctrl+V** opens a buffer viewer, letting you take a look at the various render buffers.
 * **Ctrl+T** opens the tonemapper configuration panel.
 
+Build instructions:
+
+* Windows: run `scripts/build.ps1 -run` to build & run with MSVC 2017, or `scripts/build.ps1 -clang -run` to download and use LLVM/Clang.
+* Linux and macOS: run `scripts/build.sh -run`.
+* CMake and Python are required.
+
 VX will decompress and cache textures during the first run. This may take up to 30 seconds and will currently use around 60 MB of disk space.
 
 ![VX Screenshot](Screenshot.jpg "VX Screenshot")
