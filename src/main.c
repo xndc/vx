@@ -109,13 +109,13 @@ void vxConfig_Init (vxConfig* c) {
     c->taaHaltonJitter = true;
     c->taaSampleOffsetMul = 0.2f;
     c->taaClampSampleDist = 0.5f;
-    c->taaFeedbackFactor = 0.95;
+    c->taaFeedbackFactor = 0.85;
     c->sharpenStrength = 0.0; // our current filter is very bad
 }
 
-// Halton(2,3) 8-sample offset sequence used for TAA. Initialized by GameLoad.
-typedef float Halton2x3x8T [2*8];
-Halton2x3x8T Halton2x3x8;
+// Halton(2,3) 16-sample offset sequence used for TAA. Initialized by GameLoad. Can change to any sample count.
+typedef float Halton23T [2*16];
+Halton23T Halton23;
 
 // See https://github.com/playdeadgames/temporal/blob/master/Assets/Scripts/FrustumJitter.cs (HaltonSeq)
 static float HaltonSeq (int prime, int index) {
@@ -167,9 +167,9 @@ void GameLoad (vxConfig* conf, GLFWwindow** pwindow) {
     }
 
     // Generate Halton(2,3) sequence:
-    for (int i = 0; i < vxSize(Halton2x3x8) / 2; i++) {
-        Halton2x3x8[2*i+0] = HaltonSeq(2, i+1) - 0.5f;
-        Halton2x3x8[2*i+1] = HaltonSeq(3, i+1) - 0.5f;
+    for (int i = 0; i < vxSize(Halton23) / 2; i++) {
+        Halton23[2*i+0] = HaltonSeq(2, i+1) - 0.5f;
+        Halton23[2*i+1] = HaltonSeq(3, i+1) - 0.5f;
     }
 
     // Initialize game subsystems:
@@ -468,10 +468,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         if (conf->taaHaltonJitter) {
             // Higher multipliers increase both blur and visible jitter on specular surfaces.
             // Going too low results in TAA becoming ineffective (since the sampled positions are almost the same).
-            jitterX     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+0] / (float)w;
-            jitterY     = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+1)%8)+1] / (float)h;
-            jitterLastX = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+0] / (float)w;
-            jitterLastY = conf->taaSampleOffsetMul * Halton2x3x8[2*((frame->n+0)%8)+1] / (float)h;
+            jitterX     = conf->taaSampleOffsetMul * Halton23[2*((frame->n+1)%8)+0] / (float)w;
+            jitterY     = conf->taaSampleOffsetMul * Halton23[2*((frame->n+1)%8)+1] / (float)h;
+            jitterLastX = conf->taaSampleOffsetMul * Halton23[2*((frame->n+0)%8)+0] / (float)w;
+            jitterLastY = conf->taaSampleOffsetMul * Halton23[2*((frame->n+0)%8)+1] / (float)h;
         } else {
             jitterX     = conf->taaSampleOffsetMul * ((-1) * (frame->n+1) % 2) / (float) w;
             jitterY     = conf->taaSampleOffsetMul * ((-1) * (frame->n+1) % 2) / (float) h;

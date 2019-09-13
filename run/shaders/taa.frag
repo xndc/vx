@@ -16,11 +16,6 @@ uniform sampler2D gAux2;
 uniform sampler2D gAuxDepth;
 uniform sampler2D gShadow;
 
-uniform mat4 uInvViewMatrix;
-uniform mat4 uInvProjMatrix;
-uniform mat4 uLastViewMatrix;
-uniform mat4 uLastProjMatrix;
-
 // Add 0.5*uJitter to UV coordinates to unjitter (well, somewhat).
 uniform vec2 uJitter;
 uniform vec2 uJitterLast;
@@ -70,6 +65,7 @@ void main() {
         accumColor = inputColor;
     }
 
+    #if 0
     // Neighbourhood clamping:
     // We sample some fragments around the current one to figure out what the correct historical value might reasonably
     // be, assuming the history buffer contains correct fragments and not garbage, and then we clamp the historical
@@ -81,6 +77,33 @@ void main() {
     vec3 nbMin = min(min(min(nb1, nb2), nb3), nb4); // per-component min
     vec3 nbMax = max(max(max(nb1, nb2), nb3), nb4); // per-component max
     accumColor = clamp(accumColor, nbMin, nbMax);
+    #else
+    // Neighbourhood clipping:
+    vec3 nbp1 = texture(gColorHDR, uv + vec2(+1, +0) / vec2(iResolution)).rgb;
+    vec3 nbp2 = texture(gColorHDR, uv + vec2(-1, +0) / vec2(iResolution)).rgb;
+    vec3 nbp3 = texture(gColorHDR, uv + vec2(+0, +1) / vec2(iResolution)).rgb;
+    vec3 nbp4 = texture(gColorHDR, uv + vec2(+0, -1) / vec2(iResolution)).rgb;
+    vec3 nbx1 = texture(gColorHDR, uv + vec2(+1, +1) / vec2(iResolution)).rgb;
+    vec3 nbx2 = texture(gColorHDR, uv + vec2(+1, -1) / vec2(iResolution)).rgb;
+    vec3 nbx3 = texture(gColorHDR, uv + vec2(-1, +1) / vec2(iResolution)).rgb;
+    vec3 nbx4 = texture(gColorHDR, uv + vec2(-1, -1) / vec2(iResolution)).rgb;
+    vec3 minp = min(inputColor, min(nbp1, min(nbp2, min(nbp3, nbp4))));
+    vec3 maxp = max(inputColor, max(nbp1, max(nbp2, max(nbp3, nbp4))));
+    vec3 minx = min(minp, min(nbx1, min(nbx2, min(nbx3, nbx4))));
+    vec3 maxx = max(maxp, max(nbx1, max(nbx2, max(nbx3, nbx4))));
+    // I don't know what Pedersen means by "blend". Average?
+    vec3 aabbMin = (minp + minx) * 0.5;
+    vec3 aabbMax = (maxp + maxx) * 0.5;
+    vec3 pClip = 0.5 * (aabbMax + aabbMin);
+    vec3 eClip = 0.5 * (aabbMax - aabbMin);
+    vec3 vClip = accumColor - pClip;
+    vec3 vUnit = vClip / eClip;
+    vec3 aUnit = abs(vUnit);
+    float maUnit = max(aUnit.x, max(aUnit.y, aUnit.z));
+    if (maUnit > 1.0) {
+        accumColor = pClip + vClip / maUnit;
+    }
+    #endif
 
     // Final blend:
     outColorHDR = vec4(mix(inputColor, accumColor, vec3(kFeedbackFactor)), 0);

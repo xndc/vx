@@ -27,8 +27,6 @@ uniform float uShadowBiasMax;
 uniform vec3 uAmbientCube[6];
 uniform vec3 uSunPosition;
 uniform vec3 uSunColor;
-uniform vec3 uPointLightPositions[4];
-uniform vec3 uPointLightColors[4];
 
 uniform sampler2D gDepth;
 uniform sampler2D gColorLDR;
