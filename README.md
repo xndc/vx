@@ -9,6 +9,8 @@ Current download links:
 
 Keyboard shortcuts:
 
+* Click anywhere in the window to capture the mouse cursor. Press **Esc** to release it.
+* Use the **WASD**, **Spacebar** (up) and **Shift** (down) keys to move.
 * **Tilde/backtick** [~] opens a basic Unity-style stats display.
 * **Ctrl+P** opens the engine configuration panel.
 * **Ctrl+O** opens the very primitive scene/object viewer and editor.
