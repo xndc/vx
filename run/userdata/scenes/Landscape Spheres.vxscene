@@ -1,0 +1,6 @@
+VXEngine Scene v1.0
+4 objects
+D -1 pos(1 1 1) rot(0 0 0 1) scl(1 1 1) color(1 1 1)
+L -1 pos(0 0 0) rot(0 0 0 1) scl(1 1 1) xp(0.068 0.078 0.05) xn(0.061 0.05 0.05) yp(0.084 0.07 0.075) yn(0.05 0.025 0.025) zp(0.053 0.05 0.05) zn(0.061 0.058 0.05)
+M -1 pos(0 34.1 100) rot(0 0 0 1) scl(10 10 10) MDL_LANDSCAPE_1
+M -1 pos(0 0.7 0) rot(0 0 0 1) scl(1 1 1) MDL_SPHERES

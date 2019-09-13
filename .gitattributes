@@ -1,0 +1,33 @@
+# References:
+# * https://www.git-scm.com/docs/gitattributes
+# * https://github.com/alexkaratarakis/gitattributes
+
+# Don't screw with the files unless otherwise specified:
+*               -text
+
+# Normalization is OK for text files and source code:
+*.txt           text
+*.md            text
+*.c             text
+*.cc            text
+*.cpp           text
+*.h             text
+*.hh            text
+*.hpp           text
+*.rc            text
+*.json          text
+*.gltf          text
+*.glsl          text
+*.vert          text
+*.frag          text
+*.vxscene       text
+*.ini           text
+*.ps1           text eol=crlf
+*.bat           text eol=crlf
+*.sh            text eol=lf
+*.cmake         text
+*.html          text
+*.css           text
+*.js            text
+.gitattributes  text
+.gitignore      text

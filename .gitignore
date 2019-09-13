@@ -1,0 +1,91 @@
+# Project-specific
+build
+run/*
+run/userdata/*
+!run/fonts
+!run/models
+!run/shaders
+!run/terrain
+!run/textures
+!run/userdata
+!run/userdata/scenes
+tools/apitrace*
+
+# Backup and temporary files
+*.bak
+*.gho
+*.ori
+*.tmp
+*~
+
+# Windows
+Thumbs.db
+[Dd]esktop.ini
+*.lnk
+*.stackdump
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/c_cpp_properties.json
+
+# Visual Studio
+.vs
+*.aps
+
+# Sublime Text
+*.sublime-workspace
+
+# JetBrains CLion
+# https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+.idea/**/contentModel.xml
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+.idea/**/gradle.xml
+.idea/**/libraries
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+*.iml
+*.ipr
+cmake-build-*/
+*.iws
+.idea/httpRequests
+
+# Microsoft Office and LibreOffice
+~$*.doc*
+~$*.xls*
+*.xlk
+~$*.ppt*
+*.~vsd*
+.~lock.*#

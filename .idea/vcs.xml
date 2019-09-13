@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/cglm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/cglm/test/lib/cmocka" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/cotire" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/etc/parson" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/glad" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/stb" vcs="Git" />
+  </component>
+</project>

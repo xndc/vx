@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Generic",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/lib/cglm/include",
+                "${workspaceFolder}/lib/etc",
+                "${workspaceFolder}/lib/glfw/include",
+                "${workspaceFolder}/lib/imgui",
+                "${workspaceFolder}/lib/stb",
+                "${workspaceFolder}/lib/remotery/lib",
+                "${workspaceFolder}/build/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "intelliSenseMode": "msvc-x64",
+            "cppStandard": "c++14",
+            "cStandard": "c11"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,48 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "VX: Build",
+            "type": "shell",
+            "command": "${workspaceRoot}/scripts/build.sh",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc",
+                {"base": "$msCompile", "fileLocation": ["autoDetect", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+            ],
+            "windows": {
+                "command": "${workspaceRoot}/scripts/build.ps1",
+            },
+        },
+        {
+            "label": "VX: Build & Run",
+            "type": "shell",
+            "command": "${workspaceRoot}/scripts/build.sh",
+            "args": ["-run"],            
+            "group": "build",
+            "problemMatcher": [
+                "$gcc",
+                {"base": "$msCompile", "fileLocation": ["autoDetect", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+            ],
+            "windows": {
+                "command": "${workspaceRoot}/scripts/build.ps1",
+            },
+        },
+        {
+            "label": "VX: Rebuild",
+            "type": "shell",
+            "command": "${workspaceRoot}/scripts/build.sh",
+            "args": ["-clean"],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc",
+                {"base": "$msCompile", "fileLocation": ["autoDetect", "${workspaceRoot}/build/win-x64-ninja-debug"]},
+            ],
+            "windows": {
+                "command": "${workspaceRoot}/scripts/build.ps1",                
+            },
+        },
+    ]
+}

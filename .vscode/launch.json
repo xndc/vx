@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "windows": {
+        "configurations": [
+            {
+                "name": "VX: Launch",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/build/win-x64-ninja-debug/Game.exe",
+                "args": [],
+                "stopAtEntry": false,
+                "cwd": "${workspaceFolder}/run",
+                "environment": [],
+                "externalConsole": false,
+                "MIMode": "lldb",
+            }
+        ]
+    },
+    "osx": {
+       "configurations": [
+            {
+                "name": "VX: Launch",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/build/mac-x64-ninja-debug/Game",
+                "args": [],
+                "stopAtEntry": false,
+                "cwd": "${workspaceFolder}/run",
+                "environment": [],
+                "externalConsole": false,
+                "MIMode": "lldb",
+            }
+        ]
+    },
+}
