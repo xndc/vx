@@ -246,32 +246,40 @@ void ResetModelMatrix (RenderState* rs) {
 void SetModelMatrix (RenderState* rs, mat4 model, mat4 modelLast) {
     glm_mat4_copy(model,     rs->matModel);
     glm_mat4_copy(modelLast, rs->matModelLast);
-    glm_mat4_mul(model,     rs->matVP,     rs->matMVP);
-    glm_mat4_mul(modelLast, rs->matVPLast, rs->matMVPLast);
+    glm_mat4_mul(rs->matVP,     model,     rs->matMVP);
+    glm_mat4_mul(rs->matVPLast, modelLast, rs->matMVPLast);
 }
 
 void MulModelMatrix (RenderState* rs, mat4 model, mat4 modelLast) {
     // FIXME: correct order?
     glm_mat4_mul(rs->matModel,     model,     rs->matModel);
     glm_mat4_mul(rs->matModelLast, modelLast, rs->matModelLast);
+    glm_mat4_mul(rs->matMVP,       model,     rs->matMVP);
+    glm_mat4_mul(rs->matMVPLast,   modelLast, rs->matMVPLast);
 }
 
 void MulModelPosition (RenderState* rs, vec3 pos, vec3 posLast) {
     // FIXME: maybe we should generate a translation matrix and flip the multiplication order?
     glm_translate(rs->matModel,     pos);
     glm_translate(rs->matModelLast, posLast);
+    glm_mat4_mul(rs->matVP,     rs->matModel,     rs->matMVP);
+    glm_mat4_mul(rs->matVPLast, rs->matModelLast, rs->matMVPLast);
 }
 
 void MulModelRotation (RenderState* rs, versor rot, versor rotLast) {
     // FIXME: maybe we should generate a rotation matrix and flip the multiplication order?
     glm_quat_rotate(rs->matModel, rot, rs->matModel);
     glm_quat_rotate(rs->matModelLast, rotLast, rs->matModelLast);
+    glm_mat4_mul(rs->matVP,     rs->matModel,     rs->matMVP);
+    glm_mat4_mul(rs->matVPLast, rs->matModelLast, rs->matMVPLast);
 }
 
 void MulModelScale (RenderState* rs, vec3 scl, vec3 sclLast) {
     // FIXME: maybe we should generate a scale matrix and flip the multiplication order?
     glm_scale(rs->matModel,     scl);
     glm_scale(rs->matModelLast, sclLast);
+    glm_mat4_mul(rs->matVP,     rs->matModel,     rs->matMVP);
+    glm_mat4_mul(rs->matVPLast, rs->matModelLast, rs->matMVPLast);
 }
 
 // Binds a texture and sampler to an automatically-selected texture unit.
@@ -438,10 +446,11 @@ void RenderMesh (RenderState* rs, vxConfig* conf, vxFrame* frame, Mesh* mesh, Ma
     glUniformMatrix4fv(UNIF_INV_VIEW_MATRIX,   1, false, (float*) rs->matViewInv);
     glUniformMatrix4fv(UNIF_LAST_VIEW_MATRIX,  1, false, (float*) rs->matViewLast);
 
-    glUniformMatrix4fv(UNIF_MVP,     1, false, (float*) rs->matMVP);
-    glUniformMatrix4fv(UNIF_VP,      1, false, (float*) rs->matVP);
-    glUniformMatrix4fv(UNIF_VP_INV,  1, false, (float*) rs->matVPInv);
-    glUniformMatrix4fv(UNIF_VP_LAST, 1, false, (float*) rs->matVPLast);
+    glUniformMatrix4fv(UNIF_MVP,      1, false, (float*) rs->matMVP);
+    glUniformMatrix4fv(UNIF_MVP_LAST, 1, false, (float*) rs->matMVPLast);
+    glUniformMatrix4fv(UNIF_VP,       1, false, (float*) rs->matVP);
+    glUniformMatrix4fv(UNIF_VP_INV,   1, false, (float*) rs->matVPInv);
+    glUniformMatrix4fv(UNIF_VP_LAST,  1, false, (float*) rs->matVPLast);
 
     glUniform3fv(UNIF_CAMERA_POS,      1, (float*) rs->camPos);
     glUniform3fv(UNIF_CAMERA_POS_LAST, 1, (float*) rs->camPosLast);

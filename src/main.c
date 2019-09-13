@@ -492,8 +492,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     RenderState rsMesh = rs;
     SetCamera(&rsMesh, &camMainJittered);
     for (size_t i = 0; i < rl.meshCount; i++) {
-        glm_mat4_copy(rl.meshes[i].worldMatrix,     rsMesh.matModel);
-        glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+        // glm_mat4_copy(rl.meshes[i].worldMatrix,     rsMesh.matModel);
+        // glm_mat4_copy(rl.meshes[i].lastWorldMatrix, rsMesh.matModelLast);
+        SetModelMatrix(&rsMesh, rl.meshes[i].worldMatrix, rl.meshes[i].lastWorldMatrix);
         // Timing every single mesh draw is probably a waste of time, despite being cool to look at in the profiler.
         #if 0
         static char blockName [128];
