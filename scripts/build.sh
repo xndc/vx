@@ -219,6 +219,9 @@ if $Run; then
         set -e
         LogInfo "Program exited with return code $?."
     fi
+else
+    LogInfo "Generated executable file: $BinaryPath"
+    LogInfo "You can run it manually or use \"$0 -run.\""
 fi
 
 # Start XCode:

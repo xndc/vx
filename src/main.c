@@ -190,9 +190,8 @@ void GameReload (vxConfig* conf, GLFWwindow* window) {
     LoadModels();
 }
 
-// Loads the default scene.
-void GameLoadScene (Scene* scene) {
-    #if 0
+// Loads the old default scene.
+static void LoadLegacyDefaultScene (Scene* scene) {
     InitScene(scene);
     GameObject* sponza = AddObject(scene, NULL, GAMEOBJECT_MODEL);
     sponza->model.model = &MDL_SPONZA;
@@ -209,10 +208,6 @@ void GameLoadScene (Scene* scene) {
     duck->localScale[0] = 1/sponza->localScale[0];
     duck->localScale[1] = 1/sponza->localScale[1];
     duck->localScale[2] = 1/sponza->localScale[2];
-    // MDL_DUCK.materials[0].stipple = true;
-    // MDL_DUCK.materials[0].stipple_hard_cutoff = 0.0f;
-    // MDL_DUCK.materials[0].stipple_soft_cutoff = 1.0f;
-    // MDL_DUCK.materials[0].const_diffuse[3] = 0.6f;
 
     GameObject* sunlight = AddObject(scene, NULL, GAMEOBJECT_DIRECTIONAL_LIGHT);
     sunlight->localPosition[0] = +1.0f;
@@ -249,9 +244,14 @@ void GameLoadScene (Scene* scene) {
     glm_vec3_copy((vec3){mul*0.5f, mul*0.5f, mul*0.5f}, lp->lightProbe.colorYn);
     glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZp);
     glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZn);
-    #else
+}
+
+// Loads the default scene.
+void GameLoadScene (Scene* scene) {
     LoadScene(scene, "userdata/scenes/Default.vxscene");
-    #endif
+    if (scene->size == 0) {
+        LoadLegacyDefaultScene(scene);
+    }
 }
 
 // Tick function for the game. Renders a single frame.
