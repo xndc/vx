@@ -6,11 +6,8 @@
     X(GL_FRAGMENT_SHADER,   FSH_GBUF_MAIN,          "shaders/gbuf_main.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_GBUF_LIGHT_MAIN,    "shaders/gbuf_light_main.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_GBUF_LIGHT_POINT,   "shaders/gbuf_light_point.frag") \
-    X(GL_FRAGMENT_SHADER,   FSH_FX_DITHER,          "shaders/fx_dither.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_FINAL,              "shaders/final.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_GEN_CUBEMAP,        "shaders/gen_cubemap.frag") \
-    X(GL_VERTEX_SHADER,     VSH_SKYBOX,             "shaders/skybox.vert") \
-    X(GL_FRAGMENT_SHADER,   FSH_SKYBOX,             "shaders/skybox.frag") \
     X(GL_VERTEX_SHADER,     VSH_SHADOW,             "shaders/shadow.vert") \
     X(GL_FRAGMENT_SHADER,   FSH_SHADOW,             "shaders/shadow.frag") \
     X(GL_FRAGMENT_SHADER,   FSH_SHADOW_RESOLVE,     "shaders/shadow_resolve.frag") \
@@ -22,7 +19,6 @@
     X(PROG_GBUF_LIGHT_MAIN,     VSH_FULLSCREEN_PASS,    FSH_GBUF_LIGHT_MAIN) \
     X(PROG_GBUF_LIGHT_POINT,    VSH_FULLSCREEN_PASS,    FSH_GBUF_LIGHT_POINT) \
     X(PROG_SHADOW_RESOLVE,      VSH_FULLSCREEN_PASS,    FSH_SHADOW_RESOLVE) \
-    X(PROG_FX_DITHER,           VSH_FULLSCREEN_PASS,    FSH_FX_DITHER) \
     X(PROG_FINAL,               VSH_FULLSCREEN_PASS,    FSH_FINAL) \
     X(PROG_TAA,                 VSH_FULLSCREEN_PASS,    FSH_TAA) \
 
