@@ -493,7 +493,7 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Checkbox("Use Halton pattern for jitter", &conf->taaHaltonJitter);
     
     ImGui::SliderFloat("TAA sample offset multiplier", &conf->taaSampleOffsetMul, 0.0, 4.0);
-    ImGui::SliderFloat("TAA neighbourhood clamping distance", &conf->taaClampSampleDist, 0.0, 4.0);
+    // ImGui::SliderFloat("TAA neighbourhood clamping distance", &conf->taaClampSampleDist, 0.0, 4.0);
     ImGui::SliderFloat("TAA feedback factor", &conf->taaFeedbackFactor, 0.0, 1.0);
     ImGui::SliderFloat("Sharpen filter strength", &conf->sharpenStrength, 0.0, 0.2);
 
