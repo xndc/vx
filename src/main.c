@@ -6,6 +6,7 @@
 #include "render/render.h"
 #include "render/program.h"
 #include "scene/core.h"
+#include "scene/save.h"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -95,7 +96,7 @@ void vxConfig_Init (vxConfig* c) {
     c->debugVisMode = DEBUG_VIS_NONE;
     c->debugShowPointLights = false;
 
-    c->shadowSize = 4096;
+    c->shadowSize = 8192;
     c->shadowBiasMin = 0.0002f;
     c->shadowBiasMax = 0.01f;
     c->shadowHoverFix = false;
@@ -103,7 +104,7 @@ void vxConfig_Init (vxConfig* c) {
     c->shadowPcfTapsY = 2;
     Camera_InitOrtho(&c->camShadow, 100.0f, -1000.0f, 500.0f); // no idea why these values work
     c->shadowTAA = false;
-    c->shadowNoise = false;
+    c->shadowNoise = true;
 
     c->enableTAA = true;
     c->taaHaltonJitter = true;
@@ -191,8 +192,8 @@ void GameReload (vxConfig* conf, GLFWwindow* window) {
 
 // Loads the default scene.
 void GameLoadScene (Scene* scene) {
+    #if 0
     InitScene(scene);
-    
     GameObject* sponza = AddObject(scene, NULL, GAMEOBJECT_MODEL);
     sponza->model.model = &MDL_SPONZA;
     sponza->localScale[0] = 2.5f;
@@ -248,6 +249,9 @@ void GameLoadScene (Scene* scene) {
     glm_vec3_copy((vec3){mul*0.5f, mul*0.5f, mul*0.5f}, lp->lightProbe.colorYn);
     glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZp);
     glm_vec3_copy((vec3){mul*1.0f, mul*1.0f, mul*1.0f}, lp->lightProbe.colorZn);
+    #else
+    LoadScene(scene, "userdata/scenes/Default.vxscene");
+    #endif
 }
 
 // Tick function for the game. Renders a single frame.
