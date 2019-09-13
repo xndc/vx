@@ -9,8 +9,7 @@ in mat3 TBN;
 layout(location = 0) out vec4 outColorLDR;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec4 outAux1;
-layout(location = 3) out vec4 outAux2;
-layout(location = 4) out vec3 outAuxHDR16;
+layout(location = 3) out vec3 outAuxHDR16;
 
 uniform vec2 iResolution;
 uniform int uStipple;
@@ -182,7 +181,7 @@ void main() {
 
     // We don't support occlusion yet.
     // float occlusion = uOcclusion * texture(texOccRghMet, TexCoord0).r * texture(texOcclusion, TexCoord0).r;
-    
+
     float roughness = uRoughness * texture(texOccRghMet, TexCoord0).g * texture(texRoughness, TexCoord0).r;
     float metallic  = uMetallic  * texture(texOccRghMet, TexCoord0).b * texture(texMetallic,  TexCoord0).r;
 
