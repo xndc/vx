@@ -4,7 +4,7 @@ Simple 3D engine. Currently little more than a model viewer, with partial suppor
 
 Current download links:
 
-* Windows 64-bit: https://github.com/xndc/vx/releases/download/v1.0/vx-1.0-win64.zip (56.1 MB)
+* Windows 64-bit: https://github.com/xndc/vx/releases/download/v1.0.1/vx-1.0.1.zip (56.7 MB)
 * Source code: https://github.com/xndc/vx/archive/master.zip
 
 Keyboard shortcuts:
