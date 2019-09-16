@@ -170,7 +170,7 @@ void main() {
     #elif defined(DEBUG_VIS_GBUF_NORMAL)
         outAux2 = vec4(N, 1.0);
     #elif defined(DEBUG_VIS_GBUF_ORM)
-        outAux2 = vec4(aux1, 1.0);
+        outAux2 = vec4(0.5*aux1.r, aux1.gb, 1.0);
     #elif defined(DEBUG_VIS_GBUF_VELOCITY)
         outAux2 = vec4(0.05 + velocity * 4.0, 0.0, 1.0);
     #elif defined(DEBUG_VIS_WORLDPOS)
