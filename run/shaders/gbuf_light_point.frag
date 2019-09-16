@@ -1,11 +1,7 @@
 #version 330 core
-in vec2 fragCoordClip;
-in vec2 fragCoord01;
-
 layout(location = 0) out vec4 outColorHDR;
-layout(location = 1) out vec4 outAux2;
 
-uniform vec2 iResolution;
+uniform ivec2 iResolution;
 uniform float iTime;
 uniform int iFrame;
 
@@ -107,6 +103,7 @@ highp float rand (vec2 co) {
 
 void main() {
     ivec2 fc = ivec2(gl_FragCoord.xy);
+    vec2 fragCoordClip = (gl_FragCoord.xy / vec2(iResolution)) * 2.0 - 1.0;
 
     // Don't do lighting calculations for missing fragments (e.g. sky):
     // FIXME: Replace this with a discard once we have an actual skybox shader.
@@ -123,7 +120,6 @@ void main() {
 
     vec3 diffuse  = texelFetch(gColorLDR, fc, 0).rgb;
     vec3 aux1     = texelFetch(gAux1,     fc, 0).rgb;
-    vec2 velocity = texelFetch(gAuxHDR16, fc, 0).rg;
     float rough = max(aux1.g, 0.1); // lighting looks wrong around 0 (specular highlight goes away entirely)
     float metal = aux1.b;
 
@@ -137,5 +133,8 @@ void main() {
 
     vec3 L = uPointLightPosition - FragPosWorld;
     vec3 Lo = PointLightLo(N, V, L, uPointLightColor, diffuse, metal, rough);
-    outColorHDR = texelFetch(gColorHDR, fc, 0) + vec4(Lo, 1.0);
+    #ifdef DEBUG_SHOW_LIGHT_VOLUMES
+        Lo += vec3(0.01);
+    #endif
+    outColorHDR = vec4(Lo, 1.0); // should be added to gColorHDR
 }

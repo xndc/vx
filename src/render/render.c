@@ -7,6 +7,7 @@ PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = vxglDummyTextureBarrier;
 int vxglMaxTextureUnits = 16; // resonable default, apparently getting GL_MAX_TEXTURE_IMAGE_UNITS can fail
 
 Material MAT_FULLSCREEN_QUAD;
+Material MAT_LIGHT_VOLUME;
 Material MAT_DIFFUSE_WHITE;
 Mesh MESH_QUAD;
 Mesh MESH_CUBE;
@@ -27,6 +28,13 @@ void InitRenderSystem() {
     // Generate standard materials:
     InitMaterial(&MAT_FULLSCREEN_QUAD);
     MAT_FULLSCREEN_QUAD.depth_test = false;
+    InitMaterial(&MAT_LIGHT_VOLUME);
+    MAT_LIGHT_VOLUME.depth_test = false;
+    MAT_LIGHT_VOLUME.cull = true;
+    MAT_LIGHT_VOLUME.cull_face = GL_FRONT;
+    MAT_LIGHT_VOLUME.blend = true;
+    MAT_LIGHT_VOLUME.blend_srcf = GL_ONE;
+    MAT_LIGHT_VOLUME.blend_dstf = GL_ONE;
     InitMaterial(&MAT_DIFFUSE_WHITE);
     MAT_DIFFUSE_WHITE.const_metallic = 0.0f;
 
@@ -383,6 +391,7 @@ void SetRenderMaterial (RenderState* rs, Material* mat) {
         if (mat->blend) {
             glEnable(GL_BLEND);
             glBlendFunc(mat->blend_srcf, mat->blend_dstf);
+            glBlendEquation(mat->blend_func);
         } else {
             glDisable(GL_BLEND);
         }

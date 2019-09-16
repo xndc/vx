@@ -12,6 +12,7 @@ extern PFNGLTEXTUREBARRIERPROC vxglTextureBarrier;
 extern int vxglMaxTextureUnits;
 
 extern Material MAT_FULLSCREEN_QUAD;
+extern Material MAT_LIGHT_VOLUME;
 extern Material MAT_DIFFUSE_WHITE;
 extern Mesh MESH_QUAD;
 extern Mesh MESH_CUBE;

@@ -514,11 +514,13 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::Checkbox("Noisy sampling", &conf->shadowNoise);
 
     ImGui::Checkbox("Visualize point lights", &conf->debugShowPointLights);
+    ImGui::SameLine(200);
+    ImGui::Checkbox("Visualize light volumes", &conf->debugShowLightVolumes);
     
     ImGui::Checkbox("Clear GBuffer on redraw", &conf->clearColorBuffers);
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();
-        ImGui::Text("Clears all color buffers at the start of the frame. By default, only depth buffers are cleared.");
+        ImGui::Text("Clears all color buffers at the start of the frame.");
         ImGui::Text("This is mostly useful when debugging under RenderDoc.");
         ImGui::EndTooltip();
     }
