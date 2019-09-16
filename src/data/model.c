@@ -40,6 +40,7 @@ void InitMaterial (Material* m) {
     m->blend = false;
     m->blend_srcf = GL_SRC_ALPHA;           // suitable for back-to-front transparency
     m->blend_dstf = GL_ONE_MINUS_SRC_ALPHA; // suitable for back-to-front transparency
+    m->blend_func = GL_FUNC_ADD;
     m->stipple = false;
     // NOTE: 0.5 is the GLTF default alpha cutoff. GLTF also doesn't include the concept of a soft
     //   cutoff at all, so setting it to anything over 0.5 would result in models rendering

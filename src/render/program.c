@@ -63,6 +63,10 @@ static DefineBlock sGenerateDefineBlock (vxConfig* conf) {
     });
     #undef CASE
 
+    DEFINE(bool, debugShowLightVolumes, {
+        if (debugShowLightVolumes) { WRITE("#define DEBUG_SHOW_LIGHT_VOLUMES"); }
+    });
+
     DEFINE(int, shadowPcfTapsX, { WRITE("#define SHADOW_PCF_TAPS_X %d\n", conf->shadowPcfTapsX); });
     DEFINE(int, shadowPcfTapsY, { WRITE("#define SHADOW_PCF_TAPS_Y %d\n", conf->shadowPcfTapsY); });
 

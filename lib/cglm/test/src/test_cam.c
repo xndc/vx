@@ -19,7 +19,7 @@ TEST_IMPL(camera_lookat) {
 
   glm_look(eye, dir, up, view2);
 
-  ASSERT(test_assert_mat4_eq(view1, view2).status == 1)
+  ASSERTIFY(test_assert_mat4_eq(view1, view2))
 
   TEST_SUCCESS
 }
@@ -41,15 +41,15 @@ TEST_IMPL(camera_decomp) {
 
   glm_persp_sizes(proj, fovy, sizes);
 
-  glm_frustum(-sizes[0] * 0.5,
-               sizes[0] * 0.5,
-              -sizes[1] * 0.5,
-               sizes[1] * 0.5,
+  glm_frustum(-sizes[0] * 0.5f,
+               sizes[0] * 0.5f,
+              -sizes[1] * 0.5f,
+               sizes[1] * 0.5f,
                nearVal,
                farVal,
                proj2);
 
-  ASSERT(test_assert_mat4_eq(proj, proj2).status == 1)
+  ASSERTIFY(test_assert_mat4_eq(proj, proj2))
 
   TEST_SUCCESS
 }

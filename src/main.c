@@ -570,14 +570,20 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     EndRenderPass();
 
     StartRenderPass(&rs, "GBuffer point lighting");
-    BindFramebuffer(FB_ONLY_COLOR_HDR);
     SetRenderProgram(&rs, &PROG_GBUF_LIGHT_POINT);
-    SetCamera(&rs, &conf->camMain);
-    // Render a cube for each light:
+    BindFramebuffer(FB_ONLY_COLOR_HDR_NO_AUX);
+    SetCamera(&rs, &camMainJittered);
+    // Render a light volume, to limit the amount of pixels that have to be shaded, for each point light.
     for (int i = 0; i < rl.pointLightCount; i++) {
         glUniform3fv(UNIF_POINTLIGHT_POSITION, 1, (float*) rl.pointLights[i].position);
         glUniform3fv(UNIF_POINTLIGHT_COLOR,    1, (float*) rl.pointLights[i].color);
-        RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
+        const float threshold = 0.05; // intensity beyond which we don't render the light
+        float intensity = glm_vec3_max(rl.pointLights[i].color);
+        float radius = sqrtf(intensity / threshold);
+        RenderState lightRs = rs;
+        MulModelPosition(&lightRs, rl.pointLights[i].position, rl.pointLights[i].position);
+        MulModelScale(&lightRs, (vec3){radius, radius, radius}, (vec3){radius, radius, radius});
+        RenderMesh(&lightRs, conf, frame, &MESH_CUBE, &MAT_LIGHT_VOLUME);
     }
     EndRenderPass();
 

@@ -1261,7 +1261,10 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
         if (!ItemAdd(bb, 0))
         {
             if (columns)
+            {
                 PopColumnsBackground();
+                columns->LineMinY = window->DC.CursorPos.y;
+            }
             return;
         }
 
@@ -1975,12 +1978,12 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
         // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
         FLOATTYPE v_old_norm_curved = ImPow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
         FLOATTYPE v_new_norm_curved = v_old_norm_curved + (g.DragCurrentAccum / (v_max - v_min));
-        v_cur = v_min + (TYPE)ImPow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
+        v_cur = v_min + (SIGNEDTYPE)ImPow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
         v_old_ref_for_accum_remainder = v_old_norm_curved;
     }
     else
     {
-        v_cur += (TYPE)g.DragCurrentAccum;
+        v_cur += (SIGNEDTYPE)g.DragCurrentAccum;
     }
 
     // Round to user desired precision based on format string
@@ -5624,7 +5627,7 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
     // We include ItemSpacing.y so that a list sized for the exact number of items doesn't make a scrollbar appears. We could also enforce that by passing a flag to BeginChild().
     ImVec2 size;
     size.x = 0.0f;
-    size.y = GetTextLineHeightWithSpacing() * height_in_items_f + style.FramePadding.y * 2.0f;
+    size.y = ImFloor(GetTextLineHeightWithSpacing() * height_in_items_f + style.FramePadding.y * 2.0f);
     return ListBoxHeader(label, size);
 }
 

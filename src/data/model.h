@@ -7,6 +7,7 @@ typedef struct Material {
     bool blend;
     GLenum blend_srcf;
     GLenum blend_dstf;
+    GLenum blend_func;
     bool stipple;
     float stipple_soft_cutoff;
     float stipple_hard_cutoff;
