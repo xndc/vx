@@ -2,7 +2,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-void vxglDummyTextureBarrier() {}
+void APIENTRY vxglDummyTextureBarrier() {}
 PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = vxglDummyTextureBarrier;
 int vxglMaxTextureUnits = 16; // resonable default, apparently getting GL_MAX_TEXTURE_IMAGE_UNITS can fail
 
