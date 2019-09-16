@@ -1,5 +1,6 @@
 # Project-specific
-build
+build/*
+!build/include
 run/*
 run/userdata/*
 !run/fonts
