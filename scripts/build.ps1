@@ -127,6 +127,51 @@ function GetTimerMs {
     }
 }
 
+function LoadVisualStudio2019 {
+    param([Parameter(Mandatory=$TRUE, Position=0)] [string] $HostArch,
+          [Parameter(Mandatory=$TRUE, Position=1)] [string] $TargetArch)
+
+    if (("${env:VSCMD_ARG_HOST_ARCH}" -eq $HostArch) -and
+        ("${env:VSCMD_ARG_TGT_ARCH}"  -eq $TargetArch)) {
+        return
+    }
+
+    $VSDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\Common7\Tools"
+    if (-not (test-path $VSDir)) { return $FALSE }
+
+    # VsDevCmd expects "amd64" instead of "x64":
+    $VDCHostArch = $HostArch.Replace("x64", "amd64")
+    $VDCTargetArch = $TargetArch.Replace("x64", "amd64")
+
+    # Run the VsDevCmd script and update our environment variables according to what it does.
+    LogInfo "Loading Visual Studio 2019 environment for host $HostArch and target $TargetArch..."
+    if ("${env:VisualStudioVersion}" -ne "") {
+        LogWarn "WARNING: Another MSVC environment was previously loaded."
+        LogWarn "         Repeating this will eventually lead to an `"input line is too long`" error."
+        LogWarn "         If you get this error, restart PowerShell and try again."
+    }
+    # If telemetry is enabled, vsdevcmd runs PowerShell using your default profile, which in my case includes a cls.
+    $env:VSCMD_SKIP_SENDTELEMETRY = 1
+    cmd.exe /c "`"$VSDir\VsDevCmd.bat`" -host_arch=$VDCHostArch -arch=$VDCTargetArch && set" |
+    ForEach-Object {
+        if ($_ -match "=") {
+            $Var = $_.split("=")
+            $VarName  = $Var[0]
+            $VarValue = $Var[1]
+            Set-Item -force -path "ENV:\$VarName" -value "$VarValue"
+        }
+    }
+
+    # Sanity check:
+    if (-not (
+        ("${env:VisualStudioVersion}" -eq "16.0")       -and
+        ("${env:VSCMD_ARG_HOST_ARCH}" -eq $HostArch)    -and
+        ("${env:VSCMD_ARG_TGT_ARCH}"  -eq $TargetArch)))
+    {
+        Panic "VsDevCmd failed to load the correct environment."
+    }
+}
+
 function LoadVisualStudio2017 {
     param([Parameter(Mandatory=$TRUE, Position=0)] [string] $HostArch,
           [Parameter(Mandatory=$TRUE, Position=1)] [string] $TargetArch)
@@ -150,6 +195,8 @@ function LoadVisualStudio2017 {
         LogWarn "         Repeating this will eventually lead to an `"input line is too long`" error."
         LogWarn "         If you get this error, restart PowerShell and try again."
     }
+    # MSVC 2017 doesn't seem to use telemetry in vsdevcmd, but better safe than sorry.
+    $env:VSCMD_SKIP_SENDTELEMETRY = 1
     cmd.exe /c "`"$VSDir\VsDevCmd.bat`" -host_arch=$VDCHostArch -arch=$VDCTargetArch && set" |
     ForEach-Object {
         if ($_ -match "=") {
@@ -206,6 +253,7 @@ try {
 
     # Load Visual Studio:
     StartTimer "Load Visual Studio environment"
+    LoadVisualStudio2019 $HostArch $TargetArch
     LoadVisualStudio2017 $HostArch $TargetArch
     StopTimer "Load Visual Studio environment"
 
