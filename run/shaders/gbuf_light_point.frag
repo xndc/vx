@@ -138,6 +138,4 @@ void main() {
     vec3 L = uPointLightPosition - FragPosWorld;
     vec3 Lo = PointLightLo(N, V, L, uPointLightColor, diffuse, metal, rough);
     outColorHDR = texelFetch(gColorHDR, fc, 0) + vec4(Lo, 1.0);
-
-    outAux2 = texelFetch(gAux2, fc, 0); // keep info in aux2 (debug vis)
 }

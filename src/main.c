@@ -570,10 +570,10 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     EndRenderPass();
 
     StartRenderPass(&rs, "GBuffer point lighting");
-    BindFramebuffer(FB_ONLY_COLOR_HDR);
+    BindFramebuffer(FB_ONLY_COLOR_HDR_NO_AUX);
     SetRenderProgram(&rs, &PROG_GBUF_LIGHT_POINT);
     SetCamera(&rs, &conf->camMain);
-    // Render a cube for each light:
+    // Render a fullscreen quad for each light (FIXME: make it a cube or sphere)
     for (int i = 0; i < rl.pointLightCount; i++) {
         glUniform3fv(UNIF_POINTLIGHT_POSITION, 1, (float*) rl.pointLights[i].position);
         glUniform3fv(UNIF_POINTLIGHT_COLOR,    1, (float*) rl.pointLights[i].color);
