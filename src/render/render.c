@@ -2,9 +2,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-void vxglDummyTextureBarrier() {}
+void APIENTRY vxglDummyTextureBarrier() {}
 PFNGLTEXTUREBARRIERPROC vxglTextureBarrier = vxglDummyTextureBarrier;
-int vxglMaxTextureUnits = 0;
+int vxglMaxTextureUnits = 16; // resonable default, apparently getting GL_MAX_TEXTURE_IMAGE_UNITS can fail
 
 Material MAT_FULLSCREEN_QUAD;
 Material MAT_DIFFUSE_WHITE;

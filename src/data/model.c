@@ -80,12 +80,14 @@ typedef struct GLTFNode {
 } GLTFNode;
 
 void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirectory, const char* gltfFilename) {
-    model->meshCount = 0; // mark as invalid
+    memset(model, 0, sizeof(Model)); // mark as invalid
+    model->name = strdup(name);
 
     double tStart = glfwGetTime();
     static char gltfPath [4096]; // path to GLTF file
     static char filePath [4096]; // buffer for storing other filenames
     stbsp_snprintf(gltfPath, vxSize(gltfPath), "%s/%s", gltfDirectory, gltfFilename);
+    model->sourceFilePath = strdup(gltfPath);
 
     vxLog("Reading GLTF model from %s into 0x%jx...", gltfPath, model);
     JSON_Value* rootval = json_parse_file_with_comments(gltfPath);
@@ -484,8 +486,6 @@ void ReadModelFromDisk (const char* name, Model* model, const char* gltfDirector
 
     // Fill out model fields:
     // TODO: Add an atomic lock to the model so we can load it on another thread.
-    model->name = strdup(name);
-    model->sourceFilePath = strdup(gltfPath);
     model->textureCount = textureCount;
     model->textures = textures;
     model->materialCount = materialCount;

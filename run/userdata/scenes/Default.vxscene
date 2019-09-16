@@ -1,9 +1,11 @@
 VXEngine Scene v1.0
-7 objects
+9 objects
 M -1 pos(1.5 -4 1.5) rot(0 0 0 1) scl(2.5 2.5 2.5) MDL_SPONZA
-D -1 pos(1 2 0.17) rot(0 0 0 1) scl(1 1 1) color(2 2 1.8)
-P -1 pos(4 0 0) rot(0 0 0 1) scl(1 1 1) color(10 10 10)
-P -1 pos(-4 0 0) rot(0 0 0 1) scl(1 1 1) color(10 10 10)
+D -1 pos(1 2 0.17) rot(0 0 0 1) scl(1 1 1) color(2 2 2)
+P -1 pos(4 -2 0) rot(0 0 0 1) scl(1 1 1) color(5 5 5)
+P -1 pos(-3 -2 0) rot(0 0 0 1) scl(1 1 1) color(5 5 5)
 L -1 pos(0 0 0) rot(0 0 0 1) scl(1 1 1) xp(0.05 0.05 0.05) xn(0.05 0.05 0.05) yp(0.075 0.075 0.075) yn(0.025 0.025 0.025) zp(0.05 0.05 0.05) zn(0.05 0.05 0.05)
 M -1 pos(-1.55 -3.54 0) rot(0 0 0 1) scl(1 1 1) MDL_BOX
 M -1 pos(0 -4.2 1.35) rot(0 0 0 1) scl(1 1 1) MDL_DUCK
+P -1 pos(-10 -2 0) rot(0 0 0 1) scl(1 1 1) color(5 5 5)
+P -1 pos(-17 -2 0) rot(0 0 0 1) scl(1 1 1) color(5 5 5)

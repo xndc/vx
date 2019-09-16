@@ -500,7 +500,6 @@ static void sDrawConfigurator (vxConfig* conf, GLFWwindow* window) {
     ImGui::SliderFloat("Sharpen filter strength", &conf->sharpenStrength, 0.0, 0.2);
 
     ImGui::SliderInt("VSync", &conf->swapInterval, -1, 3, "swap interval %d");
-    ImGui::InputInt("Environment map size", &conf->envmapSize, 128, 128);
 
     ImGui::InputInt("Shadow map size", &conf->shadowSize, 256, 256);
     conf->shadowSize = vxClamp(conf->shadowSize, 32, 8192); // framebuffer size limit on most machines

@@ -96,7 +96,7 @@ void vxConfig_Init (vxConfig* c) {
     c->debugVisMode = DEBUG_VIS_NONE;
     c->debugShowPointLights = false;
 
-    c->shadowSize = 8192;
+    c->shadowSize = 4096;
     c->shadowBiasMin = 0.0002f;
     c->shadowBiasMax = 0.01f;
     c->shadowHoverFix = false;

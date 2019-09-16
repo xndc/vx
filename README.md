@@ -19,9 +19,8 @@ Keyboard shortcuts:
 
 Build instructions:
 
-* Windows: run `scripts/build.ps1 -run` to build & run with MSVC 2017, or `scripts/build.ps1 -clang -run` to download and use LLVM/Clang.
-* Linux and macOS: run `scripts/build.sh -run`.
-* CMake and Python are required.
+* Windows: run `scripts/build.ps1 -run`. Visual Studio Community 2019 or 2017 is required.
+* Linux and macOS: run `scripts/build.sh -run`. CMake and Ninja are required.
 
 VX will decompress and cache textures during the first run. This may take up to 30 seconds and will currently use around 60 MB of disk space.
 
