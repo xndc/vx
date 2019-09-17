@@ -260,6 +260,11 @@ try {
     # Get the correct generator names:
     if ($Generator.ToLower() -eq "msbuild") {
         switch ($env:VisualStudioVersion) {
+            "16.0" {
+                if ($TargetArch -eq "x64") { $Generator = "Visual Studio 16 2019" }
+                if ($TargetArch -eq "x86") { $Generator = "Visual Studio 16 2019" }
+                break
+            }
             "15.0" {
                 if ($TargetArch -eq "x64") { $Generator = "Visual Studio 15 2017 Win64" }
                 if ($TargetArch -eq "x86") { $Generator = "Visual Studio 15 2017" }
@@ -270,6 +275,7 @@ try {
     $ShortGenerator = $Generator.ToLower().Replace("-", "").Replace(" ", "-")
     if ($ShortGenerator.StartsWith("visual-studio")) {
         switch ($env:VisualStudioVersion) {
+            "16.0" { $ShortGenerator = "msvc" }
             "15.0" { $ShortGenerator = "msvc" }
         }
     }
