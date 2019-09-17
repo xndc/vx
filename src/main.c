@@ -577,7 +577,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
     for (int i = 0; i < rl.pointLightCount; i++) {
         glUniform3fv(UNIF_POINTLIGHT_POSITION, 1, (float*) rl.pointLights[i].position);
         glUniform3fv(UNIF_POINTLIGHT_COLOR,    1, (float*) rl.pointLights[i].color);
-        const float threshold = 0.05; // intensity beyond which we don't render the light
+        const float threshold = 0.02; // intensity beyond which we don't render the light
         float intensity = glm_vec3_max(rl.pointLights[i].color);
         float radius = sqrtf(intensity / threshold);
         RenderState lightRs = rs;

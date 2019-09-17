@@ -29,9 +29,11 @@ void InitRenderSystem() {
     InitMaterial(&MAT_FULLSCREEN_QUAD);
     MAT_FULLSCREEN_QUAD.depth_test = false;
     InitMaterial(&MAT_LIGHT_VOLUME);
-    MAT_LIGHT_VOLUME.depth_test = false;
-    MAT_LIGHT_VOLUME.cull = true;
-    MAT_LIGHT_VOLUME.cull_face = GL_FRONT;
+    MAT_LIGHT_VOLUME.depth_test = true;
+    MAT_LIGHT_VOLUME.depth_write = false;
+    MAT_LIGHT_VOLUME.depth_func = GL_LESS;
+    MAT_LIGHT_VOLUME.cull = false;
+    MAT_LIGHT_VOLUME.cull_face = GL_BACK;
     MAT_LIGHT_VOLUME.blend = true;
     MAT_LIGHT_VOLUME.blend_srcf = GL_ONE;
     MAT_LIGHT_VOLUME.blend_dstf = GL_ONE;
@@ -202,6 +204,14 @@ void StartRenderPass (RenderState* rs, const char* passName) {
     rs->nextFreeTextureUnit = 0;
     rs->forceNoDepthTest = false;
     rs->forceNoDepthTest = false;
+
+    // Reset OpenGL state as well:
+    // Avoids issues like the shadow framebuffer not being cleared because we disable depth writes at some point.
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+
     StartGPUBlock(passName);
 }
 
