@@ -389,6 +389,9 @@ void SetRenderProgram (RenderState* rs, Program* p) {
         XM_RENDERTARGETS_SCREEN
         XM_RENDERTARGETS_SHADOW
         #undef X
+
+        // Set noise texture uniforms:
+        SetUniformTextureSampler2D(rs, UNIF_BLUENOISE_64, TEX_BLUENOISE_64, SMP_NEAREST_REPEAT);
     } else {
         vxLog("Warning: program (%s, %s) is not available", p->vsh->path, p->fsh->path);
     }

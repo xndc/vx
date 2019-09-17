@@ -30,6 +30,7 @@ GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
 GLuint TEX_WHITE_1x1;
 GLuint SMP_NEAREST;
+GLuint SMP_NEAREST_REPEAT;
 GLuint SMP_LINEAR;
 
 // Initializes the texture system. Should only be run once.
@@ -43,6 +44,12 @@ void InitTextureSystem() {
     glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glSamplerParameteri(SMP_NEAREST, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glGenSamplers(1, &SMP_NEAREST_REPEAT);
+    glSamplerParameteri(SMP_NEAREST_REPEAT, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glSamplerParameteri(SMP_NEAREST_REPEAT, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glSamplerParameteri(SMP_NEAREST_REPEAT, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glSamplerParameteri(SMP_NEAREST_REPEAT, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(SMP_NEAREST_REPEAT, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glGenSamplers(1, &SMP_LINEAR);
     glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glSamplerParameteri(SMP_LINEAR, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -55,7 +62,7 @@ void InitTextureSystem() {
 // Loads all textures from disk. Can be run multiple times.
 void LoadTextures() {
     // Regular textures:
-    #define X(name, path) name = LoadTextureFromDisk(path, true);
+    #define X(name, type, mips, path) name = LoadTextureFromDisk(path, mips);
     XM_ASSETS_TEXTURES
     #undef X
 

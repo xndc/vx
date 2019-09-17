@@ -41,7 +41,7 @@ uniform float uShadowBiasMax;
 // pass just for the shadows that doesn't use clamping. We instead discard samples based on a few (hacky) heuristics.
 // This is awful, a complete waste of GPU time and doesn't even work well, but does result in *slightly* nicer shadows.
 // If you use it together with high PCF and don't look at objects too closely, that is. Otherwise it ends up being
-// super-noisy in motion. I haven't found a good way to accept samples 
+// super-noisy in motion.
 
 // More or less "standard" random function.
 // http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
@@ -91,8 +91,8 @@ void main() {
                 vec2 offset = vec2((ipcfX - (SHADOW_PCF_TAPS_X / 2)), (ipcfY - (SHADOW_PCF_TAPS_Y / 2)));
                 offset *= 1.0; // tunable, increase for larger penumbras
                 #ifdef SHADOW_NOISE
-                    offset.y += rand(V.xy + float((iFrame + 2) % 100)) * 2.0 - 1.0;
-                    offset.x += rand(V.xy + float((iFrame + 1) % 100)) * 2.0 - 1.0;
+                    offset.x += rand(100*FragPosWorld.xy + float((iFrame + 1) % 100)) * 2.0 - 1.0;
+                    offset.y += rand(100*FragPosWorld.yz + float((iFrame + 2) % 100)) * 2.0 - 1.0;
                 #endif
                 float zShadowMap = texture(gShadow, ShadowTexcoord + offset * ShadowTexelSize).r;
                 // Correct shadow depth if required:

@@ -53,9 +53,11 @@
     X(UNIF_RT_AUX_DEPTH,    "gAuxDepth") \
     X(UNIF_RT_SHADOW_DEPTH, "gShadow") \
 \
-    X(UNIF_IRESOLUTION,         "iResolution") \
-    X(UNIF_ITIME,               "iTime") \
-    X(UNIF_IFRAME,              "iFrame") \
+    X(UNIF_IRESOLUTION,  "iResolution") \
+    X(UNIF_ITIME,        "iTime") \
+    X(UNIF_IFRAME,       "iFrame") \
+    X(UNIF_BLUENOISE_64, "texBlueNoise64") \
+\
     X(UNIF_STIPPLE,             "uStipple") \
     X(UNIF_STIPPLE_HARD_CUTOFF, "uStippleHardCutoff") \
     X(UNIF_STIPPLE_SOFT_CUTOFF, "uStippleSoftCutoff") \
@@ -124,6 +126,7 @@
 // X(name, target (GL_TEXTURE_*), needs mipmaps, path)
 
 #define XM_ASSETS_TEXTURES \
+    X(TEX_BLUENOISE_64, GL_TEXTURE_2D, false, "textures/core/bluenoise64.png") \
 
 #define XM_ASSETS_TEXTURES_IGNORED \
     X(TEX_TERRAIN_HEIGHTMAP,        GL_TEXTURE_2D, false, "terrain/testmap.png") \

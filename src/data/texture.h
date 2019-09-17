@@ -37,6 +37,7 @@ extern GLuint VXGL_SAMPLER [VXGL_SAMPLER_COUNT];
 
 extern GLuint TEX_WHITE_1x1;
 extern GLuint SMP_NEAREST;
+extern GLuint SMP_NEAREST_REPEAT;
 extern GLuint SMP_LINEAR;
 
 void InitTextureSystem();
