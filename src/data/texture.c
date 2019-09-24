@@ -6,8 +6,11 @@
 #include <glfw/glfw3.h>
 #include <stb_image.h>
 
-#define X(name, _) GLuint name = 0;
+#define X(name, type, mips, path) GLuint name = 0;
 XM_ASSETS_TEXTURES
+#undef X
+
+#define X(name, format) GLuint name = 0;
 XM_RENDERTARGETS_SCREEN
 XM_RENDERTARGETS_SHADOW
 XM_RENDERTARGETS_ENVMAP

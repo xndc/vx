@@ -3,8 +3,11 @@
 #include "assets.h"
 #include "main.h"
 
-#define X(name, _) extern GLuint name;
+#define X(name, type, mips, path) extern GLuint name;
 XM_ASSETS_TEXTURES
+#undef X
+
+#define X(name, _) extern GLuint name;
 XM_RENDERTARGETS_SCREEN
 XM_RENDERTARGETS_SHADOW
 XM_RENDERTARGETS_ENVMAP
