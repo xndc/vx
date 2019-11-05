@@ -599,8 +599,9 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         RenderMesh(&rs, conf, frame, &MESH_QUAD, &MAT_FULLSCREEN_QUAD);
         EndRenderPass();
 
-        // I stopped writing to RT_AUX_HDR11 in the TAA shader due to some tearing artifacts, but the TAA shader has been
-        // completely overhauled since, so having this as a separate step might not be needed anymore.
+        // Writing directly to RT_AUX_HDR11 (and using gAuxHDR11 instead of gColorHDR in the final shader) seems to
+        // work, but a) is undefined behaviour, and b) avoiding the copy doesn't seem to improve performance anyway.
+        // TODO: Add a toggle for copy vs. no copy so we can test how it behaves on other hardware.
         StartRenderPass(&rs, "Temporal AA Accumulation Buffer Copy");
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FB_TAA);
         glReadBuffer(GL_COLOR_ATTACHMENT0); // copying from RT_COLOR_HDR
@@ -629,7 +630,7 @@ void GameTick (vxConfig* conf, GLFWwindow* window, vxFrame* frame, vxFrame* last
         }
         EndRenderPass();
     }
-
+    
     StartRenderPass(&rs, "Final output");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDrawBuffer(GL_BACK);
